@@ -1,7 +1,7 @@
 {
   "name": "yellow-machine",
   "version": "1.0.1",
-  "description": "pipeline alternative",
+  "description": "very simple pipeline alternative",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
@@ -34,9 +34,9 @@
   "author": "Miguel Ángel Alarcos Torrecillas",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/.../issues"
+    "url": "https://github.com/yellowmachine/yellow-machine/issues"
   },
-  "homepage": "https://github.com/...#readme",
+  "homepage": "https://github.com/yellowmachine/yellow-machine#readme",
   "devDependencies": {
     "@types/jest": "^28.1.7",
     "@types/node": "^18.7.8",
