@@ -3,7 +3,14 @@ import { watch as chwatch } from 'chokidar';
 const keypress = require('keypress');
 
 keypress(process.stdin);
-process.stdin.setRawMode(true);
+try{
+    process.stdin.setRawMode(true);
+}catch(err){
+    // eslint-disable-next-line no-console
+    console.log("There's an error with 'process.stdin.setRawMode(true)'");
+    // eslint-disable-next-line no-console
+    console.log("It should be only with jest tests.");
+}
 
 export function watch(options: {f: ((arg0: (()=>void)) => void), quit: string, files: string[]}){
     process.stdin.on('keypress', function (ch, key) {
