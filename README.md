@@ -49,7 +49,7 @@ Pipes can be nested: [f1, [k1, k2], z1]. If k1 throws, the sequence is: f1...k1.
 Other example:
 
 ```js
-await pipe(up, [awatch(["*.js"], f1, test), down]);
+await pipe(up, [awatch(["*.graphql", "*.test.js"], loadSchema, test), down]);
 ```
 
 You can see a repo using this library:

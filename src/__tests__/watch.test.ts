@@ -56,6 +56,8 @@ test('watch 2', async () => {
 });
 
 test('watch pipe', async () => {
-    const ok = await pipe(f1, awatch(["*.hey"], f1, f_x, 'throws'));
-    expect(ok).toBeTruthy();
-  });
+    let v_end = false;
+    const end = async() => {v_end=true;};
+    await pipe(f1, [awatch(["*.hey"], f1, f_x, 'throws'), end]);
+    expect(v_end).toBeTruthy();
+});
