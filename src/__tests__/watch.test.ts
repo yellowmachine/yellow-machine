@@ -58,24 +58,27 @@ test('watch 2', async () => {
 });
 
 test('watch pipe', async () => {
-    let v_end = false;
-    let v_none = false;
-    const end = async() => {v_end=true;};
-    const f_none = async() => {v_none=true;};
-    await pipe([f1, [pwatch(["*.hey"], [f1, f_x, f_none, 'throws']), end]]);
-    expect(v_end).toBeTruthy();
-    expect(v_none).toBeFalsy();
+    const path: string[] = [];
+    const a = async() => path.push('a');
+    const f_throws = async () => {
+        path.push('f throws');
+        throw new Error("my x error");
+    };
+    const end = async() => path.push('end');
+    const b = async() => path.push('b');
+    await pipe([a, [pwatch(["*.hey"], [f_throws, b, 'throws']), end]]);
+    expect(path).toEqual(['a', 'f throws', 'end']);
 });
 
 test('watch pipe with quit', async () => {
-    let v_end = false;
-    let v_f_x = false;
-    const f_1 = async(payload: C) => {
+    const path: string[] = [];
+    const a = async() => path.push('a');
+    const f_quit = async(payload: C) => {
+        path.push('quit');
         payload.ctx.quit();
     };
-    const end = async() => {v_end=true;};
-    const f_x = async() => {v_f_x=true;};
-    await pipe([f1, [pwatch(["*.hey"], [f_1, f_x]), end]]);
-    expect(v_end).toBeTruthy();
-    expect(v_f_x).toBeTruthy();
+    const end = async() => path.push('end');
+    const b = async() => path.push('b');
+    await pipe([a, [pwatch(["*.hey"], [f_quit, b]), end]]);
+    expect(path).toEqual(['a', 'quit', 'b', 'end']);
 });
