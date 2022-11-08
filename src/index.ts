@@ -18,7 +18,7 @@ export type C = {data?: any, ctx: {quit: ()=>void}};
 type F = ((arg0: C) => any);
 type Tpipe = (F|'throws'|Tpipe)[];
 
-export function awatch(files: string[],
+export function pwatch(files: string[],
     f: Tpipe
     ){
         return () => watch(files, f);

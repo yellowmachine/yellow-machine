@@ -53,7 +53,7 @@ Pipes can be nested: [f1, [k1, k2], z1]. If k1 throws, the sequence is: f1...k1.
 
 In this case: [f1, [k1, k2, 'throws'], z1] if k1 throws then z1 is not executed.
 
-If: [f1, awatch("*.js", [k2, k3]), z1] and
+If: [f1, pwatch("*.js", [k2, k3]), z1] and
 
 ```js
 function k2({ctx}){
@@ -67,7 +67,7 @@ A real example:
 
 ```js
 await pipe([up, 
-            [awatch(["*.graphql", "*.test.js"], 
+            [pwatch(["*.graphql", "*.test.js"], 
                 [loadSchema, test]
                 ), 
              down

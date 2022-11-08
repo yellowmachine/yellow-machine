@@ -1,5 +1,5 @@
 import {openSync, close, writeSync, rmSync} from 'fs';
-import { awatch, watch, pipe, DEBUG, type C } from '../index';
+import { pwatch, watch, pipe, DEBUG, type C } from '../index';
 
 DEBUG.v = false;
 
@@ -62,7 +62,7 @@ test('watch pipe', async () => {
     let v_none = false;
     const end = async() => {v_end=true;};
     const f_none = async() => {v_none=true;};
-    await pipe([f1, [awatch(["*.hey"], [f1, f_x, f_none, 'throws']), end]]);
+    await pipe([f1, [pwatch(["*.hey"], [f1, f_x, f_none, 'throws']), end]]);
     expect(v_end).toBeTruthy();
     expect(v_none).toBeFalsy();
 });
@@ -75,7 +75,7 @@ test('watch pipe with quit', async () => {
     };
     const end = async() => {v_end=true;};
     const f_x = async() => {v_f_x=true;};
-    await pipe([f1, [awatch(["*.hey"], [f_1, f_x]), end]]);
+    await pipe([f1, [pwatch(["*.hey"], [f_1, f_x]), end]]);
     expect(v_end).toBeTruthy();
     expect(v_f_x).toBeTruthy();
 });
