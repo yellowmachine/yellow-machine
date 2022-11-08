@@ -40,16 +40,39 @@ main()
 
 It starts a docker image and wait for it to be ready, then, if it's ok, it enters to do a watch. It executes a function every time a file changes (given array of paths). If you press 'q' then it exits watch and do pipe down, i.e., stops docker. (You can stop watch programatically by executing the `quit` function).
 
-`pipe` executes async functions serially, passing data from one to next. If an error occurs, then pipe catch the error unless you do something like this. `await pipe(f1, f2, f3, 'throws')`. In this case, if for example *f2* throws, then *f3* does not execute and error is thrown.
+`pipe` executes async functions serially, passing data from one to next. The data passed is type: {
+    data: any,
+    ctx: {
+        quit: ()=>void
+    }
+} If an error occurs, then pipe catches the error unless you do something like this. `await pipe(f1, f2, f3, 'throws')`. In this case, if for example *f2* throws, then *f3* does not execute and error is thrown.
 
 In this case `await pipe(dgraph(config), test)`: it loads a schema to dgraph and if there's no error then does the test. But if dgraph doesn't load the schema because for example there's a syntax error on the schema.graphql file, then `test` is not executed.
 
 Pipes can be nested: [f1, [k1, k2], z1]. If k1 throws, the sequence is: f1...k1...z1.
 
-Other example:
+In this case: [f1, [k1, k2, 'throws'], z1] if k1 throws then z1 is not executed.
+
+If: [f1, awatch("*.js", [k2, k3]), z1] and
 
 ```js
-await pipe([up, [awatch(["*.graphql", "*.test.js"], [loadSchema, test]), down]]);
+function k2({ctx}){
+    ctx.quit();
+}
+```
+
+Then the execution is f1 ... k2 ... k3 ... z1.
+
+A real example:
+
+```js
+await pipe([up, 
+            [awatch(["*.graphql", "*.test.js"], 
+                [loadSchema, test]
+                ), 
+             down
+            ]
+        ]);
 ```
 
 You can see a repo using this library:

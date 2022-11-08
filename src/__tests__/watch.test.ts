@@ -1,5 +1,7 @@
 import {openSync, close, writeSync, rmSync} from 'fs';
-import { awatch, watch, pipe } from '../index';
+import { awatch, watch, pipe, DEBUG, type C } from '../index';
+
+DEBUG.v = false;
 
 async function f1(){
     return 1;
@@ -68,7 +70,7 @@ test('watch pipe', async () => {
 test('watch pipe with quit', async () => {
     let v_end = false;
     let v_f_x = false;
-    const f_1 = async(payload:{ctx: {quit: (()=>void)}}) => {
+    const f_1 = async(payload: C) => {
         payload.ctx.quit();
     };
     const end = async() => {v_end=true;};

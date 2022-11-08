@@ -1,4 +1,6 @@
-import {pipe } from '../index';
+import { pipe, DEBUG } from '../index';
+
+DEBUG.v = false;
 
 async function f1(){
   return 1;
@@ -45,4 +47,17 @@ test('pipe nested ok', async () => {
   await p;
   expect(k2_v).toBeFalsy();
   expect(z1_v).toBeTruthy();
+});
+
+test('pipe nested that throws', async () => {
+  let k2_v = false;
+  let z1_v = false;
+  const k1 = async () => {throw new Error();};
+  const k2 = async () => k2_v = true;
+  const z1 = async () => z1_v = true;
+
+  const p = pipe([f1, [k1, k2, 'throws'], z1]);
+  await p;
+  expect(k2_v).toBeFalsy();
+  expect(z1_v).toBeFalsy();
 });

@@ -12,17 +12,20 @@ try{
     console.log("It should be only with jest tests.");
 }
 
-type f = ((arg0: any) => any);
-type tpipe = (f|'throws'|tpipe)[];
+export const DEBUG = {v: false};
+
+export type C = {data?: any, ctx: {quit: ()=>void}};
+type F = ((arg0: C) => any);
+type Tpipe = (F|'throws'|Tpipe)[];
 
 export function awatch(files: string[],
-    f: tpipe
+    f: Tpipe
     ){
         return () => watch(files, f);
 }
 
 export function watch(files: string[],
-                      f: tpipe|((arg0: (()=>void)) => void)
+                      f: Tpipe|((arg0: (()=>void)) => void)
                       ){
     const q = 'q';
     
@@ -44,7 +47,7 @@ export function watch(files: string[],
         watcher.close();
     }
 
-    async function run(f: tpipe|((arg0: (()=>void)) => void)){
+    async function run(f: Tpipe|((arg0: (()=>void)) => void)){
         try{
             if(typeof f === 'function')
                 await f(close);
@@ -53,8 +56,9 @@ export function watch(files: string[],
             // eslint-disable-next-line no-console
             console.log("Press " + q + " to quit.");
         }catch(err){
-            // eslint-disable-next-line no-console
-            console.log(err);
+            if(DEBUG.v)
+                // eslint-disable-next-line no-console
+                console.log(err);
             close();
         }
     }
@@ -71,24 +75,26 @@ export function watch(files: string[],
     return p;
 }
 
-export async function pipe(tasks: tpipe, ctx: any=null){
+export async function pipe(tasks: Tpipe, ctx: any=null){
     let ok = false;
-    let data = {
+    const data = {
+        data: null,
         ctx: ctx  || {}
     };
 
     try{
         for(const t of tasks){
             if(typeof t === 'function'){
-                data = await t(data);
+                data.data = await t(data);
             }else if(Array.isArray(t)){
                 await pipe(t, data);
             }
         }
         ok = true;
     }catch(err){
-        // eslint-disable-next-line no-console
-        console.log(err);
+        if(DEBUG.v)
+            // eslint-disable-next-line no-console
+            console.log(err);
         if(tasks.at(-1) === 'throws')
             throw err;
     }
