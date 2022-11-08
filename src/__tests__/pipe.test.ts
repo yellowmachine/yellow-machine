@@ -33,3 +33,16 @@ test('pipe fail that throws', async () => {
   }
   await expect(t).rejects.toThrow("my error");
 });
+
+test('pipe nested ok', async () => {
+  let k2_v = false;
+  let z1_v = false;
+  const k1 = async () => {throw new Error();};
+  const k2 = async () => k2_v = true;
+  const z1 = async () => z1_v = true;
+
+  const p = pipe(f1, [k1, k2], z1);
+  await p;
+  expect(k2_v).toBeFalsy();
+  expect(z1_v).toBeTruthy();
+});

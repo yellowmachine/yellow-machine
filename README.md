@@ -25,13 +25,12 @@ async function main(){
         console.log("Could not start docker")
     }
     else{
-        await watch({files: ["./tests/*.js", "./schema/*.*"], 
-                     quit: 'q', 
-                     f: async (quit)=>{
+        await watch(["./tests/*.js", "./schema/*.*"],  
+                     async (quit)=>{
             ok = await pipe(dgraph(config), test) 
             //if(!ok)   
             //    quit()
-        }})
+            });
         await pipe(down)
     }
 }
@@ -44,6 +43,14 @@ It starts a docker image and wait for it to be ready, then, if it's ok, it enter
 `pipe` executes async functions serially, passing data from one to next. If an error occurs, then pipe catch the error unless you do something like this. `await pipe(f1, f2, f3, 'throws')`. In this case, if for example *f2* throws, then *f3* does not execute and error is thrown.
 
 In this case `await pipe(dgraph(config), test)`: it loads a schema to dgraph and if there's no error then does the test. But if dgraph doesn't load the schema because for example there's a syntax error on the schema.graphql file, then `test` is not executed.
+
+Pipes can be nested: [f1, [k1, k2], z1]. If k1 throws, the sequence is: f1...k1...z1.
+
+Other example:
+
+```js
+await pipe(up, [awatch(["*.js"], f1, test), down]);
+```
 
 You can see a repo using this library:
 

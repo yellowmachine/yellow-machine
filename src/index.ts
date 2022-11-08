@@ -12,9 +12,22 @@ try{
     console.log("It should be only with jest tests.");
 }
 
-export function watch(options: {f: ((arg0: (()=>void)) => void), quit: string, files: string[]}){
+type f = ((arg0: any) => any);
+type tpipe = (f|'throws'|tpipe)[];
+
+export function awatch(files: string[],
+    ...f: tpipe
+    ){
+        return () => watch(files, f);
+}
+
+export function watch(files: string[],
+                      f: tpipe|((arg0: (()=>void)) => void)
+                      ){
+    const q = 'q';
+    
     process.stdin.on('keypress', function (ch, key) {
-        if (key.name === options.quit) {
+        if (key.name === q) {
             close();
         }
     });
@@ -31,30 +44,34 @@ export function watch(options: {f: ((arg0: (()=>void)) => void), quit: string, f
         watcher.close();
     }
 
-    async function run(f: ((arg0: (()=>void)) => void)){
+    async function run(f: tpipe|((arg0: (()=>void)) => void)){
         try{
-            await f(close);
+            if(typeof f === 'function')
+                await f(close);
+            else
+                await pipe(...f);
             // eslint-disable-next-line no-console
-            console.log("Press " + options.quit + " to quit.");
+            console.log("Press " + q + " to quit.");
         }catch(err){
             // eslint-disable-next-line no-console
             console.log(err);
+            close();
         }
     }
 
-    const watcher = chwatch(options.files, {ignoreInitial: true}).
+    const watcher = chwatch(files, {ignoreInitial: true}).
         on('all', (event, path) => {
         // eslint-disable-next-line no-console
         console.log(event, path);
-        run(options.f);
+        run(f);
     });
 
-    run(options.f);
+    run(f);
 
     return p;
 }
 
-export async function pipe(...rest: (((arg0: any) => any)|string)[]){
+export async function pipe(...rest: tpipe){
     let ok = false;
     let data = {};
 
@@ -62,6 +79,8 @@ export async function pipe(...rest: (((arg0: any) => any)|string)[]){
         for(const t of rest){
             if(typeof t === 'function'){
                 data = await t(data);
+            }else if(Array.isArray(t)){
+                await pipe(...t);
             }
         }
         ok = true;
