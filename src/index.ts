@@ -59,6 +59,8 @@ export async function pipe(...rest: (((arg0: any) => any)|string)[]){
         }
         ok = true;
     }catch(err){
+        // eslint-disable-next-line no-console
+        console.log(err);
         if([...rest].at(-1) === 'throws')
             throw err;
     }
