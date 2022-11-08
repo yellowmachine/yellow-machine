@@ -3,19 +3,16 @@ import { pwatch, watch, pipe, DEBUG, type C } from '../index';
 
 DEBUG.v = false;
 
-async function f1(){
-    return 1;
-}
-  
-async function f_error(){
-    throw new Error("my error");
-}
-
-async function f_x(){
-    throw new Error("my x error");
-}
-
 test('watch', async () => {
+
+    async function f1(){
+        return 1;
+    }
+
+    async function f_error(){
+        throw new Error("my error");
+    }
+
     async function f(){
         await watch(["*.hey"], 
                     async (quit)=>{
