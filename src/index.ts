@@ -16,7 +16,7 @@ type f = ((arg0: any) => any);
 type tpipe = (f|'throws'|tpipe)[];
 
 export function awatch(files: string[],
-    ...f: tpipe
+    f: tpipe
     ){
         return () => watch(files, f);
 }
@@ -49,7 +49,7 @@ export function watch(files: string[],
             if(typeof f === 'function')
                 await f(close);
             else
-                await pipe(...f);
+                await pipe(f, {quit: close});
             // eslint-disable-next-line no-console
             console.log("Press " + q + " to quit.");
         }catch(err){
@@ -71,23 +71,25 @@ export function watch(files: string[],
     return p;
 }
 
-export async function pipe(...rest: tpipe){
+export async function pipe(tasks: tpipe, ctx: any=null){
     let ok = false;
-    let data = {};
+    let data = {
+        ctx: ctx  || {}
+    };
 
     try{
-        for(const t of rest){
+        for(const t of tasks){
             if(typeof t === 'function'){
                 data = await t(data);
             }else if(Array.isArray(t)){
-                await pipe(...t);
+                await pipe(t, data);
             }
         }
         ok = true;
     }catch(err){
         // eslint-disable-next-line no-console
         console.log(err);
-        if([...rest].at(-1) === 'throws')
+        if(tasks.at(-1) === 'throws')
             throw err;
     }
     return ok;

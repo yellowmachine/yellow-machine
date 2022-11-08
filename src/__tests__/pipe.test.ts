@@ -17,19 +17,19 @@ async function f_error(){
 
 test('pipe ok', async () => {
   f2_executed = false;
-  expect(await pipe(f1, f2)).toBeTruthy();
+  expect(await pipe([f1, f2])).toBeTruthy();
   expect(f2_executed).toBeTruthy();
 });
 
 test('pipe fail', async () => {
   f2_executed = false;
-  expect(await pipe(f_error, f2)).toBeFalsy();
+  expect(await pipe([f_error, f2])).toBeFalsy();
   expect(f2_executed).toBeFalsy();
 });
 
 test('pipe fail that throws', async () => {
   async function t(){
-    await pipe(f_error, f2, 'throws');
+    await pipe([f_error, f2, 'throws']);
   }
   await expect(t).rejects.toThrow("my error");
 });
@@ -41,7 +41,7 @@ test('pipe nested ok', async () => {
   const k2 = async () => k2_v = true;
   const z1 = async () => z1_v = true;
 
-  const p = pipe(f1, [k1, k2], z1);
+  const p = pipe([f1, [k1, k2], z1]);
   await p;
   expect(k2_v).toBeFalsy();
   expect(z1_v).toBeTruthy();
