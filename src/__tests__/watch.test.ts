@@ -1,4 +1,4 @@
-import {openSync, close, writeSync} from 'fs';
+import {openSync, close, writeSync, rmSync} from 'fs';
 import { watch, pipe } from '../index';
 
 async function f1(){
@@ -52,4 +52,5 @@ test('watch 2', async () => {
     await f();
     expect(count).toBe(3);
     clearInterval(interval);
+    rmSync(fileName);
 });
