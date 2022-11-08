@@ -20,18 +20,18 @@ const {up, down} = docker({name: "my-container-dgraph",
                         })
 
 async function main(){
-    let ok = await pipe(up)
+    let ok = await pipe([up])
     if(!ok){
         console.log("Could not start docker")
     }
     else{
         await watch(["./tests/*.js", "./schema/*.*"],  
                      async (quit)=>{
-            ok = await pipe(dgraph(config), test) 
+            ok = await pipe([dgraph(config), test]) 
             //if(!ok)   
             //    quit()
             });
-        await pipe(down)
+        await pipe([down])
     }
 }
 
@@ -49,7 +49,7 @@ Pipes can be nested: [f1, [k1, k2], z1]. If k1 throws, the sequence is: f1...k1.
 Other example:
 
 ```js
-await pipe(up, [awatch(["*.graphql", "*.test.js"], loadSchema, test), down]);
+await pipe([up, [awatch(["*.graphql", "*.test.js"], [loadSchema, test]), down]]);
 ```
 
 You can see a repo using this library:
