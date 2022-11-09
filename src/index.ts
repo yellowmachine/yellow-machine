@@ -143,11 +143,13 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
             ok = true;
         }catch(err){
             if(quit) quit();
-            if(DEBUG.v)
-                // eslint-disable-next-line no-console
-                console.log(err);
             if(tasks.at(-1) === 'throws')
                 throw err;
+            else{
+                if(DEBUG.v)
+                    // eslint-disable-next-line no-console
+                    console.log(err);
+            }
         }
         return ok;
     }

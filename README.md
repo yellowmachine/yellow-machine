@@ -2,14 +2,20 @@
 
 Example of use:
 
-```js
+```ts
 import { context as C, dev} from 'yellow-machine';
+
+async function f1(){...}
+async function f2(){...}
+async function f3(){...}
+async function up(){...}
+async function down(){...}
 
 const {serial, w, p} = C({f3, up, down}) // we create a context given a namespace
 //
 await serial([f1, f2, "f3"]) // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
 //
-await serial(["up", w(["*.js"], [k1, "k"]), "down"]) // w is watch some files and do the task associated. If pressed key 'q' or exception or programatically quit(), then we get out of watch and "down" is execute.
+await serial(["up", w(["*.js"], [k1, "k"]), "down"]) // w is watch some files and do the task associated ([k1, "k"]). If pressed key 'q', by exception or programmatically quit(), then we get out of watch and "down" is executed.
 //
 await parallel([w(["*.js"], [dojs]), w(["*.css"], [docss])])
 //
@@ -18,9 +24,9 @@ await serial("up", p(x), "end")  // p is a wrapper over parallel
 //
 await serial([f1, f2, 'throws']) //if f1, for example, throws, then f2 is not executed and the exception is raised
 //
-await serial([f1, f2, [f3, f4], f5]) //serial are default option when array is encountered
-//note that you can also use generators
-//debug mode
+await serial([f1, f2, [f3, f4], f5]) //serial are default option when nested array is encountered
+
+//note that you can also use generators. Useful in debug mode
 test('watch with generators', async ()=>{
     const path: string[] = [];
     function *ab(){
@@ -30,7 +36,7 @@ test('watch with generators', async ()=>{
 
     function *x(){
         yield "1";
-        yield "2";
+        yield "2"; // you could throw some exception inside generators and outer w will stop immediately
         return "3";
     }
   
@@ -41,7 +47,7 @@ test('watch with generators', async ()=>{
 });
 ```
 
-This is an example with more flexibility:
+This is a real example:
 
 ```js
 const {context as C} = require("yellow-machine")
@@ -60,6 +66,7 @@ const {up, down} = docker({name: "my-container-dgraph",
                            waitOn: "http://localhost:8080"
                         })
 
+//compact mode
 async function main(){
     const {serial, w} = C()
     await serial([up, 
@@ -92,11 +99,11 @@ async function main(){
 main()
 ```
 
-Pipes can be nested: [f1, [k1, k2], z1]. If k1 throws, the sequence is: f1...k1...z1.
+Pipes can be nested: `[f1, [k1, k2], z1]`. If k1 throws, the sequence is: f1...k1...z1.
 
-In this case: [f1, [k1, k2, 'throws'], z1] if k1 throws then z1 is not executed.
+If we have `[f1, [k1, k2, 'throws'], z1]` if k1 throws then z1 is not executed.
 
-If we have: 
+If we have both: 
 
 `[f1, w("*.js", [k2, k3]), z1]` and
 
@@ -108,9 +115,11 @@ function k2({ctx}){
 
 Then the execution is f1 ... k2 ... k3 ... z1.
 
+---
+
 The types are:
 
-```js
+```ts
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 
 type F = ((arg0: Data) => any);
@@ -118,7 +127,7 @@ type F = ((arg0: Data) => any);
 type Tpipe = (Generator|F|string|Tpipe)[];
 ```
 
-The data returned from a task is assigned to the object passed to the next task in the pipeline:
+The data returned from a function is assigned to the data property of the object type Data passed to the next function in the pipeline:
 
 You can see a repo using this library:
 
