@@ -3,8 +3,10 @@
 Example of use:
 
 ```js
-const {serial, w, p} = C({f3, up, down}) // we create a context given a namespace
+import { context as C, dev} from 'yellow-machine';
 
+const {serial, w, p} = C({f3, up, down}) // we create a context given a namespace
+//
 await serial([f1, f2, "f3"]) // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
 //
 await serial(["up", w(["*.js"], [k1, "k"]), "down"]) // w is watch some files and do the task associated. If pressed key 'q' or exception or programatically quit(), then we get out of watch and "down" is execute.
@@ -17,19 +19,26 @@ await serial("up", p(x), "end")  // p is a wrapper over parallel
 await serial([f1, f2, 'throws']) //if f1, for example, throws, then f2 is not executed and the exception is raised
 //
 await serial([f1, f2, [f3, f4], f5]) //serial are default option when array is encountered
+//note that you can also use generators
 //debug mode
-test('with generators', async ()=>{
+test('watch with generators', async ()=>{
     const path: string[] = [];
-    function *a(){
+    function *ab(){
         yield 'a';
         yield 'b';
     }
+
+    function *x(){
+        yield "1";
+        yield "2";
+        return "3";
+    }
   
-    const p = C({a: a()}, true, path).serial(["a", "a"]);
+    const {serial, w} = dev(path)({ab: ab(), x: x()});
+    const p = serial(["ab", w(["*"], ["x"]), "ab"]);
     await p;
-    expect(path).toEqual(["a", "b"]);
+    expect(path).toEqual(["a", "1", "2", "3", "b"]);
 });
-//note that you can also use generators
 ```
 
 This is an example with more flexibility:

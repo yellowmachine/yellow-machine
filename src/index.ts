@@ -18,6 +18,8 @@ export type Data = {data?: any, ctx: {quit: ()=>void}};
 type F = ((arg0: Data) => any);
 type Tpipe = (Generator|F|string|Tpipe)[];
 
+export const dev = (path: string[]) => (namespace: Record<string, Generator|((arg0: Data)=>any)>) => context(namespace, true, path);
+
 export function context(namespace: Record<string, Generator|((arg0: Data)=>any)> = {}, dev=false, path: string[]=[]){
     
     function w(files: string[],f: Tpipe){
@@ -39,10 +41,15 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
             resolve = r;
         });
 
+        let exited = false;
         function close(){
-            process.stdin.pause();
-            if(resolve) resolve(false);
-            watcher.close();
+            if(!exited){
+                exited = true;
+                process.stdin.pause();
+                if(resolve) resolve(false);
+                if(watcher)
+                    watcher.close();
+            }
         }
 
         async function run(f: Tpipe|((arg0: (()=>void)) => void)){
@@ -50,7 +57,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                 if(typeof f === 'function')
                     await f(close);
                 else
-                    await serial(f, {quit: close});
+                    await serial(f, {quit: close}, close);
                 // eslint-disable-next-line no-console
                 console.log("Press " + q + " to quit.");
             }catch(err){
@@ -61,12 +68,17 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
             }
         }
 
-        const watcher = chwatch(files, {ignoreInitial: true}).
-        on('all', (event, path) => {
-            // eslint-disable-next-line no-console
-            console.log(event, path);
-            run(f);
-        });
+        let watcher: null | ReturnType<typeof chwatch> = null;
+        if(!dev)
+            watcher = chwatch(files, {ignoreInitial: true}).
+                on('all', (event, path) => {
+                    // eslint-disable-next-line no-console
+                    console.log(event, path);
+                    run(f);
+                });
+        else{
+            while(!exited) run(f);
+        }
 
         run(f);
 
@@ -93,7 +105,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
     }
     const p = (x: Tpipe)=>()=>parallel(x);
 
-    async function serial(tasks: Tpipe, ctx: any=null){
+    async function serial(tasks: Tpipe, ctx: any=null, quit: (null|(()=>void))=null){
         let ok = false;
         const data = {
             data: null,
@@ -111,17 +123,22 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                         if(typeof m === 'function'){
                             data.data = await m(data);
                         }else{
-                            const v = m.next(data).value;
-                            data.data = v;
-                            if(dev) path.push(v);
+                            const x = m.next(data);
+                            data.data = x.value;
+                            if(dev && x.value !== undefined) path.push(x.value);
+                            if(x.done && quit) quit();
                         }
                     }                        
                 }
                 else if(Array.isArray(t)){
-                    await serial(t, data);
+                    await serial(t, data, quit);
                 }
                 else{
-                    data.data = t.next(data).value;
+                    const x = t.next(data);
+                    data.data = x.value;
+                    if(dev) path.push(x.value);
+                    if(x.done && quit) quit();
+                    //data.data = t.next(data).value;
                 } 
             }
             ok = true;
