@@ -11,8 +11,10 @@ async function f3(){...}
 async function up(){...}
 async function down(){...}
 
-const {serial, w, p} = C({f3, up, down}) // we create a context given a namespace
-//
+const {serial, w, p, parallel} = C({f3, up, down}) // we create a context given a namespace
+
+// then we could do:
+
 await serial([f1, f2, "f3"]) // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
 //
 await serial(["up", w(["*.js"], [k1, "k"]), "down"]) // w is watch some files and do the task associated ([k1, "k"]). If pressed key 'q', by exception or programmatically quit(), then we get out of watch and "down" is executed.
@@ -26,7 +28,7 @@ await serial([f1, f2, 'throws']) //if f1, for example, throws, then f2 is not ex
 //
 await serial([f1, f2, [f3, f4], f5]) //serial are default option when nested array is encountered
 
-//note that you can also use generators. Useful in debug mode
+//note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
 test('watch with generators', async ()=>{
     const path: string[] = [];
     function *ab(){
@@ -45,6 +47,19 @@ test('watch with generators', async ()=>{
     await p;
     expect(path).toEqual(["a", "1", "2", "3", "b"]);
 });
+```
+
+To test paths I think this is the way:
+
+```js
+function create(G, ctx){
+    const {serial, w} = G(ctx);
+    return serial(["ab", w(["*"], ["x"]), "ab"]); 
+}
+
+const p = create(dev(path), ctx_dev)
+//or in production
+const p = create(C, ctx_production)
 ```
 
 This is a real example:
