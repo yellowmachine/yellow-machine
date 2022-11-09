@@ -67,13 +67,13 @@ test('parallel nested ok', async () => {
 
 test('parallel nested w ok', async () => {
     const {f_throws_1, f_throws_2, ini, end, path} = setup();
-    const {serial, p, w} = C();
+    const {serial, p, w} = C({f_throws_1, f_throws_2});
     async function m(){
         await serial([ini, 
                     p([w(["*.js"], 
-                            [f_throws_1, 'throws']), 
+                            ["f_throws_1", 'throws']), 
                        w(["*.c"], 
-                            [f_throws_2, 'throws'])]), 
+                            ["f_throws_2", 'throws'])]), 
                     end]);
     }
     await m();

@@ -10,3 +10,15 @@ test('basic context', async () => {
     await p;
     expect(path).toEqual(["a", "a"]);
 });
+
+test('with generators', async ()=>{
+    const path: string[] = [];
+    function *a(){
+        yield 'a';
+        yield 'b';
+    }
+  
+    const p = C({a: a()}, true, path).serial(["a", "a"]);
+    await p;
+    expect(path).toEqual(["a", "b"]);
+});

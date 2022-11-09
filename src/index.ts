@@ -16,9 +16,9 @@ export const DEBUG = {v: false};
 
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 type F = ((arg0: Data) => any);
-type Tpipe = (F|string|Tpipe)[];
+type Tpipe = (Generator|F|string|Tpipe)[];
 
-export function context(namespace: Record<string, (arg0: Data)=>any> = {}){
+export function context(namespace: Record<string, Generator|((arg0: Data)=>any)> = {}, dev=false, path: string[]=[]){
     
     function w(files: string[],f: Tpipe){
         return () => watch(files, f);
@@ -105,12 +105,24 @@ export function context(namespace: Record<string, (arg0: Data)=>any> = {}){
                 if(typeof t === 'function'){
                     data.data = await t(data);
                 }
-                else if(typeof t === 'string' && t !== 'throws'){
-                    await namespace[t](data);
+                else if(typeof t === 'string'){
+                    if(t !== 'throws'){
+                        const m = namespace[t];
+                        if(typeof m === 'function'){
+                            data.data = await m(data);
+                        }else{
+                            const v = m.next(data).value;
+                            data.data = v;
+                            if(dev) path.push(v);
+                        }
+                    }                        
                 }
                 else if(Array.isArray(t)){
                     await serial(t, data);
                 }
+                else{
+                    data.data = t.next(data).value;
+                } 
             }
             ok = true;
         }catch(err){
