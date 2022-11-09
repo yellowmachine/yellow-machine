@@ -24,6 +24,8 @@ export function pwatch(files: string[],
         return () => watch(files, f);
 }
 
+export const w = pwatch;
+
 export function watch(files: string[],
                       f: Tpipe|((arg0: (()=>void)) => void)
                       ){
@@ -74,6 +76,27 @@ export function watch(files: string[],
 
     return p;
 }
+
+export async function parallel(tasks: Tpipe, ctx: any=null){
+    const promises: Promise<any>[] = [];
+
+    const data = {
+        data: null,
+        ctx: ctx  || {}
+    };
+
+    for(const t of tasks){
+        if(typeof t === 'function'){
+            promises.push(t({...data}));
+        }else if(Array.isArray(t)){
+            promises.push(pipe(t, {...data}));
+        }
+    }
+    await Promise.all(promises);
+    return true;
+}
+
+export const p = (x: Tpipe)=>()=>parallel(x);
 
 export async function pipe(tasks: Tpipe, ctx: any=null){
     let ok = false;
