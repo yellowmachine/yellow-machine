@@ -1,4 +1,4 @@
-import { serial, p, w, parallel, DEBUG } from '../index';
+import { DEBUG, context as C } from '../index';
 
 DEBUG.v = false;
 
@@ -42,7 +42,7 @@ function setup(){
 
 test('parallel ok', async () => {
     const {f1, f2, f3, path} = setup();
-    await parallel([f1, f2, f3]);
+    await C().parallel([f1, f2, f3]);
     expect(path.length).toBe(3);
     expect(path).toContain('1');
     expect(path).toContain('2');
@@ -51,6 +51,7 @@ test('parallel ok', async () => {
 
 test('parallel nested ok', async () => {
     const {f1, f2, f3, ini, end, path} = setup();
+    const {serial, p} = C();
     async function m(){
         await serial([ini, p([f1, f2, f3]), end]);
     }
@@ -66,6 +67,7 @@ test('parallel nested ok', async () => {
 
 test('parallel nested w ok', async () => {
     const {f_throws_1, f_throws_2, ini, end, path} = setup();
+    const {serial, p, w} = C();
     async function m(){
         await serial([ini, 
                     p([w(["*.js"], 

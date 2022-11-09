@@ -1,5 +1,5 @@
 import {openSync, close, writeSync, rmSync} from 'fs';
-import { w, watch, serial, DEBUG, type Data } from '../index';
+import { DEBUG, type Data, context as C } from '../index';
 
 DEBUG.v = false;
 
@@ -12,6 +12,8 @@ test('watch', async () => {
     async function f_error(){
         throw new Error("my error");
     }
+
+    const {watch, serial} = C();
 
     async function f(){
         await watch(["*.hey"], 
@@ -39,6 +41,8 @@ test('watch 2', async () => {
         close(fh);
     }, 1000);
 
+    const {watch, serial} = C();
+
     async function f(){
         await watch([fileName], 
                      async (quit)=>{
@@ -63,6 +67,8 @@ test('watch pipe', async () => {
     };
     const end = async() => path.push('end');
     const b = async() => path.push('b');
+    
+    const {serial, w} = C();
     await serial([a, [w(["*.hey"], [f_throws, b, 'throws']), end]]);
     expect(path).toEqual(['a', 'f throws', 'end']);
 });
@@ -76,6 +82,8 @@ test('watch pipe with quit', async () => {
     };
     const end = async() => path.push('end');
     const b = async() => path.push('b');
+    
+    const {serial, w} = C();
     await serial([a, [w(["*.hey"], [f_quit, b]), end]]);
     expect(path).toEqual(['a', 'quit', 'b', 'end']);
 });
