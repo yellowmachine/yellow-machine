@@ -103,12 +103,11 @@ A real example:
 
 ```js
 await serial([up, 
-            [w(["*.graphql", "*.test.js"], 
-                [loadSchema, test]
-                ), 
-             down
-            ]
-        ]);
+               [w(["*.graphql", "*.test.js"], 
+                  [loadSchema, test]), 
+                down
+               ]
+             ]);
 ```
 
 You can see a repo using this library:
