@@ -1,4 +1,4 @@
-import { pipe, DEBUG } from '../index';
+import { serial, DEBUG } from '../index';
 
 DEBUG.v = false;
 
@@ -19,19 +19,19 @@ async function f_error(){
 
 test('pipe ok', async () => {
   f2_executed = false;
-  expect(await pipe([f1, f2])).toBeTruthy();
+  expect(await serial([f1, f2])).toBeTruthy();
   expect(f2_executed).toBeTruthy();
 });
 
 test('pipe fail', async () => {
   f2_executed = false;
-  expect(await pipe([f_error, f2])).toBeFalsy();
+  expect(await serial([f_error, f2])).toBeFalsy();
   expect(f2_executed).toBeFalsy();
 });
 
 test('pipe fail that throws', async () => {
   async function t(){
-    await pipe([f_error, f2, 'throws']);
+    await serial([f_error, f2, 'throws']);
   }
   await expect(t).rejects.toThrow("my error");
 });
@@ -43,7 +43,7 @@ test('pipe nested ok', async () => {
   const k2 = async () => k2_v = true;
   const z1 = async () => z1_v = true;
 
-  const p = pipe([f1, [k1, k2], z1]);
+  const p = serial([f1, [k1, k2], z1]);
   await p;
   expect(k2_v).toBeFalsy();
   expect(z1_v).toBeTruthy();
@@ -56,7 +56,7 @@ test('pipe nested that throws', async () => {
   const k2 = async () => k2_v = true;
   const z1 = async () => z1_v = true;
 
-  const p = pipe([f1, [k1, k2, 'throws'], z1]);
+  const p = serial([f1, [k1, k2, 'throws'], z1]);
   await p;
   expect(k2_v).toBeFalsy();
   expect(z1_v).toBeFalsy();

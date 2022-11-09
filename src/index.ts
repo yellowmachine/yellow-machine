@@ -18,13 +18,11 @@ export type Data = {data?: any, ctx: {quit: ()=>void}};
 type F = ((arg0: Data) => any);
 type Tpipe = (F|'throws'|Tpipe)[];
 
-export function pwatch(files: string[],
+export function w(files: string[],
     f: Tpipe
     ){
         return () => watch(files, f);
 }
-
-export const w = pwatch;
 
 export function watch(files: string[],
                       f: Tpipe|((arg0: (()=>void)) => void)
@@ -98,7 +96,7 @@ export async function parallel(tasks: Tpipe, ctx: any=null){
 
 export const p = (x: Tpipe)=>()=>parallel(x);
 
-export async function pipe(tasks: Tpipe, ctx: any=null){
+async function pipe(tasks: Tpipe, ctx: any=null){
     let ok = false;
     const data = {
         data: null,
@@ -123,3 +121,5 @@ export async function pipe(tasks: Tpipe, ctx: any=null){
     }
     return ok;
 }
+
+export const serial = pipe;

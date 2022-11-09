@@ -1,4 +1,4 @@
-import { pipe, p, w, parallel, DEBUG } from '../index';
+import { serial, p, w, parallel, DEBUG } from '../index';
 
 DEBUG.v = false;
 
@@ -52,7 +52,7 @@ test('parallel ok', async () => {
 test('parallel nested ok', async () => {
     const {f1, f2, f3, ini, end, path} = setup();
     async function m(){
-        await pipe([ini, p([f1, f2, f3]), end]);
+        await serial([ini, p([f1, f2, f3]), end]);
     }
     await m();
     const subpath = path.slice(1, -1);
@@ -64,10 +64,15 @@ test('parallel nested ok', async () => {
     expect(path.at(-1)).toBe('end');
 });
 
-test('parallel nested ok', async () => {
+test('parallel nested w ok', async () => {
     const {f_throws_1, f_throws_2, ini, end, path} = setup();
     async function m(){
-        await pipe([ini, p([w(["*.js"], [f_throws_1, 'throws']), w(["*.c"], [f_throws_2, 'throws'])]), end]);
+        await serial([ini, 
+                    p([w(["*.js"], 
+                            [f_throws_1, 'throws']), 
+                       w(["*.c"], 
+                            [f_throws_2, 'throws'])]), 
+                    end]);
     }
     await m();
     const subpath = path.slice(1, -1);
