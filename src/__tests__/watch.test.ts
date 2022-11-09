@@ -1,5 +1,5 @@
 import {openSync, close, writeSync, rmSync} from 'fs';
-import { pwatch, watch, pipe, DEBUG, type C } from '../index';
+import { pwatch, watch, pipe, DEBUG, type Data } from '../index';
 
 DEBUG.v = false;
 
@@ -70,7 +70,7 @@ test('watch pipe', async () => {
 test('watch pipe with quit', async () => {
     const path: string[] = [];
     const a = async() => path.push('a');
-    const f_quit = async(payload: C) => {
+    const f_quit = async(payload: Data) => {
         path.push('quit');
         payload.ctx.quit();
     };

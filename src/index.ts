@@ -14,8 +14,8 @@ try{
 
 export const DEBUG = {v: false};
 
-export type C = {data?: any, ctx: {quit: ()=>void}};
-type F = ((arg0: C) => any);
+export type Data = {data?: any, ctx: {quit: ()=>void}};
+type F = ((arg0: Data) => any);
 type Tpipe = (F|'throws'|Tpipe)[];
 
 export function pwatch(files: string[],

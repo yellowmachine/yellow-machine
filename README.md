@@ -47,13 +47,15 @@ It starts a docker image and wait for it to be ready, then, if it's ok, it enter
     }
 } If an error occurs, then pipe catches the error unless you do something like this. `await pipe(f1, f2, f3, 'throws')`. In this case, if for example *f2* throws, then *f3* does not execute and error is thrown.
 
-In this case `await pipe(dgraph(config), test)`: it loads a schema to dgraph and if there's no error then does the test. But if dgraph doesn't load the schema because for example there's a syntax error on the schema.graphql file, then `test` is not executed.
+In this case `await pipe(dgraph(config), test)`: it loads a schema to dgraph database and if there's no error then does the test. But if dgraph doesn't load the schema because for example there's a syntax error on the schema.graphql file, then `test` is not executed.
 
 Pipes can be nested: [f1, [k1, k2], z1]. If k1 throws, the sequence is: f1...k1...z1.
 
 In this case: [f1, [k1, k2, 'throws'], z1] if k1 throws then z1 is not executed.
 
-If: [f1, pwatch("*.js", [k2, k3]), z1] and
+If we have: 
+
+[f1, pwatch("*.js", [k2, k3]), z1] and
 
 ```js
 function k2({ctx}){
@@ -62,6 +64,16 @@ function k2({ctx}){
 ```
 
 Then the execution is f1 ... k2 ... k3 ... z1.
+
+`pwatch` is just a wrap over watch:
+
+```js
+export function pwatch(files: string[],
+    f: Tpipe
+    ){
+        return () => watch(files, f);
+}
+```
 
 A real example:
 
@@ -77,4 +89,4 @@ await pipe([up,
 
 You can see a repo using this library:
 
-[example testing a dgraph](https://github.com/yellowmachine/example-test-your-dgraph)
+[example testing a dgraph schema](https://github.com/yellowmachine/example-test-your-dgraph)
