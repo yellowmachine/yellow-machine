@@ -1,6 +1,6 @@
 {
   "name": "yellow-machine",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "very simple pipeline alternative",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
