@@ -64,24 +64,24 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                 if(DEBUG.v)
                     // eslint-disable-next-line no-console
                     console.log(err);
-                close();
+                //close();
             }
         }
 
         let watcher: null | ReturnType<typeof chwatch> = null;
-        if(!dev)
+        if(!dev){
             watcher = chwatch(files, {ignoreInitial: true}).
                 on('all', (event, path) => {
                     // eslint-disable-next-line no-console
                     console.log(event, path);
                     run(f);
                 });
-        else{
-            while(!exited) run(f);
+            run(f);
+        }else{
+            while(!exited){
+                run(f);
+            } 
         }
-
-        run(f);
-
         return p;
     }
 
@@ -125,7 +125,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                         }else{
                             const x = m.next(data);
                             data.data = x.value;
-                            if(dev && x.value !== undefined) path.push(x.value);
+                            if(dev) path.push(x.value);
                             if(x.done && quit) quit();
                         }
                     }                        
@@ -138,11 +138,11 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                     data.data = x.value;
                     if(dev) path.push(x.value);
                     if(x.done && quit) quit();
-                    //data.data = t.next(data).value;
                 } 
             }
             ok = true;
         }catch(err){
+            if(quit) quit();
             if(DEBUG.v)
                 // eslint-disable-next-line no-console
                 console.log(err);
