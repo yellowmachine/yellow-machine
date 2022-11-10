@@ -63,7 +63,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         const q = 'q';
 
         const h = (ch: any, key: any) => {
-            if (key.name === q) {
+            if (key && key.name === q || ch === q) {
                 close();
             }
         };
@@ -93,7 +93,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         }
 
         async function exitedRun(f: Tpipe|((arg0: (()=>void)) => void)){
-            while(!exited){
+            while(!exited){                
                 await run(f);
             }
         }
@@ -199,7 +199,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         };
     
         try{
-            for(const t of tasks){  
+            for(const t of tasks){ 
                 if(typeof t === 'function'){
                     const x = await t(data);
                     data.data = x;
