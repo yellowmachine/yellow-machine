@@ -65,3 +65,26 @@ test('watch with generators and exception', async ()=>{
     await p;
     expect(path).toEqual(["a", "y", "1", "b"]);
 });
+
+test('watch with generators and parallel', async ()=>{
+    const path: string[] = [];
+
+    function *f(){
+        yield "1";
+        return "1";
+    }
+
+    function *ab(){
+        yield 'a';
+        return 'b';
+    }
+  
+    const { serial, p, w } = dev(path)({f: f(), ab: ab()});
+    const x = serial([
+            w(["*"], 
+                [p(["f", "ab"])]
+            )
+    ]);
+    await x;
+    expect(path).toEqual(["1", "a", "1", "b"]);
+});

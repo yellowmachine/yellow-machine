@@ -85,7 +85,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
         return p;
     }
 
-    async function parallel(tasks: Tpipe, ctx: any=null){
+    async function parallel(tasks: Tpipe, ctx: any=null, quit: (null|(()=>void))=null){
         const promises: Promise<any>[] = [];
     
         const data = {
@@ -98,12 +98,28 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                 promises.push(t({...data}));
             }else if(Array.isArray(t)){
                 promises.push(serial(t, {...data}));
-            }
+            }else if(typeof t === 'string'){
+                const m = namespace[t];
+                if(typeof m === 'function'){
+                    promises.push(m({...data}));
+                }else{
+                    const x = m.next(data);
+                    //data.data = x.value;
+                    if(dev) path.push(x.value);
+                    if(x.done && quit) quit();
+                }
+            }else{
+                const x = t.next(data);
+                //data.data = x.value;
+                if(dev) path.push(x.value);
+                if(x.done && quit) quit();
+            } 
         }
         await Promise.all(promises);
         return true;
     }
-    const p = (x: Tpipe)=>()=>parallel(x);
+
+    const p = (x: Tpipe)=>(data: Data)=>parallel(x, null, data.ctx.quit);
 
     async function serial(tasks: Tpipe, ctx: any=null, quit: (null|(()=>void))=null){
         let ok = false;
