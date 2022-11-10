@@ -20,6 +20,7 @@ export function *g(arr: string[]){
 }
 
 export const DEBUG = {v: false};
+export const SHOW_QUIT_MESSAGE = {v: false};
 
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 type F = ((arg0: Data) => any);
@@ -60,7 +61,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                 if(err){
                     if(reject) reject(true);
                 }
-                else if(resolve) resolve(false);
+                else if(resolve) resolve(true);
                 if(watcher)
                     watcher.close();
             }
@@ -71,19 +72,14 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                 if(typeof f === 'function')
                     await f(close);
                 else
-                    await serial(f, {quit: close}, close);
-                // eslint-disable-next-line no-console
-                console.log("Press " + q + " to quit.");
+                    await serial(f, {quit: close}, close);                
+                if(SHOW_QUIT_MESSAGE.v)
+                    // eslint-disable-next-line no-console
+                    console.log("Press " + q + " to quit.");
             }catch(err){
                 if(DEBUG.v)
                     // eslint-disable-next-line no-console
                     console.log(err);
-                /*if(typeof f !== "function" && f.at(-1) === 'throws')
-                    if(reject){
-                        console.log('reject');
-                        reject("555");
-                    }
-                */
             }
         }
 
@@ -92,7 +88,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
             watcher = chwatch(files, {ignoreInitial: true}).
                 on('all', (event, path) => {
                     // eslint-disable-next-line no-console
-                    console.log(event, path);
+                    //console.log(event, path);
                     run(f);
                 });
             run(f);
