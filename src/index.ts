@@ -24,11 +24,11 @@ export const SHOW_QUIT_MESSAGE = {v: false};
 
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 type F = ((arg0: Data) => any);
-type Tpipe = (Generator|F|string|Tpipe)[];
+type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
 
-export const dev = (path: string[]) => (namespace: Record<string, Generator|((arg0: Data)=>any)>) => context(namespace, true, path);
+export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>) => context(namespace, true, path);
 
-export function context(namespace: Record<string, Generator|((arg0: Data)=>any)> = {}, dev=false, path: string[]=[]){
+export function context(namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)> = {}, dev=false, path: string[]=[]){
     
     function w(files: string[],f: Tpipe){
         return () => watch(files, f);
@@ -67,12 +67,19 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
             }
         }
 
+        async function exitedRun(f: Tpipe|((arg0: (()=>void)) => void)){
+            while(!exited){
+                await run(f);
+            }
+        }
+
         async function run(f: Tpipe|((arg0: (()=>void)) => void)){
             try{
                 if(typeof f === 'function')
                     await f(close);
-                else
-                    await serial(f, {quit: close}, close);                
+                else{
+                    await serial(f, {quit: close}, close);
+                }                
                 if(SHOW_QUIT_MESSAGE.v)
                     // eslint-disable-next-line no-console
                     console.log("Press " + q + " to quit.");
@@ -93,9 +100,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                 });
             run(f);
         }else{
-            while(!exited){
-                run(f);
-            } 
+            exitedRun(f);
         }
         return p;
     }
@@ -119,7 +124,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                     promises.push(m({...data}));
                 }else{
                     try{
-                        const x = m.next(data);
+                        const x = await m.next(data);
                         if(dev) path.push(x.value);
                         if(x.done && quit) quit();
                     }catch(err){
@@ -132,7 +137,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                 }
             }else{
                 try{
-                    const x = t.next(data);
+                    const x = await t.next(data);
                     if(dev) path.push(x.value);
                     if(x.done && quit) quit();
                 }catch(err){
@@ -169,7 +174,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
         };
     
         try{
-            for(const t of tasks){
+            for(const t of tasks){  
                 if(typeof t === 'function'){
                     const x = await t(data);
                     data.data = x;
@@ -181,7 +186,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                             data.data = await m(data);
                         }else{
                             try{
-                                const x = m.next(data);
+                                const x = await m.next(data);
                                 data.data = x.value;
                                 if(dev) path.push(x.value);
                                 if(x.done && quit) quit();
@@ -194,14 +199,14 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                                 throw err;
                             }                            
                         }
-                    }                        
+                    }                    
                 }
                 else if(Array.isArray(t)){
                     await serial(t, data, quit);
                 }
                 else{
                     try{
-                        const x = t.next(data);
+                        const x = await t.next(data);
                         data.data = x.value;
                         if(dev) path.push(x.value);
                         if(x.done && quit) quit();

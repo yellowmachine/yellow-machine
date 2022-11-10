@@ -1,5 +1,6 @@
 import { context as C, dev, g} from '../index';
 
+
 test('basic context', async () => {
     const path: string[] = [];
     const a = async() => {
@@ -23,17 +24,17 @@ test('with generators', async ()=>{
     expect(path).toEqual(["a", "b"]);
 });
 
-test('watch with generators', async ()=>{
+test('watch with async generators', async ()=>{
     const path: string[] = [];
-    function *ab(){
-        yield 'a';
-        yield 'b';
+    async function *ab(){
+        yield await Promise.resolve('a');
+        return await Promise.resolve('b');
     }
 
-    function *x(){
-        yield "1";
-        yield "2";
-        return "3";
+    async function *x(){
+        yield await Promise.resolve("1");
+        yield await Promise.resolve("2");
+        return await Promise.resolve("3");
     }
   
     const {serial, w} = dev(path)({ab: ab(), x: x()});
