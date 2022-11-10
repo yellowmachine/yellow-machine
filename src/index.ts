@@ -24,12 +24,37 @@ export const SHOW_QUIT_MESSAGE = {v: false};
 
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 type F = ((arg0: Data) => any);
-type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
+export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
+
+type JCpipe = ({w?: [string[], Jpipe], p?: Jpipe}|string); 
+export type Jpipe = JCpipe[];
 
 export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>) => context(namespace, true, path);
 
 export function context(namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)> = {}, dev=false, path: string[]=[]){
-    
+
+    function normalize(data: Jpipe|JCpipe, ret: Tpipe){
+        if(Array.isArray(data)){
+            //const aux: Tpipe = [];
+            for(const x of data){
+                normalize(x, ret);
+            }
+            //ret.push(aux);
+        }else{
+            if(typeof data === 'string'){
+                ret.push(data);
+            }else if(data.w){
+                const aux: Tpipe = [];
+                normalize(data.w[1], aux);
+                ret.push(w(data.w[0], aux));
+            }else if(data.p){
+                const aux: Tpipe = [];
+                normalize(data.p, aux);
+                ret.push(p(aux));
+            }
+        }
+    }
+
     function w(files: string[],f: Tpipe){
         return () => watch(files, f);
     }
@@ -235,11 +260,25 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         return ok;
     }
 
+    async function run(data: {serial?: Jpipe, parallel?: Jpipe}){
+        if(data.serial){
+            const aux: Tpipe = [];
+            normalize(data.serial, aux);
+            await serial(aux);
+        }else if(data.parallel){
+            const aux: Tpipe = [];
+            normalize(data.parallel, aux);
+            await parallel(aux);
+        }
+    }
+
     return {
         w,
         watch,        
         parallel,        
         p,
-        serial
+        serial,
+        normalize,
+        run
     };
 }
