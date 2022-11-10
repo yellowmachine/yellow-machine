@@ -88,6 +88,18 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
     async function parallel(tasks: Tpipe, ctx: any=null, quit: (null|(()=>void))=null){
         const promises: Promise<any>[] = [];
     
+        async function run(f: ()=>Promise<any>){
+            try{
+                await f();
+            }catch(err){
+                if(quit) quit();
+                if(DEBUG.v)
+                    // eslint-disable-next-line no-console
+                    console.log(err);
+                throw err;
+            }
+        }
+
         const data = {
             data: null,
             ctx: ctx  || {}
@@ -95,24 +107,43 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
     
         for(const t of tasks){
             if(typeof t === 'function'){
-                promises.push(t({...data}));
+                //promises.push(t({...data}));
+                promises.push(run(()=>t({...data})));
             }else if(Array.isArray(t)){
-                promises.push(serial(t, {...data}));
+                //promises.push(serial(t, {...data}));
+                promises.push(run(()=>serial(t, {...data})));
             }else if(typeof t === 'string'){
                 const m = namespace[t];
                 if(typeof m === 'function'){
-                    promises.push(m({...data}));
+                    //promises.push(m({...data}));
+                    promises.push(run(()=>m({...data})));
                 }else{
-                    const x = m.next(data);
+                    try{
+                        const x = m.next(data);
+                        //data.data = x.value;
+                        if(dev) path.push(x.value);
+                        if(x.done && quit) quit();
+                    }catch(err){
+                        if(DEBUG.v)
+                            // eslint-disable-next-line no-console
+                            console.log(err);
+                        if(dev) path.push('throws');
+                        if(quit) quit();
+                    }                    
+                }
+            }else{
+                try{
+                    const x = t.next(data);
                     //data.data = x.value;
                     if(dev) path.push(x.value);
                     if(x.done && quit) quit();
-                }
-            }else{
-                const x = t.next(data);
-                //data.data = x.value;
-                if(dev) path.push(x.value);
-                if(x.done && quit) quit();
+                }catch(err){
+                    if(DEBUG.v)
+                        // eslint-disable-next-line no-console
+                        console.log(err);
+                    if(dev) path.push('throws');
+                    if(quit) quit();
+                }                
             } 
         }
         await Promise.all(promises);

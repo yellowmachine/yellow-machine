@@ -84,3 +84,27 @@ test('parallel nested w ok', async () => {
     expect(subpath).toContain('throw 2');
     expect(path.at(-1)).toBe('end');
 });
+
+test('parallel throws', async () => {
+    const path: string[] = [];
+
+    const {serial, p} = C();
+
+    async function ini(){
+        path.push("ini");
+    }
+
+    async function end(){
+        path.push("end");
+    }
+
+    async function f_throw(){
+        path.push("f_throw");
+        throw new Error("my");
+    }
+    async function m(){
+        await serial([ini, p([f_throw]), end]);
+    }
+    await m();
+    expect(path).toEqual(["ini", "f_throw"]);
+});
