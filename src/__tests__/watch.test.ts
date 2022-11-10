@@ -69,8 +69,9 @@ test('watch pipe', async () => {
     const b = async() => path.push('b');
     
     const {serial, w} = C();
-    await serial([a, [w(["*.hey"], [f_throws, b, 'throws']), end]]);
-    expect(path).toEqual(['a', 'f throws', 'end']);
+    //await serial([a, [w(["*.hey"], [f_throws, b, 'throws']), end]]);
+    await serial([a, [w(["*.hey"], [f_throws, b]), end]]);
+    expect(path).toEqual(['a', 'f throws']);
 });
 
 test('watch pipe with quit', async () => {

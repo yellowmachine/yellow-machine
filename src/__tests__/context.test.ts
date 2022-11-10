@@ -1,11 +1,4 @@
-import { context as C, dev} from '../index';
-
-function *g(arr: string[]){
-    for(const i of arr){
-        if(i === 'throw') throw new Error(i);
-        else yield i;
-    }
-}
+import { context as C, dev, g} from '../index';
 
 test('basic context', async () => {
     const path: string[] = [];
@@ -49,7 +42,7 @@ test('watch with generators', async ()=>{
     expect(path).toEqual(["a", "1", "2", "3", "b"]);
 });
 
-test('watch with generators and exception', async ()=>{
+test('watch with generators and exception v0', async ()=>{
     const path: string[] = [];
     function *ab(){
         yield 'a';
@@ -70,7 +63,7 @@ test('watch with generators and exception', async ()=>{
     const {serial, w} = dev(path)({ab: ab(), x: x(), y: y()});
     const p = serial(["ab", w(["*"], ["y", "x"]), "ab"]);
     await p;
-    expect(path).toEqual(["a", "y", "1", "b"]);
+    expect(path).toEqual(["a", "y", "1", "throws"]);
 });
 
 test('watch with generators and parallel', async ()=>{
@@ -109,11 +102,21 @@ test('watch with generic generator and parallel', async ()=>{
     expect(path).toEqual(["1", "a", "1", "b"]);
 });
 
-test('watch with generators and exception', async ()=>{
+test('watch with generators and exception v1', async ()=>{
     const path: string[] = [];
   
     const {serial, w} = dev(path)({ab: g(["a", "b"]), x: g(["1", "2", "3"]), y: g(["y", "throw"])});
     const p = serial(["ab", w(["*"], ["y", "x"]), "ab"]);
     await p;
-    expect(path).toEqual(["a", "y", "1", "b"]);
+    expect(path).toEqual(["a", "y", "1", "throws"]);
+});
+
+//should w throw?
+test('watch with generators and exception v2', async ()=>{
+    const path: string[] = [];
+  
+    const {serial, w} = dev(path)({ab: g(["a", "b"]), x: g(["1", "2", "3"]), y: g(["y", "throw"])});
+    const p = serial(["ab", w(["*"], ["y", "x", "throws"]), "ab"]);
+    await p;
+    expect(path).toEqual(["a", "y", "1", "throws"]);
 });
