@@ -29,11 +29,12 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
     function watch(files: string[], f: Tpipe|((arg0: (()=>void)) => void)){
         const q = 'q';
 
-        process.stdin.on('keypress', function (ch, key) {
-        if (key.name === q) {
-            close();
+        const h = (ch: any, key: any) => {
+            if (key.name === q) {
+                close();
             }
-        });
+        };
+        process.stdin.on('keypress', h);        
 
         let resolve: (null|((arg0: (string|boolean)) => void)) = null;
 
@@ -46,6 +47,7 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
             if(!exited){
                 exited = true;
                 process.stdin.pause();
+                process.stdin.removeListener("keypress", h);
                 if(resolve) resolve(false);
                 if(watcher)
                     watcher.close();

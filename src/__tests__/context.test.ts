@@ -1,5 +1,12 @@
 import { context as C, dev} from '../index';
 
+function *g(arr: string[]){
+    for(const i of arr){
+        if(i === 'throw') throw new Error(i);
+        else yield i;
+    }
+}
+
 test('basic context', async () => {
     const path: string[] = [];
     const a = async() => {
@@ -87,4 +94,26 @@ test('watch with generators and parallel', async ()=>{
     ]);
     await x;
     expect(path).toEqual(["1", "a", "1", "b"]);
+});
+
+test('watch with generic generator and parallel', async ()=>{
+    const path: string[] = [];
+  
+    const { serial, p, w } = dev(path)({f: g(["1", "1"]), ab: g(['a', 'b'])});
+    const x = serial([
+            w(["*"], 
+                [p(["f", "ab"])]
+            )
+    ]);
+    await x;
+    expect(path).toEqual(["1", "a", "1", "b"]);
+});
+
+test('watch with generators and exception', async ()=>{
+    const path: string[] = [];
+  
+    const {serial, w} = dev(path)({ab: g(["a", "b"]), x: g(["1", "2", "3"]), y: g(["y", "throw"])});
+    const p = serial(["ab", w(["*"], ["y", "x"]), "ab"]);
+    await p;
+    expect(path).toEqual(["a", "y", "1", "b"]);
 });
