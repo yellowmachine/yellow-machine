@@ -24,6 +24,10 @@ await parallel([w(["*.js"], [dojs]), w(["*.css"], [docss])])
 const x = [w(["*.js"], [dojs]), w(["*.css"], [docss])]
 await serial("up", p(x), "end")  // p is a wrapper over parallel
 //
+await serial("up", p([a, b, c], "all"), "end")  // default mode is "all". Possible values are: "all"|"race"|"allSettled"
+//I would like to use mode "any" but I have to understand why typescript doesn't let me. I will study this issue
+//if mode is "all" and for example "a" throws, then "end" will not execute.
+//
 await serial([f1, f2, 'throws']) //if f1, for example, throws, then f2 is not executed and the exception is raised
 //
 await serial([f1, f2, [f3, f4], f5]) //serial are default option when nested array is encountered

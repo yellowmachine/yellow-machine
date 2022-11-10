@@ -85,20 +85,8 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
         return p;
     }
 
-    async function parallel(tasks: Tpipe, ctx: any=null, quit: (null|(()=>void))=null){
-        const promises: Promise<any>[] = [];
-    
-        async function run(f: ()=>Promise<any>){
-            try{
-                await f();
-            }catch(err){
-                if(quit) quit();
-                if(DEBUG.v)
-                    // eslint-disable-next-line no-console
-                    console.log(err);
-                throw err;
-            }
-        }
+    async function parallel(tasks: Tpipe, ctx: any=null, quit: (null|(()=>void))=null, mode: "all"|"race"|"allSettled" = "all"){
+        const promises: Promise<any>[] = [];   
 
         const data = {
             data: null,
@@ -107,20 +95,16 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
     
         for(const t of tasks){
             if(typeof t === 'function'){
-                //promises.push(t({...data}));
-                promises.push(run(()=>t({...data})));
+                promises.push(t({...data}));
             }else if(Array.isArray(t)){
-                //promises.push(serial(t, {...data}));
-                promises.push(run(()=>serial(t, {...data})));
+                promises.push(serial(t, {...data}));
             }else if(typeof t === 'string'){
                 const m = namespace[t];
                 if(typeof m === 'function'){
-                    //promises.push(m({...data}));
-                    promises.push(run(()=>m({...data})));
+                    promises.push(m({...data}));
                 }else{
                     try{
                         const x = m.next(data);
-                        //data.data = x.value;
                         if(dev) path.push(x.value);
                         if(x.done && quit) quit();
                     }catch(err){
@@ -134,7 +118,6 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
             }else{
                 try{
                     const x = t.next(data);
-                    //data.data = x.value;
                     if(dev) path.push(x.value);
                     if(x.done && quit) quit();
                 }catch(err){
@@ -146,11 +129,22 @@ export function context(namespace: Record<string, Generator|((arg0: Data)=>any)>
                 }                
             } 
         }
-        await Promise.all(promises);
+        try{
+            if(mode === "all") await Promise.all(promises);
+            //else if (mode === "any") await Promise.any(promises);
+            else if (mode === "race") await Promise.race(promises);
+            else if (mode === "allSettled") await Promise.allSettled(promises);
+        }catch(err){
+            if(quit) quit();
+            if(DEBUG.v)
+                // eslint-disable-next-line no-console
+                console.log(err);
+            throw err;
+        }
         return true;
     }
 
-    const p = (x: Tpipe)=>(data: Data)=>parallel(x, null, data.ctx.quit);
+    const p = (x: Tpipe)=>(data: Data, mode: "all"|"race"|"allSettled" = "all")=>parallel(x, null, data.ctx.quit, mode);
 
     async function serial(tasks: Tpipe, ctx: any=null, quit: (null|(()=>void))=null){
         let ok = false;
