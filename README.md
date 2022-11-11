@@ -151,6 +151,8 @@ The data returned from a function is assigned to the data property of the object
 `nr` means not reentrant. Example:
 
 ```ts
+const {w, serial, nr} = C();
+
 await serial([
             w(["*.ts"], 
                 nr([f])
@@ -160,6 +162,35 @@ await serial([
 
 `f` will execute triggered by `w`, but only if it exited yet. If not, the call is discarded.
 
+You can write your own logic. Suppose you want to write a `nr`, this is how you would do:
+
+```ts
+function custom_nr({serial}:{serial: Serial}){
+    return function (f: F|Tpipe){
+        let exited = true;
+        return async function(data: Data){
+            if(exited){
+                try{
+                    exited = false;
+                    if(typeof f === 'function')
+                        return await f(data);
+                    else
+                        return await serial(f, data.ctx); // data is not passed. I will have to think about this
+                }finally{
+                    exited = true;
+                }
+            }
+        };
+    };
+}
+//...
+const {w, serial} = C();
+
+const nr = custom_nr({serial});
+```
+
 You can see a repo using this library:
 
 [example testing a dgraph schema](https://github.com/yellowmachine/example-test-your-dgraph)
+
+Tests: `npm run test`

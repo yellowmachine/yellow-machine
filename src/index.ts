@@ -15,8 +15,9 @@ export const DEBUG = {v: false};
 export const SHOW_QUIT_MESSAGE = {v: false};
 
 export type Data = {data?: any, ctx: {quit: ()=>void}};
-type F = ((arg0: Data) => any);
+export type F = ((arg0: Data) => any);
 export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
+export type Serial = (tasks: Tpipe, ctx?: any, quit?: (null|((arg0?: boolean, arg1?: any)=>void))) => Promise<any>;
 
 type JCpipe = ({w?: [string[], Jpipe], p?: Jpipe}|string); 
 export type Jpipe = JCpipe[];
@@ -209,6 +210,8 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             data: null,
             ctx: ctx  || {}
         };
+
+        if(ctx && !quit) quit = ctx.quit;
     
         try{
             for(const t of tasks){ 
