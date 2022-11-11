@@ -17,7 +17,8 @@ export const SHOW_QUIT_MESSAGE = {v: false};
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 export type F = ((arg0: Data) => any);
 export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
-export type Serial = (tasks: Tpipe, ctx?: any, quit?: (null|((arg0?: boolean, arg1?: any)=>void))) => Promise<any>;
+export type Serial = (tasks: Tpipe, ctx?: any) => Promise<any>;
+export type Parallel = (tasks: Tpipe, ctx?: any, quit?: (null|((arg0?: boolean, arg1?: any)=>void)), mode?: "all"|"race"|"allSettled") => Promise<any>;
 
 type JCpipe = ({w?: [string[], Jpipe], p?: Jpipe}|string); 
 export type Jpipe = JCpipe[];
@@ -55,7 +56,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                     if(typeof f === 'function')
                         return await f(data);
                     else
-                        return await serial(f, data.ctx, data.ctx.quit);
+                        return await serial(f, data.ctx);
                 }catch(err){
                     if(DEBUG.v)
                         // eslint-disable-next-line no-console
@@ -114,9 +115,9 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         async function run(f: Tpipe|F){
             try{
                 if(typeof f === 'function')
-                    await serial([f, 'throws'], {quit: close}, close);
+                    await serial([f, 'throws'], {quit: close});
                 else{
-                    await serial(f, {quit: close}, close);
+                    await serial(f, {quit: close});
                 }                
                 if(SHOW_QUIT_MESSAGE.v)
                     // eslint-disable-next-line no-console
@@ -150,6 +151,8 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             data: null,
             ctx: ctx  || {}
         };
+
+        if(ctx && !quit) quit = ctx.quit;
     
         for(const t of tasks){
             if(typeof t === 'function'){
@@ -204,14 +207,15 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
 
     const p = (x: Tpipe)=>(data: Data, mode: "all"|"race"|"allSettled" = "all")=>parallel(x, null, data.ctx.quit, mode);
 
-    async function serial(tasks: Tpipe, ctx: any=null, quit: (null|((arg0?: boolean, arg1?: any)=>void))=null){
+    async function serial(tasks: Tpipe, ctx: any=null){
         let ok = false;
         const data = {
             data: null,
             ctx: ctx  || {}
         };
 
-        if(ctx && !quit) quit = ctx.quit;
+        let quit;
+        if(ctx) quit = ctx.quit;
     
         try{
             for(const t of tasks){ 
@@ -242,7 +246,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                     }                    
                 }
                 else if(Array.isArray(t)){
-                    await serial(t, data, quit);
+                    await serial(t, data);
                 }
                 else{
                     try{
