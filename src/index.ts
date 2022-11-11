@@ -75,8 +75,8 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         };
         process.stdin.on('keypress', h);        
 
-        let resolve: (null|((arg0: (string|boolean)) => void)) = null;
-        let reject: (null|((arg0: any) => void)) = null;
+        let resolve: (null|((arg0: (any)) => void)) = null;
+        let reject: (null|(() => void)) = null;
 
         const p = new Promise((_resolve, _reject) => {
             resolve = _resolve;
@@ -84,15 +84,15 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         });
 
         let exited = false;
-        function close(err = false){
+        function close(err = false, data = null){
             if(!exited){
                 exited = true;
                 process.stdin.pause();
                 process.stdin.removeListener("keypress", h);
                 if(err){
-                    if(reject) reject(true);
+                    if(reject) reject();
                 }
-                else if(resolve) resolve(true);
+                else if(resolve) resolve(data);
                 if(watcher)
                     watcher.close();
             }
@@ -136,7 +136,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         return p;
     }
 
-    async function parallel(tasks: Tpipe, ctx: any=null, quit: (null|((arg0?: boolean)=>void))=null, mode: "all"|"race"|"allSettled" = "all"){
+    async function parallel(tasks: Tpipe, ctx: any=null, quit: (null|((arg0?: boolean, arg1?: any)=>void))=null, mode: "all"|"race"|"allSettled" = "all"){
         const promises: Promise<any>[] = [];   
 
         const data = {
@@ -157,7 +157,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                     try{
                         const x = await m.next(data);
                         if(dev) path.push(x.value);
-                        if(x.done && quit) quit();
+                        if(x.done && quit) quit(false, x.value);
                     }catch(err){
                         if(DEBUG.v)
                             // eslint-disable-next-line no-console
@@ -170,7 +170,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                 try{
                     const x = await t.next(data);
                     if(dev) path.push(x.value);
-                    if(x.done && quit) quit();
+                    if(x.done && quit) quit(false, x.value);
                 }catch(err){
                     if(DEBUG.v)
                         // eslint-disable-next-line no-console
@@ -197,7 +197,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
 
     const p = (x: Tpipe)=>(data: Data, mode: "all"|"race"|"allSettled" = "all")=>parallel(x, null, data.ctx.quit, mode);
 
-    async function serial(tasks: Tpipe, ctx: any=null, quit: (null|((arg?: boolean)=>void))=null){
+    async function serial(tasks: Tpipe, ctx: any=null, quit: (null|((arg0?: boolean, arg1?: any)=>void))=null){
         let ok = false;
         const data = {
             data: null,
@@ -220,7 +220,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                                 const x = await m.next(data);
                                 data.data = x.value;
                                 if(dev) path.push(x.value);
-                                if(x.done && quit) quit();
+                                if(x.done && quit) quit(false, x.value);
                             }catch(err){
                                 if(DEBUG.v)
                                     // eslint-disable-next-line no-console
@@ -240,7 +240,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                         const x = await t.next(data);
                         data.data = x.value;
                         if(dev) path.push(x.value);
-                        if(x.done && quit) quit();
+                        if(x.done && quit) quit(false, x.value);
                     }catch(err){
                         if(DEBUG.v)
                             // eslint-disable-next-line no-console
