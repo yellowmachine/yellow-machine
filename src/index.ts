@@ -62,10 +62,16 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
     function watch(files: string[], f: Tpipe|((arg0: (()=>void)) => void)){
         const q = 'q';
 
+        /*
         const h = (ch: any, key: any) => {
             if (key && key.name === q || ch === q) {
                 close();
             }
+        };
+        */
+        const h = (ch: string) => {
+            if(ch === q)
+                close();
         };
         process.stdin.on('keypress', h);        
 

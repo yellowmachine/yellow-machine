@@ -1,6 +1,6 @@
 import { context as C } from '../index';
 
-test("", async ()=> {
+test("quiting w with keypress q", async ()=> {
     const path: string[] = [];
     const a = async() => path.push('a');
     const end = async() => path.push('end');
