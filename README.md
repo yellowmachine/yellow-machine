@@ -139,17 +139,12 @@ Then the execution is f1 ... k2 ... k3 ... z1.
 The types are:
 
 ```ts
+
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 export type F = ((arg0: Data) => any);
 export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
-export type Serial = (tasks: Tpipe, ctx?: any) => Promise<any>;
-export type Parallel = (tasks: Tpipe, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
-```
-
-I have to think about this, that tasks could be type F:
-```ts
 export type Serial = (tasks: Tpipe|F, ctx?: any) => Promise<any>;
-//...
+export type Parallel = (tasks: Tpipe|F, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
 ```
 
 The data returned from a function is assigned to the data property of the object type Data passed to the next function in the pipeline:
@@ -178,10 +173,7 @@ function custom_nr({serial}:{serial: Serial}){
             if(exited){
                 try{
                     exited = false;
-                    if(typeof f === 'function')
-                        return await f(data);
-                    else
-                        return await serial(f, data.ctx); // data is not passed. I will have to think about this
+                    return await serial(f, data.ctx);
                 }finally{
                     exited = true;
                 }

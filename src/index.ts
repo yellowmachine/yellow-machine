@@ -17,8 +17,8 @@ export const SHOW_QUIT_MESSAGE = {v: false};
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 export type F = ((arg0: Data) => any);
 export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
-export type Serial = (tasks: Tpipe, ctx?: any) => Promise<any>;
-export type Parallel = (tasks: Tpipe, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
+export type Serial = (tasks: Tpipe|F, ctx?: any) => Promise<any>;
+export type Parallel = (tasks: Tpipe|F, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
 
 export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>) => context(namespace, true, path);
 
@@ -30,10 +30,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             if(exited){
                 try{
                     exited = false;
-                    if(typeof f === 'function')
-                        return await f(data);
-                    else
-                        return await serial(f, data.ctx);
+                    return await serial(f, data.ctx);
                 }catch(err){
                     if(DEBUG.v)
                         // eslint-disable-next-line no-console
@@ -132,6 +129,10 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         let quit;
         if(ctx) quit = ctx.quit;
     
+        if(typeof tasks === 'function'){
+            tasks = [tasks, 'throws'];
+        }
+
         for(const t of tasks){
             if(typeof t === 'function'){
                 promises.push(t({...data}));
@@ -194,6 +195,10 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
 
         let quit;
         if(ctx) quit = ctx.quit;
+
+        if(typeof tasks === 'function'){
+            tasks = [tasks, 'throws'];
+        }
     
         try{
             for(const t of tasks){ 

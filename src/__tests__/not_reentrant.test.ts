@@ -14,10 +14,7 @@ function custom_nr({serial}:{serial: Serial}){
             if(exited){
                 try{
                     exited = false;
-                    if(typeof f === 'function')
-                        return await f(data);
-                    else
-                        return await serial(f, data.ctx);
+                    return await serial(f, data.ctx);
                 }finally{
                     exited = true;
                 }
