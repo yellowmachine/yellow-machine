@@ -106,7 +106,7 @@ async function main(){
     }
     else{
         await watch(["./tests/*.js", "./schema/*.*"],  
-                     async (quit)=>{
+                     async ({ctx: {quit}})=>{
             ok = await serial([dgraph(config), test]) 
             //if(!ok)   
             //    quit()

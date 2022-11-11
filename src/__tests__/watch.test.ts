@@ -17,7 +17,7 @@ test('watch', async () => {
 
     async function f(){
         await watch(["*.hey"], 
-                    async (quit)=>{
+                    async ({ctx: {quit}})=>{
             const ok = await serial([f1, f_error]); 
             if(!ok)   
                 quit();
@@ -45,7 +45,7 @@ test('watch 2', async () => {
 
     async function f(){
         await watch([fileName], 
-                     async (quit)=>{
+                     async ({ctx: {quit}})=>{
             await serial([f_count]);
             if(count === 3)   
                 quit();

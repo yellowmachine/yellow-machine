@@ -55,11 +55,11 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         }
     }
 
-    function w(files: string[],f: Tpipe){
+    function w(files: string[],f: Tpipe|((arg0: Data) => void)){
         return () => watch(files, f);
     }
 
-    function watch(files: string[], f: Tpipe|((arg0: (()=>void)) => void)){
+    function watch(files: string[], f: Tpipe|((arg0: Data) => void)){
         const q = 'q';
 
         /*
@@ -98,16 +98,16 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             }
         }
 
-        async function exitedRun(f: Tpipe|((arg0: (()=>void)) => void)){
+        async function exitedRun(f: Tpipe|((arg0: Data) => void)){
             while(!exited){                
                 await run(f);
             }
         }
 
-        async function run(f: Tpipe|((arg0: (()=>void)) => void)){
+        async function run(f: Tpipe|((arg0: Data) => void)){
             try{
                 if(typeof f === 'function')
-                    await f(close);
+                    await f({ctx: {quit: close}});
                 else{
                     await serial(f, {quit: close}, close);
                 }                
