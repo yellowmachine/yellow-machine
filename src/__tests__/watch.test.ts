@@ -47,13 +47,13 @@ test('watch 2', async () => {
         await watch([fileName], 
                      async ({ctx: {quit}})=>{
             await serial([f_count]);
-            if(count === 3)   
+            if(count === 2)   
                 quit();
             });
         return true; 
     }
     await f();
-    expect(count).toBe(3);
+    expect(count).toBe(2);
     clearInterval(interval);
     rmSync(fileName);
 });
