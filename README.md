@@ -156,7 +156,7 @@ const {w, serial, nr} = C();
 
 await serial([
             w(["*.ts"], 
-                nr([f])
+                nr([f]) // please note that nr(f) implies nr([f, 'throws'])
             )
     ]);
 ```
@@ -187,8 +187,21 @@ const {w, serial} = C();
 const nr = custom_nr({serial});
 ```
 
+You can enable or disable some logs:
+
+```ts
+import { DEBUG, SHOW_QUIT_MESSAGE } from 'yellow-machine';
+
+//default false
+DEBUG.v = true // will log all exceptions cached
+
+//default false
+SHOW_QUIT_MESSAGE.v = true // will print in console the message "Press q to quit!" when watching
+```
+
 You can see a repo using this library:
 
 [example testing a dgraph schema](https://github.com/yellowmachine/example-test-your-dgraph)
+
 
 Tests: `npm run test`

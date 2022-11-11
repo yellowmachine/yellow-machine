@@ -45,7 +45,7 @@ test("not reentrant", async() => {
 
     await serial([
             w([fileName], 
-                nr([f])
+                nr(f)
             )
     ]);
     expect(path).toEqual(['f']);
