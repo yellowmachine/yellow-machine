@@ -1,16 +1,8 @@
 import { watch as chwatch } from 'chokidar';
-// eslint-disable-next-line 
-const keypress = require('keypress');
+import { emitKeypressEvents } from 'node:readline';
 
-keypress(process.stdin);
-try{
-    process.stdin.setRawMode(true);
-}catch(err){
-    // eslint-disable-next-line no-console
-    console.log("There's an error with 'process.stdin.setRawMode(true)'");
-    // eslint-disable-next-line no-console
-    console.log("It should be only with jest tests.");
-}
+emitKeypressEvents(process.stdin);
+process.stdin.setRawMode(true);
 
 export function *g(arr: string[]){
     for(const i of arr){
@@ -35,11 +27,9 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
 
     function normalize(data: Jpipe|JCpipe, ret: Tpipe){
         if(Array.isArray(data)){
-            //const aux: Tpipe = [];
             for(const x of data){
                 normalize(x, ret);
             }
-            //ret.push(aux);
         }else{
             if(typeof data === 'string'){
                 ret.push(data);
@@ -62,16 +52,10 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
     function watch(files: string[], f: Tpipe|F){
         const q = 'q';
 
-        /*
-        const h = (ch: any, key: any) => {
-            if (key && key.name === q || ch === q) {
+        const h = (ch: string) => {
+            if(ch === q){
                 close();
             }
-        };
-        */
-        const h = (ch: string) => {
-            if(ch === q)
-                close();
         };
         process.stdin.on('keypress', h);        
 
@@ -113,7 +97,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                 }                
                 if(SHOW_QUIT_MESSAGE.v)
                     // eslint-disable-next-line no-console
-                    console.log("Press " + q + " to quit.");
+                    console.log("Press " + q + " to quit!");
             }catch(err){
                 if(DEBUG.v)
                     // eslint-disable-next-line no-console
