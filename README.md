@@ -140,10 +140,10 @@ The types are:
 
 ```ts
 export type Data = {data?: any, ctx: {quit: ()=>void}};
-
-type F = ((arg0: Data) => any);
-
+export type F = ((arg0: Data) => any);
 export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
+export type Serial = (tasks: Tpipe, ctx?: any) => Promise<any>;
+export type Parallel = (tasks: Tpipe, ctx?: any, mode?: "all"|"race"|"allSettled") => Promise<any>;
 ```
 
 The data returned from a function is assigned to the data property of the object type Data passed to the next function in the pipeline:

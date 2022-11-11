@@ -18,7 +18,7 @@ export type Data = {data?: any, ctx: {quit: ()=>void}};
 export type F = ((arg0: Data) => any);
 export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
 export type Serial = (tasks: Tpipe, ctx?: any) => Promise<any>;
-export type Parallel = (tasks: Tpipe, ctx?: any, quit?: (null|((arg0?: boolean, arg1?: any)=>void)), mode?: "all"|"race"|"allSettled") => Promise<any>;
+export type Parallel = (tasks: Tpipe, ctx?: any, mode?: "all"|"race"|"allSettled") => Promise<any>;
 
 type JCpipe = ({w?: [string[], Jpipe], p?: Jpipe}|string); 
 export type Jpipe = JCpipe[];
@@ -144,7 +144,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         return p;
     }
 
-    async function parallel(tasks: Tpipe, ctx: any=null, quit: (null|((arg0?: boolean, arg1?: any)=>void))=null, mode: "all"|"race"|"allSettled" = "all"){
+    async function parallel(tasks: Tpipe, ctx: any=null, mode: "all"|"race"|"allSettled" = "all"){
         const promises: Promise<any>[] = [];   
 
         const data = {
@@ -152,7 +152,8 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             ctx: ctx  || {}
         };
 
-        if(ctx && !quit) quit = ctx.quit;
+        let quit;
+        if(ctx) quit = ctx.quit;
     
         for(const t of tasks){
             if(typeof t === 'function'){
@@ -205,7 +206,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         return true;
     }
 
-    const p = (x: Tpipe)=>(data: Data, mode: "all"|"race"|"allSettled" = "all")=>parallel(x, null, data.ctx.quit, mode);
+    const p = (x: Tpipe)=>(data: Data, mode: "all"|"race"|"allSettled" = "all")=>parallel(x, data.ctx, mode);
 
     async function serial(tasks: Tpipe, ctx: any=null){
         let ok = false;
