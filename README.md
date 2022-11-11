@@ -139,12 +139,13 @@ Then the execution is f1 ... k2 ... k3 ... z1.
 The types are:
 
 ```ts
-
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 export type F = ((arg0: Data) => any);
-export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
-export type Serial = (tasks: Tpipe|F, ctx?: any) => Promise<any>;
-export type Parallel = (tasks: Tpipe|F, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
+type C = Generator|AsyncGenerator|F|string|Tpipe;
+export type Tpipe = C[];
+export type Serial = (tasks: Tpipe|C, ctx?: any) => Promise<any>;
+export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
+
 ```
 
 The data returned from a function is assigned to the data property of the object type Data passed to the next function in the pipeline:

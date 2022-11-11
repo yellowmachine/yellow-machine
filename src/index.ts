@@ -16,9 +16,10 @@ export const SHOW_QUIT_MESSAGE = {v: false};
 
 export type Data = {data?: any, ctx: {quit: ()=>void}};
 export type F = ((arg0: Data) => any);
-export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
-export type Serial = (tasks: Tpipe|F, ctx?: any) => Promise<any>;
-export type Parallel = (tasks: Tpipe|F, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
+type C = Generator|AsyncGenerator|F|string|Tpipe;
+export type Tpipe = C[];
+export type Serial = (tasks: Tpipe|C, ctx?: any) => Promise<any>;
+export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
 
 export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>) => context(namespace, true, path);
 
@@ -129,7 +130,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         let quit;
         if(ctx) quit = ctx.quit;
     
-        if(typeof tasks === 'function'){
+        if(!Array.isArray(tasks)){
             tasks = [tasks, 'throws'];
         }
 
@@ -196,7 +197,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         let quit;
         if(ctx) quit = ctx.quit;
 
-        if(typeof tasks === 'function'){
+        if(!Array.isArray(tasks)){
             tasks = [tasks, 'throws'];
         }
     
