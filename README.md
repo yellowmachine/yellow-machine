@@ -107,7 +107,7 @@ async function main(){
     else{
         await watch(["./tests/*.js", "./schema/*.*"],  
                      async ({ctx: {quit}})=>{
-            ok = await serial([dgraph(config), test]) 
+            ok = await serial([loadSchema, test]) 
             //if(!ok)   
             //    quit()
             });
@@ -143,7 +143,13 @@ export type Data = {data?: any, ctx: {quit: ()=>void}};
 export type F = ((arg0: Data) => any);
 export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
 export type Serial = (tasks: Tpipe, ctx?: any) => Promise<any>;
-export type Parallel = (tasks: Tpipe, ctx?: any, mode?: "all"|"race"|"allSettled") => Promise<any>;
+export type Parallel = (tasks: Tpipe, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
+```
+
+I have to think about this, that tasks could be type F:
+```ts
+export type Serial = (tasks: Tpipe|F, ctx?: any) => Promise<any>;
+//...
 ```
 
 The data returned from a function is assigned to the data property of the object type Data passed to the next function in the pipeline:
@@ -160,7 +166,7 @@ await serial([
     ]);
 ```
 
-`f` will execute triggered by `w`, but only if it exited yet. If not, the call is discarded.
+`f` will be executed triggered by `w`, but only if it exited yet. If not, the call is discarded.
 
 You can write your own logic. Suppose you want to write a `nr`, this is how you would do:
 

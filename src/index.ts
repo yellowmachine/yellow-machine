@@ -18,34 +18,11 @@ export type Data = {data?: any, ctx: {quit: ()=>void}};
 export type F = ((arg0: Data) => any);
 export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
 export type Serial = (tasks: Tpipe, ctx?: any) => Promise<any>;
-export type Parallel = (tasks: Tpipe, ctx?: any, mode?: "all"|"race"|"allSettled") => Promise<any>;
-
-type JCpipe = ({w?: [string[], Jpipe], p?: Jpipe}|string); 
-export type Jpipe = JCpipe[];
+export type Parallel = (tasks: Tpipe, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
 
 export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>) => context(namespace, true, path);
 
 export function context(namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)> = {}, dev=false, path: string[]=[]){
-
-    function normalize(data: Jpipe|JCpipe, ret: Tpipe){
-        if(Array.isArray(data)){
-            for(const x of data){
-                normalize(x, ret);
-            }
-        }else{
-            if(typeof data === 'string'){
-                ret.push(data);
-            }else if(data.w){
-                const aux: Tpipe = [];
-                normalize(data.w[1], aux);
-                ret.push(w(data.w[0], aux));
-            }else if(data.p){
-                const aux: Tpipe = [];
-                normalize(data.p, aux);
-                ret.push(p(aux));
-            }
-        }
-    }
 
     function nr(f: F|Tpipe){
         let exited = true;
@@ -144,7 +121,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         return p;
     }
 
-    async function parallel(tasks: Tpipe, ctx: any=null, mode: "all"|"race"|"allSettled" = "all"){
+    const parallel: Parallel = async (tasks, mode="all", ctx=null) =>{
         const promises: Promise<any>[] = [];   
 
         const data = {
@@ -204,11 +181,11 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             throw err;
         }
         return true;
-    }
+    };
 
-    const p = (x: Tpipe)=>(data: Data, mode: "all"|"race"|"allSettled" = "all")=>parallel(x, data.ctx, mode);
+    const p = (x: Tpipe)=>(data: Data, mode: "all"|"race"|"allSettled" = "all")=>parallel(x, mode, data.ctx);
 
-    async function serial(tasks: Tpipe, ctx: any=null){
+    const serial: Serial = async(tasks, ctx=null) => {
         let ok = false;
         const data = {
             data: null,
@@ -278,19 +255,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             }
         }
         return ok;
-    }
-
-    async function run(data: {serial?: Jpipe, parallel?: Jpipe}){
-        if(data.serial){
-            const aux: Tpipe = [];
-            normalize(data.serial, aux);
-            await serial(aux);
-        }else if(data.parallel){
-            const aux: Tpipe = [];
-            normalize(data.parallel, aux);
-            await parallel(aux);
-        }
-    }
+    };
 
     return {
         w,
@@ -298,8 +263,6 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         parallel,        
         p,
         serial,
-        normalize,
-        run,
         nr
     };
 }
