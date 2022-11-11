@@ -54,8 +54,6 @@
     "typescript": "^4.7.4"
   },
   "dependencies": {
-    "@types/keypress.js": "^2.1.1",
-    "chokidar": "^3.5.3",
-    "keypress": "^0.2.1"
+    "chokidar": "^3.5.3"
   }
 }
