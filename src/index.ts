@@ -45,6 +45,28 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         }
     }
 
+    function nr(f: F|Tpipe){
+        let exited = true;
+        return async function(data: Data){
+            if(exited){
+                try{
+                    exited = false;
+                    if(typeof f === 'function')
+                        return await f(data);
+                    else
+                        return await serial(f, data.ctx, data.ctx.quit);
+                }catch(err){
+                    if(DEBUG.v)
+                        // eslint-disable-next-line no-console
+                        console.log(err);
+                    throw(err);
+                }finally{
+                    exited = true;
+                }
+            }
+        };
+    }
+
     function w(files: string[],f: Tpipe|F){
         return () => watch(files, f);
     }
@@ -269,6 +291,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         p,
         serial,
         normalize,
-        run
+        run,
+        nr
     };
 }

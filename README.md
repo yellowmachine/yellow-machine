@@ -143,10 +143,22 @@ export type Data = {data?: any, ctx: {quit: ()=>void}};
 
 type F = ((arg0: Data) => any);
 
-type Tpipe = (Generator|F|string|Tpipe)[];
+export type Tpipe = (Generator|AsyncGenerator|F|string|Tpipe)[];
 ```
 
 The data returned from a function is assigned to the data property of the object type Data passed to the next function in the pipeline:
+
+`nr` means not reentrant. Example:
+
+```ts
+await serial([
+            w(["*.ts"], 
+                nr([f])
+            )
+    ]);
+```
+
+`f` will execute triggered by `w`, but only if it exited yet. If not, the call is discarded.
 
 You can see a repo using this library:
 
