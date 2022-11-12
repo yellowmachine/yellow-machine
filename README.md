@@ -211,9 +211,12 @@ TODO, alternative syntax:
 
 ```ts
 await serial("a|b|c");
-await serial(["i", "a|b|c", "j]);
+await serial(["i", "a|b|c", "j"]);
 await serial("a|p[x|y]")
 
 await serial("a|b!|c|d|e!") // b throws out the serial but a doesn't
 await serial("a|b!|{c}|d|e!") // if c throws, it's cached immediately and d is executed
+
+// and why not ;) ?
+await serial("a|{b!}")
 ```
