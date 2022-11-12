@@ -1,5 +1,33 @@
-type B = (string|B|P)[];
+import { Parallel, Serial, Tpipe, Data } from ".";
+
+type B = (string|B|P)[]|undefined;
 type P = {p: B};
+
+export const build = (obj: {serial?: B, parallel?: B}, 
+                     {serial, parallel, p}: 
+                            {serial: Serial, 
+                             parallel: Parallel, 
+                             p: (arg: Tpipe) => (data: Data, mode: "all"|"race"|"allSettled")=>Promise<any>}) => {
+
+    function x(tasks: B, ret: Tpipe){
+        if(tasks === undefined) return ret;
+        for(const t of tasks){
+            if(t !== undefined){
+                if(Array.isArray(t)){
+                    ret.push(x(t, ret));
+                }else if(typeof t === 'string'){
+                    ret.push(t);
+                }else{
+                    ret.push((data: Data, mode?: "all"|"race"|"allSettled") => 
+                                                parallel(x(t.p, ret), mode, data.ctx));
+                }
+            }
+        }
+        return ret;
+    }
+    if(obj.serial) return () => serial(x(obj.serial, []));
+    else if (obj.parallel) return () => parallel(x(obj.parallel, []));
+};
 
 export function parse(t: string): {remaining: string, parsed: B}{
 

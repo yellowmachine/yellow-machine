@@ -1,5 +1,6 @@
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
+import { build, parse} from './parse';
 
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
@@ -263,12 +264,18 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         return ok;
     };
 
+    function _build(obj: {serial?: string, parallel?: string}){
+        if(obj.serial) return build({serial: parse(obj.serial).parsed}, {serial, parallel, p});
+        else if(obj.parallel) return build({parallel: parse(obj.parallel).parsed}, {serial, parallel, p});
+    }
+
     return {
         w,
         watch,        
         parallel,        
         p,
         serial,
-        nr
+        nr,
+        build: _build
     };
 }
