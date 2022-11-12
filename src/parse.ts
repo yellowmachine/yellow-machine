@@ -46,7 +46,7 @@ export function parse(t: string): {remaining: string, parsed: B}{
         const next = t.substring(i+1, i+2);
         if(c === 'p' && next === "["){
             if(partial != "")
-                parsed = [...partial.slice(0, -1).split("|"), ...parsed];
+                parsed = [...partial.split("|").filter(k => k !== ""), ...parsed];
             const {remaining, parsed: _parsed} = parse(t.substring(i+2));
             parsed.push({p: _parsed});
             t = remaining;
@@ -54,7 +54,7 @@ export function parse(t: string): {remaining: string, parsed: B}{
             partial = "";
         }
         else if( c === "["){
-            parsed = [...partial.slice(0, -1).split("|"), ...parsed];
+            parsed = [...partial.split("|").filter(k => k !== ""), ...parsed];
             const {remaining, parsed: _parsed} = parse(t.substring(i+1));
             parsed.push(_parsed);
             t = remaining;
@@ -62,11 +62,11 @@ export function parse(t: string): {remaining: string, parsed: B}{
             partial = "";
         }else if(c === "]" || c === ""){
             if(partial != "")
-                parsed = [...parsed, ...partial.split("|"), ];
+                parsed = [...parsed, ...partial.split("|").filter(k => k !== ""), ];
             break;
         }else{
             partial = partial + c;
         }
     }
-    return {remaining: t.substring(2+partial.length), parsed};
+    return {remaining: t.substring(1+partial.length), parsed};
 }

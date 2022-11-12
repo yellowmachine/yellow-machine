@@ -218,7 +218,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                 }
                 else if(typeof t === 'string'){
                     if(t !== 'throws'){
-                        if(!t.includes("|")){
+                        if(!t.includes("|") && !t.includes("[")){
                             if(t.charAt(t.length-1) === "!"){
                                 throws = true;
                                 t = t.substring(0, t.length-1);
@@ -284,11 +284,6 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         return ok;
     };
 
-    function _build(obj: {serial?: string, parallel?: string}){
-        if(obj.serial) return build({serial: parse(obj.serial).parsed}, {serial, parallel, p});
-        else if(obj.parallel) return build({parallel: parse(obj.parallel).parsed}, {serial, parallel, p});
-    }
-
     function _t(t: string){
         const b = build({serial: parse(t).parsed}, {serial, parallel, p});
         if(b) return b;
@@ -301,7 +296,6 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         parallel,        
         p,
         serial,
-        nr,
-        build: _build
+        nr
     };
 }
