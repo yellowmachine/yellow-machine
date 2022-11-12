@@ -86,3 +86,15 @@ test("build with p", async ()=>{
     await serial(["a", "p[b|c]"]);
     expect(path).toEqual(["a", "b", "c"]);
 });
+
+test("build with exception", async ()=>{
+    const path: string[] = [];
+    
+    const a = g(["a"]);
+    const b = g(["throw"]);
+    const c = g(["c"]);
+
+    const { serial } = dev(path)({"a": a, "b": b, "c": c});
+    await serial(["a|b!|c]"]);
+    expect(path).toEqual(["a", "throws"]);
+});

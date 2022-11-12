@@ -159,7 +159,6 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                         }                    
                     }
                 }else{
-                    console.log(t);
                     const f = _t(t);
                     if(!Array.isArray(f)){
                         promises.push(f());
@@ -209,9 +208,10 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         if(!Array.isArray(tasks)){
             tasks = [tasks, 'throws'];
         }
-    
+        let throws = false;
         try{
-            for(const t of tasks){ 
+            for(let t of tasks){ 
+                throws = false;
                 if(typeof t === 'function'){
                     const x = await t(data);
                     data.data = x;
@@ -219,6 +219,10 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                 else if(typeof t === 'string'){
                     if(t !== 'throws'){
                         if(!t.includes("|")){
+                            if(t.charAt(t.length-1) === "!"){
+                                throws = true;
+                                t = t.substring(0, t.length-1);
+                            }
                             const m = namespace[t];
                             if(typeof m === 'function'){
                                 data.data = await m(data);
@@ -268,7 +272,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             ok = true;
         }catch(err){
             if(quit) quit(true);
-            if(tasks.at(-1) === 'throws'){      
+            if(tasks.at(-1) === 'throws' || throws){      
                 throw err;
             }
             else{
