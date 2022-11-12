@@ -1,7 +1,7 @@
 import { DEBUG, context as C, dev, g } from '../index';
 import { parse, build } from '../parse';
 
-DEBUG.v = false;
+DEBUG.v = true;
 
 test("parse most simple", ()=>{
     const {remaining, parsed} = parse("a|b|c");
@@ -9,6 +9,11 @@ test("parse most simple", ()=>{
     expect(remaining).toBe("");
 });
 
+test("parse with p[]", ()=>{
+    const {remaining, parsed} = parse("p[b|c]");
+    expect(parsed).toEqual([{p: ["b", "c"]}]);
+    expect(remaining).toBe("");
+});
 
 test("parse with []", ()=>{
     const {remaining, parsed} = parse("a|[b|c]|d");
@@ -58,14 +63,26 @@ test("build simple from context", async ()=>{
     }
 });
 
-test("build simple from context with inner parse", async ()=>{
+test("build simple from context with inner parse and implicit parse", async ()=>{
     const path: string[] = [];
     
     const a = g(["a", "a2"]);
     const b = g(["b"]);
     const c = g(["c"]);
 
-    const {serial, t} = dev(path)({"a": a, "b": b, "c": c});
-    await serial(["a", t("a|b|c")]);
+    const { serial } = dev(path)({"a": a, "b": b, "c": c});
+    await serial(["a", "a|b|c"]);
     expect(path).toEqual(["a", "a2", "b", "c"]);
+});
+
+test("build with p", async ()=>{
+    const path: string[] = [];
+    
+    const a = g(["a"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    const { serial } = dev(path)({"a": a, "b": b, "c": c});
+    await serial(["a", "p[b|c]"]);
+    expect(path).toEqual(["a", "b", "c"]);
 });

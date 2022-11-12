@@ -7,7 +7,7 @@ export const build = (obj: {serial?: B, parallel?: B},
                      {serial, parallel, p}: 
                             {serial: Serial, 
                              parallel: Parallel, 
-                             p: (arg: Tpipe) => (data: Data, mode: "all"|"race"|"allSettled")=>Promise<any>}) => {
+                             p: (arg: Tpipe) => (data: Data)=>Promise<any>}) => {
 
     function x(tasks: B, ret: Tpipe){
         if(tasks === undefined) return ret;
@@ -18,15 +18,21 @@ export const build = (obj: {serial?: B, parallel?: B},
                 }else if(typeof t === 'string'){
                     ret.push(t);
                 }else{
-                    ret.push((data: Data, mode?: "all"|"race"|"allSettled") => 
-                                                parallel(x(t.p, ret), mode, data.ctx));
+                    const pipe = x(t.p, []);
+                    ret.push(p(pipe));
                 }
             }
         }
         return ret;
     }
-    if(obj.serial) return () => serial(x(obj.serial, []));
-    else if (obj.parallel) return () => parallel(x(obj.parallel, []));
+    if(obj.serial){
+        const pipe = x(obj.serial, []);
+        return () => serial(pipe);
+    } 
+    else if (obj.parallel){
+        const pipe = x(obj.parallel, []);
+        return () => parallel(pipe);
+    }  
 };
 
 export function parse(t: string): {remaining: string, parsed: B}{
@@ -39,7 +45,8 @@ export function parse(t: string): {remaining: string, parsed: B}{
         const c = t.substring(i, i+1);
         const next = t.substring(i+1, i+2);
         if(c === 'p' && next === "["){
-            parsed = [...partial.slice(0, -1).split("|"), ...parsed];
+            if(partial != "")
+                parsed = [...partial.slice(0, -1).split("|"), ...parsed];
             const {remaining, parsed: _parsed} = parse(t.substring(i+2));
             parsed.push({p: _parsed});
             t = remaining;
@@ -54,7 +61,8 @@ export function parse(t: string): {remaining: string, parsed: B}{
             i = -1;
             partial = "";
         }else if(c === "]" || c === ""){
-            parsed = [...parsed, ...partial.split("|"), ];
+            if(partial != "")
+                parsed = [...parsed, ...partial.split("|"), ];
             break;
         }else{
             partial = partial + c;

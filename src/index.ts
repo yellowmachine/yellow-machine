@@ -141,21 +141,29 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             }else if(Array.isArray(t)){
                 promises.push(serial(t, {...data}));
             }else if(typeof t === 'string'){
-                const m = namespace[t];
-                if(typeof m === 'function'){
-                    promises.push(m({...data}));
+                if(!t.includes("|")){
+                    const m = namespace[t];
+                    if(typeof m === 'function'){
+                        promises.push(m({...data}));
+                    }else{
+                        try{
+                            const x = await m.next(data);
+                            if(dev) path.push(x.value);
+                            if(x.done && quit) quit(false, x.value);
+                        }catch(err){
+                            if(DEBUG.v)
+                                // eslint-disable-next-line no-console
+                                console.log(err);
+                            if(dev) path.push('throws');
+                            if(quit) quit(true);
+                        }                    
+                    }
                 }else{
-                    try{
-                        const x = await m.next(data);
-                        if(dev) path.push(x.value);
-                        if(x.done && quit) quit(false, x.value);
-                    }catch(err){
-                        if(DEBUG.v)
-                            // eslint-disable-next-line no-console
-                            console.log(err);
-                        if(dev) path.push('throws');
-                        if(quit) quit(true);
-                    }                    
+                    console.log(t);
+                    const f = _t(t);
+                    if(!Array.isArray(f)){
+                        promises.push(f());
+                    }
                 }
             }else{
                 try{
@@ -186,7 +194,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         return true;
     };
 
-    const p = (x: Tpipe)=>(data: Data, mode: "all"|"race"|"allSettled" = "all")=>parallel(x, mode, data.ctx);
+    const p = (x: Tpipe)=> async (data: Data)=> await parallel(x, "all", data.ctx);
 
     const serial: Serial = async(tasks, ctx=null) => {
         let ok = false;
@@ -210,23 +218,31 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                 }
                 else if(typeof t === 'string'){
                     if(t !== 'throws'){
-                        const m = namespace[t];
-                        if(typeof m === 'function'){
-                            data.data = await m(data);
+                        if(!t.includes("|")){
+                            const m = namespace[t];
+                            if(typeof m === 'function'){
+                                data.data = await m(data);
+                            }else{
+                                try{
+                                    const x = await m.next(data);
+                                    data.data = x.value;
+                                    if(dev) path.push(x.value);
+                                    if(x.done && quit) quit(false, x.value);
+                                }catch(err){
+                                    if(DEBUG.v)
+                                        // eslint-disable-next-line no-console
+                                        console.log(err);
+                                    if(dev) path.push('throws');
+                                    if(quit) quit(true);
+                                    throw err;
+                                }                            
+                            }
                         }else{
-                            try{
-                                const x = await m.next(data);
-                                data.data = x.value;
-                                if(dev) path.push(x.value);
-                                if(x.done && quit) quit(false, x.value);
-                            }catch(err){
-                                if(DEBUG.v)
-                                    // eslint-disable-next-line no-console
-                                    console.log(err);
-                                if(dev) path.push('throws');
-                                if(quit) quit(true);
-                                throw err;
-                            }                            
+                            const f = _t(t);
+                            if(!Array.isArray(f)){
+                                const x = await f();
+                                data.data = x;
+                            }
                         }
                     }                    
                 }
@@ -269,7 +285,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         else if(obj.parallel) return build({parallel: parse(obj.parallel).parsed}, {serial, parallel, p});
     }
 
-    function t(t: string){
+    function _t(t: string){
         const b = build({serial: parse(t).parsed}, {serial, parallel, p});
         if(b) return b;
         else return [];
@@ -282,7 +298,6 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         p,
         serial,
         nr,
-        build: _build,
-        t
+        build: _build
     };
 }
