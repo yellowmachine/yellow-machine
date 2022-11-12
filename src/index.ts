@@ -141,7 +141,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             }else if(Array.isArray(t)){
                 promises.push(serial(t, {...data}));
             }else if(typeof t === 'string'){
-                if(!t.includes("|")){
+                if(!t.includes("|") && !t.includes("[")){
                     const m = namespace[t];
                     if(typeof m === 'function'){
                         promises.push(m({...data}));
@@ -244,8 +244,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                         }else{
                             const f = _t(t);
                             if(!Array.isArray(f)){
-                                const x = await f();
-                                data.data = x;
+                                data.data = await f();
                             }
                         }
                     }                    
