@@ -214,6 +214,18 @@ await serial("a|b|c"); // ok
 await serial(["i", "a|b|c", "j"]); // ok
 await serial("a|p[x|y]") //ok
 
-await serial(["a[b]c"]) // ok if b throws, it's cached immediately and c is executed
-await serial(["a[b!]c"]) // ok if b throws, c is not executed 
+//shorthand for "a|[b]|c"
+await serial(["a[b]c"]) // (ok) if b throws, it's cached immediately and c is executed
+await serial(["a[b!]c"]) // (ok) if b throws, c is not executed 
 ```
+
+What about this?:
+```ts
+const {serial} = C({up, load, test, 
+                    w_js_grapql: //starts with "w_", so it will be a watch 
+                        ["./src/*.js", "./schema/*.graphql"]
+                });
+
+await serial(["up[w_js_graphql[load|test]|down]"])
+```
+I'm not sure if it's useful or not because I want as simple as possible.
