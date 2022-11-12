@@ -71,8 +71,20 @@ test("build with exception", async ()=>{
     const c = g(["c"]);
 
     const { serial } = dev(path)({"a": a, "b": b, "c": c});
-    await serial(["a|b!|c]"]);
+    await serial(["a|b!|c"]);
     expect(path).toEqual(["a", "throws"]);
+});
+
+test("build with exception catched v0", async ()=>{
+    const path: string[] = [];
+    
+    const a = g(["a"]);
+    const b = g(["throw"]);
+    const c = g(["c"]);
+
+    const { serial } = dev(path)({"a": a, "b": b, "c": c});
+    await serial(["a[b]c"]);
+    expect(path).toEqual(["a", "throws", "c"]);
 });
 
 test("build with exception catched", async ()=>{
@@ -85,4 +97,16 @@ test("build with exception catched", async ()=>{
     const { serial } = dev(path)({"a": a, "b": b, "c": c});
     await serial(["a[b!]c"]);
     expect(path).toEqual(["a", "throws"]);
+});
+
+test("parallel with compact mode", async ()=>{
+    const path: string[] = [];
+    
+    const a = g(["a", "a2"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    const { parallel } = dev(path)({"a": a, "b": b, "c": c});
+    await parallel(["a", "a|b|c"]);
+    expect(path).toEqual(["a", "a2", "b", "c"]);
 });

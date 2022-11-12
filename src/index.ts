@@ -196,6 +196,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
     const p = (x: Tpipe)=> async (data: Data)=> await parallel(x, "all", data.ctx);
 
     const serial: Serial = async(tasks, ctx=null) => {
+
         let ok = false;
         const data = {
             data: null,
@@ -217,6 +218,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
                     data.data = x;
                 }
                 else if(typeof t === 'string'){
+
                     if(t !== 'throws'){
                         if(!t.includes("|") && !t.includes("[")){
                             if(t.charAt(t.length-1) === "!"){
@@ -271,7 +273,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
             ok = true;
         }catch(err){
             if(quit) quit(true);
-            if(tasks.at(-1) === 'throws' || throws){      
+            if(tasks.at(-1) === 'throws' || throws){     
                 throw err;
             }
             else{

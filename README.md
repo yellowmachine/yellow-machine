@@ -212,11 +212,8 @@ Work in progress:
 ```ts
 await serial("a|b|c"); // ok
 await serial(["i", "a|b|c", "j"]); // ok
-await serial("a|p[x|y]")
+await serial("a|p[x|y]") //ok
 
-await serial("a|b!|c|d|e!") // b throws out the serial but a doesn't
-await serial("a|b!|{c}|d|e!") // if c throws, it's cached immediately and d is executed
-
-// and why not ;) ?
-await serial("a|{b!}")
+await serial(["a[b]c"]) // ok if b throws, it's cached immediately and c is executed
+await serial(["a[b!]c"]) // ok if b throws, c is not executed 
 ```

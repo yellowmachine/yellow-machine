@@ -14,7 +14,7 @@ export const build = (obj: {serial?: B, parallel?: B},
         for(const t of tasks){
             if(t !== undefined){
                 if(Array.isArray(t)){
-                    ret.push(x(t, ret));
+                    ret.push(x(t, []));
                 }else if(typeof t === 'string'){
                     ret.push(t);
                 }else{
