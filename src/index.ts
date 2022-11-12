@@ -269,6 +269,12 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         else if(obj.parallel) return build({parallel: parse(obj.parallel).parsed}, {serial, parallel, p});
     }
 
+    function t(t: string){
+        const b = build({serial: parse(t).parsed}, {serial, parallel, p});
+        if(b) return b;
+        else return [];
+    }
+
     return {
         w,
         watch,        
@@ -276,6 +282,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
         p,
         serial,
         nr,
-        build: _build
+        build: _build,
+        t
     };
 }

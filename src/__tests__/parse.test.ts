@@ -36,7 +36,36 @@ test("build simple", async ()=>{
         await x();
         expect(path).toEqual(["a", "b", "c"]);
     }else{
-        expect(true).toBe(false);
+        fail('it should not reach here');
     }
 
+});
+
+test("build simple from context", async ()=>{
+    const path: string[] = [];
+    
+    const a = g(["a"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    const {build} = dev(path)({"a": a, "b": b, "c": c});
+    const x = build({serial: "a|b|c"});
+    if(x){
+        await x();
+        expect(path).toEqual(["a", "b", "c"]);
+    }else{
+        fail('it should not reach here');
+    }
+});
+
+test("build simple from context with inner parse", async ()=>{
+    const path: string[] = [];
+    
+    const a = g(["a", "a2"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    const {serial, t} = dev(path)({"a": a, "b": b, "c": c});
+    await serial(["a", t("a|b|c")]);
+    expect(path).toEqual(["a", "a2", "b", "c"]);
 });
