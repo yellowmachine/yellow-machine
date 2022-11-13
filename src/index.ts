@@ -23,21 +23,35 @@ export type Serial = (tasks: Tpipe|C, ctx?: any) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
 
 type W = (files: string[],f: Tpipe|F) => () => Promise<any>;
-type PW = (w: W) => (pipe: Tpipe) => void;
 
-export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>, w_namespace: Record<string, PW>={}) => context(namespace, w_namespace, true, path);
+export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
 export const partial_w = (files: string[]) => (w: W) => (pipe: Tpipe) => w(files, pipe);
 
-export function context(namespace: Record<string,
-                                            Generator|
-                                            AsyncGenerator|
-                                            ((arg0: Data)=>any)
-                                        > = {}, 
-                        w_namespace: Record<string, PW>={},
+type ON = (conf: TON, pipe: Tpipe) => void;
+type TON = {setup: (arg0: ((arg0: Tpipe)=>Promise<any>))=>void, close: (()=>void)};
+export const partial_on = (conf: TON) => (on: (arg0: TON, arg1: Tpipe)=>void) => (pipe: Tpipe) => on(conf, pipe);
+
+type Plugin = Record<string,((
+    {on, w}:{on: ON, w: W}
+    )=>(arg0: Tpipe)=>Promise<any>)>;
+type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
+
+export function context(namespace: Namespace,
+                        plugins: Plugin={}, 
                         dev=false, 
                         path: string[]=[]
                     ){
+
+    function on({setup, close}:TON, pipe: Tpipe){
+        setup(async () => {
+            try{
+                await serial(pipe);
+            }catch(err){
+                close();
+            }
+        });
+    }
 
     function build(parsed: (string|Parsed)[]): Tpipe{
         let ret: Tpipe = [];
@@ -46,10 +60,17 @@ export function context(namespace: Record<string,
         
         for(const chunk of parsed){
             if(typeof chunk === 'string'){
-                if(chunk.includes('|')){
+                if(chunk.includes(',')){
+                    const aux = chunk.split(",").filter(x => x !== "");
+                    const aux2 = aux.map(x => {
+                        if(x.includes('|')) return x.split('|').filter(y => y !== "");
+                        else return x;
+                    });
+                    ret = [...ret, ...aux2];
+                }else if(chunk.includes('|')){
                     ret = [...ret, ...chunk.split("|").filter(x => x !== "")];
                 }else{
-                    ret = [...ret, ...chunk.split(",").filter(x => x !== "")];
+                    ret = [...ret, chunk];
                 }
             }else{
                 if(chunk.t === 'p['){
@@ -57,11 +78,13 @@ export function context(namespace: Record<string,
                 }else if(chunk.t === '['){
                     ret = [...ret, ()=>serial(build(chunk.c))];
                 }else{ //w_...[
-                    const m = w_namespace[chunk.t.substring(0, chunk.t.length-1)];
-                    const built = build(chunk.c);
-                    //const x = partial_w(["*.js"])(w);
-                    //ret = [...ret, () => x(built)];
-                    ret = [...ret, () => m(w)(built)];
+                    if(namespace.plugins){
+                        const m = plugins[chunk.t.substring(0, chunk.t.length-1)];
+                        const built = build(chunk.c);
+                        //const x = partial_w(["*.js"])(w);
+                        //ret = [...ret, () => x(built)];
+                        ret = [...ret, () => m({w, on})(built)];
+                    }
                 }
             }
         }
@@ -341,6 +364,8 @@ export function context(namespace: Record<string,
         parallel,        
         p,
         serial,
-        nr
+        nr,
+        on,
+        run: (t: string) => serial(t)
     };
 }

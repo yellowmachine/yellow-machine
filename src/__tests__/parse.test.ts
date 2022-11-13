@@ -123,8 +123,24 @@ test("parse w", ()=>{
     expect(parsed).toEqual(["a", {t: "w_1", c: ["b"]}, "c"]);
 });
 
-test("parse p", ()=>{
-    const {parsed} = parse("a|p[b,c]|d");
-    console.log(JSON.stringify(parsed));
-    expect(parsed).toEqual(["a", {t: "p[", c: ["b,c"]}, "d"]);
+test("parse p with ,", ()=>{
+    const {parsed} = parse("a!|p[b,c]|d");
+    expect(parsed).toEqual(["a!", {t: "p[", c: ["b,c"]}, "d"]);
+});
+
+test("parse p with , | and !", ()=>{
+    const {parsed} = parse("a|p[b|x,c!|y]|d");
+    expect(parsed).toEqual(["a", {t: "p[", c: ["b|x,c!|y"]}, "d"]);
+});
+
+test("execution with p", async ()=>{
+    const path: string[] = [];
+    
+    const a = g(["a"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    const { run } = dev(path)({"a": a, "b": b, "c": c});
+    await run("a|p[b|c]");
+    expect(path).toEqual(["a", "b", "c"]);
 });
