@@ -1,8 +1,9 @@
 import { DEBUG, context as C, dev, g } from '../index';
-import { parse } from '../parse';
+import { parse, parsev2 } from '../parse';
 
 DEBUG.v = false;
 
+/*
 test("parse most simple", ()=>{
     const {remaining, parsed} = parse("a|b|c");
     expect(parsed).toEqual(["a", "b", "c"]);
@@ -109,4 +110,10 @@ test("parallel with compact mode", async ()=>{
     const { parallel } = dev(path)({"a": a, "b": b, "c": c});
     await parallel(["a", "a|b|c"]);
     expect(path).toEqual(["a", "a2", "b", "c"]);
+});
+*/
+test("parse w", ()=>{
+    const parsed = parsev2("a|w_1[b]|c");
+    console.log(JSON.stringify(parsed));
+    expect(parsed).toEqual(["a", {w: {files: ["*.js"], pipe: ["b"]}}, "c"]);
 });

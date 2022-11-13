@@ -22,9 +22,18 @@ export type Tpipe = C[];
 export type Serial = (tasks: Tpipe|C, ctx?: any) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
 
-export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>) => context(namespace, true, path);
+export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>, w_namespace: Record<string, string[]>={}) => context(namespace, w_namespace, true, path);
 
-export function context(namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)> = {}, dev=false, path: string[]=[]){
+export function context(namespace: Record<string,
+                                            //string[]|
+                                            Generator|
+                                            AsyncGenerator|
+                                            ((arg0: Data)=>any)
+                                        > = {}, 
+                        w_namespace: Record<string, string[]>,
+                        dev=false, 
+                        path: string[]=[]
+                    ){
 
     function nr(f: F|Tpipe){
         let exited = true;
@@ -286,7 +295,7 @@ export function context(namespace: Record<string, Generator|AsyncGenerator|((arg
     };
 
     function _t(t: string){
-        const b = build({serial: parse(t).parsed}, {serial, parallel, p});
+        const b = build({serial: parse(t, w_namespace).parsed}, {serial, parallel, p, w});
         if(b) return b;
         else return [];
     }

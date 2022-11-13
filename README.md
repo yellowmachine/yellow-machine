@@ -221,11 +221,16 @@ await serial(["a[b!]c"]) // (ok) if b throws, c is not executed
 
 What about this?:
 ```ts
+import {C as context, partial_w} from 'yellow-machine';
+
 const {serial} = C({up, load, test, 
                     w_js_grapql: //starts with "w_", so it will be a watch 
-                        ["./src/*.js", "./schema/*.graphql"]
+                        partial_w(["./src/*.js", "./schema/*.graphql"])
                 });
 
 await serial(["up[w_js_graphql[load|test]|down]"])
+
+const partial_w = (files: string[]) => (w: (arg0: string[], arg1: Tpipe|F)=>Promise<any>, tasks: Tpipe|F) => w(files, tasks); 
+
 ```
 I'm not sure if it's useful or not because I want as simple as possible.
