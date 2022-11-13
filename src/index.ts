@@ -34,7 +34,7 @@ export function context(namespace: Record<string,
                                             AsyncGenerator|
                                             ((arg0: Data)=>any)
                                         > = {}, 
-                        w_namespace: Record<string, PW>,
+                        w_namespace: Record<string, PW>={},
                         dev=false, 
                         path: string[]=[]
                     ){
@@ -45,9 +45,13 @@ export function context(namespace: Record<string,
         if(parsed.length === 0) return [];
         
         for(const chunk of parsed){
-            if(typeof chunk === 'string')
-                ret = [...ret, ...chunk.split("|").filter(x => x !== "")];
-            else{
+            if(typeof chunk === 'string'){
+                if(chunk.includes('|')){
+                    ret = [...ret, ...chunk.split("|").filter(x => x !== "")];
+                }else{
+                    ret = [...ret, ...chunk.split(",").filter(x => x !== "")];
+                }
+            }else{
                 if(chunk.t === 'p['){
                     ret = [...ret, p(build(chunk.c))];
                 }else if(chunk.t === '['){

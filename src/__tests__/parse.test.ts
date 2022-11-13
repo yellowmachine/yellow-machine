@@ -125,5 +125,6 @@ test("parse w", ()=>{
 
 test("parse p", ()=>{
     const {parsed} = parse("a|p[b,c]|d");
-    expect(parsed).toEqual(["a", {t: "p", c: ["b", "c"]}, "d"]);
+    console.log(JSON.stringify(parsed));
+    expect(parsed).toEqual(["a", {t: "p[", c: ["b,c"]}, "d"]);
 });

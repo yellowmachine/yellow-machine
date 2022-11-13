@@ -6,8 +6,8 @@ function nextToken(t: string){
 
     if(t.charAt(0) === '],')
         return {token: "],", remaining: t.substring(2)};
-    else if(t.charAt(0) === ',')
-        return {token: ",", remaining: t.substring(1)};
+    //else if(t.charAt(0) === ',')
+    //    return {token: ",", remaining: t.substring(1)};
     else if(t.charAt(0) === '[')
         return {token: "[", remaining: t.substring(1)};
     else if(t.charAt(0) === ']')
@@ -22,7 +22,7 @@ function nextToken(t: string){
         throw new Error("] not found");
     }else{
         for(let i=0; i < t.length; i++){
-            if([",", "[", "]"].includes(t.charAt(i)))
+            if(["[", "]"].includes(t.charAt(i)))
                 return {token: t.substring(0, i), remaining: t.substring(i)};
             if(t.substring(i).startsWith("|w_"))
                 return {token: t.substring(0, i), remaining: t.substring(i+1)};
