@@ -15,12 +15,14 @@ export function *g(arr: string[]){
 export const DEBUG = {v: false};
 export const SHOW_QUIT_MESSAGE = {v: false};
 
-export type Data = {data?: any, ctx: {quit: ()=>void}};
+type FX = ({serial}:{serial: Serial})=>TON;
+type Quit = (err?: boolean, data?: any)=>void;
+export type Data = {data?: any, ctx: Ctx};
 export type F = ((arg0: Data) => any);
 type C = Generator|AsyncGenerator|F|string|Tpipe;
 export type Tpipe = C[];
-export type Serial = (tasks: Tpipe|C, ctx?: any) => Promise<any>;
-export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
+export type Serial = (tasks: Tpipe|C, ctx?: Ctx) => Promise<any>;
+export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
 type W = (files: string[],f: Tpipe|F) => () => Promise<any>;
 
@@ -28,16 +30,17 @@ export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) 
 
 export const partial_w = (files: string[]) => (w: W) => (pipe: Tpipe) => w(files, pipe);
 
-type ON = (conf: TON) => (pipe: Tpipe) => void;
-type TON = {setup: (arg0: ((arg0: Tpipe)=>Promise<any>))=>void, close: (()=>void)};
-export const partial_on = (conf: TON) => (on: (arg0: TON, arg1: Tpipe)=>void) => (pipe: Tpipe) => on(conf, pipe);
+type ON = (f: FX) => (pipe: Tpipe) => Promise<any>;
+export const plugin = (f: ({serial}:{serial:Serial}) => TON) => ({on, w}: {on: ON, w: W}) => on(f); 
+
+type TON = {setup: ((arg0: ()=>Promise<any>)=>Promise<any>), close: (()=>void)};
 
 type Plugin = Record<string,((
     {on, w}:{on: ON, w: W}
     )=>(arg0: Tpipe)=>Promise<any>)>;
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 
-type Ctx = {quit: (err?: boolean, data?: Data)=>void};
+type Ctx = {quit?: Quit}|null;
 
 export function context(namespace: Namespace,
                         plugins: Plugin={}, 
@@ -45,17 +48,19 @@ export function context(namespace: Namespace,
                         path: string[]=[]
                     ){
 
-    function on({setup, close}:TON){
-        return function m(pipe: Tpipe){
-            setup(async () => {
+    const on = (f: ({serial}:{serial:Serial}) => TON): ((arg0: Tpipe) => Promise<any>) => {
+        const {setup, close} = f({serial});
+        return async (pipe: Tpipe) => {
+            await setup(async () => {
                 try{
                     await serial(pipe, {quit: close});
                 }catch(err){
                     close();
                 }
+                return true;
             });
         };
-    }
+    };
 
     function build(parsed: (string|Parsed)[]): Tpipe{
         let ret: Tpipe = [];
@@ -137,7 +142,7 @@ export function context(namespace: Namespace,
         });
 
         let exited = false;
-        function close(err = false, data = null){
+        function close(err = false, data: any = null){
             if(!exited){
                 exited = true;
                 process.stdin.pause();
@@ -194,7 +199,7 @@ export function context(namespace: Namespace,
 
         const data = {
             data: null,
-            ctx: ctx  || {}
+            ctx: ctx || {}
         };
 
         let quit;
@@ -208,7 +213,7 @@ export function context(namespace: Namespace,
             if(typeof t === 'function'){
                 promises.push(t({...data}));
             }else if(Array.isArray(t)){
-                promises.push(serial(t, {...data}));
+                promises.push(serial(t, data.ctx));
             }else if(typeof t === 'string'){
                 if(!t.includes("|") && !t.includes("[")){
                     const m = namespace[t];
@@ -322,7 +327,7 @@ export function context(namespace: Namespace,
                     }                    
                 }
                 else if(Array.isArray(t)){
-                    await serial(t, data);
+                    await serial(t, data.ctx);
                 }
                 else{
                     try{
@@ -370,6 +375,7 @@ export function context(namespace: Namespace,
         serial,
         nr,
         on,
+        plug: (r: (({serial}:{serial: Serial})=>TON)) => (pipe: Tpipe) => () => on(r)(pipe), 
         run: (t: string) => serial(t)
     };
 }

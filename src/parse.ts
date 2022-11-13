@@ -4,10 +4,12 @@ type P = {p?: B, w?: {files: string[], pipe: B}};
 function nextToken(t: string){
     if(t === "") return null;
 
-    if(t.charAt(0) === '],')
+    if(t.startsWith("]!"))
+        return {token: "]!", remaining: t.substring(2)};
+    else if(t.startsWith("]!,"))
+        return {token: "]!,", remaining: t.substring(3)};
+    else if(t.startsWith('],'))
         return {token: "],", remaining: t.substring(2)};
-    //else if(t.charAt(0) === ',')
-    //    return {token: ",", remaining: t.substring(1)};
     else if(t.charAt(0) === '[')
         return {token: "[", remaining: t.substring(1)};
     else if(t.charAt(0) === ']')
@@ -44,7 +46,7 @@ export function parse(t: string){
         const token = nextToken(remaining);
         if(token === null) break;
         remaining = token.remaining;
-        if(!["],", ",", "[", "]", "p["].includes(token.token) && !token.token.startsWith("w_")){
+        if(!["]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("w_")){
             let t = token.token;
             if(t.startsWith('|'))
                 t = t.substring(1);
@@ -63,7 +65,9 @@ export function parse(t: string){
             const aux = parse(remaining);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
-        }else if(token.token === "," || token.token === "]," || token.token === "]" || remaining === ""){   
+        }else if(token.token === "]!" ||token.token === "]!," || token.token === "]," || token.token === "]" || remaining === ""){   
+            if(token.token.includes("!"))
+                pending.push("throws");
             break;
         }
     }
