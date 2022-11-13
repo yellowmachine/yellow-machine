@@ -28,7 +28,7 @@ export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) 
 
 export const partial_w = (files: string[]) => (w: W) => (pipe: Tpipe) => w(files, pipe);
 
-type ON = (conf: TON, pipe: Tpipe) => void;
+type ON = (conf: TON) => (pipe: Tpipe) => void;
 type TON = {setup: (arg0: ((arg0: Tpipe)=>Promise<any>))=>void, close: (()=>void)};
 export const partial_on = (conf: TON) => (on: (arg0: TON, arg1: Tpipe)=>void) => (pipe: Tpipe) => on(conf, pipe);
 
@@ -37,20 +37,24 @@ type Plugin = Record<string,((
     )=>(arg0: Tpipe)=>Promise<any>)>;
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 
+type Ctx = {quit: (err?: boolean, data?: Data)=>void};
+
 export function context(namespace: Namespace,
                         plugins: Plugin={}, 
                         dev=false, 
                         path: string[]=[]
                     ){
 
-    function on({setup, close}:TON, pipe: Tpipe){
-        setup(async () => {
-            try{
-                await serial(pipe);
-            }catch(err){
-                close();
-            }
-        });
+    function on({setup, close}:TON){
+        return function m(pipe: Tpipe){
+            setup(async () => {
+                try{
+                    await serial(pipe, {quit: close});
+                }catch(err){
+                    close();
+                }
+            });
+        };
     }
 
     function build(parsed: (string|Parsed)[]): Tpipe{
@@ -79,11 +83,11 @@ export function context(namespace: Namespace,
                     ret = [...ret, ()=>serial(build(chunk.c))];
                 }else{ //w_...[
                     if(namespace.plugins){
-                        const m = plugins[chunk.t.substring(0, chunk.t.length-1)];
+                        const plugin = plugins[chunk.t.substring(0, chunk.t.length-1)];
                         const built = build(chunk.c);
                         //const x = partial_w(["*.js"])(w);
                         //ret = [...ret, () => x(built)];
-                        ret = [...ret, () => m({w, on})(built)];
+                        ret = [...ret, () => plugin({w, on})(built)];
                     }
                 }
             }
