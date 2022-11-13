@@ -1,6 +1,6 @@
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
-import { build, parse} from './parse';
+import { parse, type Parsed} from './parse';
 
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
@@ -22,18 +22,47 @@ export type Tpipe = C[];
 export type Serial = (tasks: Tpipe|C, ctx?: any) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
 
-export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>, w_namespace: Record<string, string[]>={}) => context(namespace, w_namespace, true, path);
+type W = (files: string[],f: Tpipe|F) => () => Promise<any>;
+type PW = (w: W) => (pipe: Tpipe) => void;
+
+export const dev = (path: string[]) => (namespace: Record<string, Generator|AsyncGenerator|((arg0: Data)=>any)>, w_namespace: Record<string, PW>={}) => context(namespace, w_namespace, true, path);
+
+export const partial_w = (files: string[]) => (w: W) => (pipe: Tpipe) => w(files, pipe);
 
 export function context(namespace: Record<string,
-                                            //string[]|
                                             Generator|
                                             AsyncGenerator|
                                             ((arg0: Data)=>any)
                                         > = {}, 
-                        w_namespace: Record<string, string[]>,
+                        w_namespace: Record<string, PW>,
                         dev=false, 
                         path: string[]=[]
                     ){
+
+    function build(parsed: (string|Parsed)[]): Tpipe{
+        let ret: Tpipe = [];
+        
+        if(parsed.length === 0) return [];
+        
+        for(const chunk of parsed){
+            if(typeof chunk === 'string')
+                ret = [...ret, ...chunk.split("|").filter(x => x !== "")];
+            else{
+                if(chunk.t === 'p['){
+                    ret = [...ret, p(build(chunk.c))];
+                }else if(chunk.t === '['){
+                    ret = [...ret, ()=>serial(build(chunk.c))];
+                }else{ //w_...[
+                    const m = w_namespace[chunk.t.substring(0, chunk.t.length-1)];
+                    const built = build(chunk.c);
+                    //const x = partial_w(["*.js"])(w);
+                    //ret = [...ret, () => x(built)];
+                    ret = [...ret, () => m(w)(built)];
+                }
+            }
+        }
+        return ret;
+    }
 
     function nr(f: F|Tpipe){
         let exited = true;
@@ -54,11 +83,11 @@ export function context(namespace: Record<string,
         };
     }
 
-    function w(files: string[],f: Tpipe|F){
+    function w(files: string[],f: Tpipe|F): ()=>Promise<any>{
         return () => watch(files, f);
     }
 
-    function watch(files: string[], f: Tpipe|F){
+    function watch(files: string[], f: Tpipe|F): Promise<any>{
         const q = 'q';
 
         const h = (ch: string) => {
@@ -169,7 +198,7 @@ export function context(namespace: Record<string,
                     }
                 }else{
                     const f = _t(t);
-                    if(!Array.isArray(f)){
+                    if(f !== null){
                         promises.push(f());
                     }
                 }
@@ -254,7 +283,8 @@ export function context(namespace: Record<string,
                             }
                         }else{
                             const f = _t(t);
-                            if(!Array.isArray(f)){
+                            //if(!Array.isArray(f)){
+                            if(f !== null){
                                 data.data = await f();
                             }
                         }
@@ -295,9 +325,10 @@ export function context(namespace: Record<string,
     };
 
     function _t(t: string){
-        const b = build({serial: parse(t, w_namespace).parsed}, {serial, parallel, p, w});
-        if(b) return b;
-        else return [];
+        const {parsed} = parse(t);
+        const b = build(parsed);
+        if(b) return ()=>serial(b);
+        else return null;
     }
 
     return {

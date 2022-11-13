@@ -1,5 +1,5 @@
 import { DEBUG, context as C, dev, g } from '../index';
-import { parse, parsev2 } from '../parse';
+import { parse } from '../parse';
 
 DEBUG.v = false;
 
@@ -112,8 +112,18 @@ test("parallel with compact mode", async ()=>{
     expect(path).toEqual(["a", "a2", "b", "c"]);
 });
 */
+
+test("parse simple", ()=>{
+    const {parsed} = parse("a|b|c");
+    expect(parsed).toEqual(["a|b|c"]);
+});
+
 test("parse w", ()=>{
-    const parsed = parsev2("a|w_1[b]|c");
-    console.log(JSON.stringify(parsed));
-    expect(parsed).toEqual(["a", {w: {files: ["*.js"], pipe: ["b"]}}, "c"]);
+    const {parsed} = parse("a|w_1[b]|c");
+    expect(parsed).toEqual(["a", {t: "w_1", c: ["b"]}, "c"]);
+});
+
+test("parse p", ()=>{
+    const {parsed} = parse("a|p[b,c]|d");
+    expect(parsed).toEqual(["a", {t: "p", c: ["b", "c"]}, "d"]);
 });
