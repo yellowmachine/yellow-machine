@@ -9,11 +9,14 @@ type F = (data: Data) => Promise<any>;
 
 export default (files: string[]) => () => {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    let _close: null|(()=>void) = null;
+    let _close: null|Close;
+    function setClose(c: Close){
+        _close = c;
+    }
     return {
         setup: ({single}: SingleOrMultiple) => {
-            const {promise, close} = watch(files, single);
-            _close = close; 
+            //const {promise, close} = watch(files, single);
+            const promise = watch(files, single, setClose);
             return promise;
         },
         close: () => {
@@ -22,7 +25,10 @@ export default (files: string[]) => () => {
     };
 };
 
-function watch(files: string[], f: F): {promise: Promise<any>, close: ()=>void}{
+type Close = (err?: boolean, data?: any) => void;
+
+const watch = async (files: string[], f: F, setClose: (arg: Close)=>void) => {
+
     const q = 'q';
 
     const h = (ch: string) => {
@@ -55,8 +61,11 @@ function watch(files: string[], f: F): {promise: Promise<any>, close: ()=>void}{
         }
     }
 
+    setClose(close);
+
     async function exitedRun(){
         while(!exited){   
+            console.log('w run');
             await run();
         }
     }
@@ -87,4 +96,4 @@ function watch(files: string[], f: F): {promise: Promise<any>, close: ()=>void}{
         exitedRun();
     }
     return {promise: p, close};
-}
+};

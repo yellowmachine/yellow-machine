@@ -1,10 +1,5 @@
-//import { watch as chwatch } from 'chokidar';
-//import { emitKeypressEvents } from 'node:readline';
 import { parse, type Parsed} from './parse';
 import parallel from './parallel';
-
-//emitKeypressEvents(process.stdin);
-//process.stdin.setRawMode(true);
 
 type RecordPlugin = {[key: string]: (({serial}:{serial: Serial})=>TON)};
 
@@ -32,16 +27,16 @@ export type Serial = (tasks: Tpipe|C, ctx?: Ctx) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
-type FD = (data: Data)=>Promise<any>;
+type FD = ()=>Promise<any>;
 export type SingleOrMultiple = {single: FD, multiple: FD[]};
 type SETUP = (arg: SingleOrMultiple) => Promise<any>;
-type TON = {setup: SETUP, close?: (()=>void)};
+type TON = {setup: SETUP, close?: Quit};
 export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type P = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type NR = (f: F) => (data?: Data) => Promise<any>;
 
 type FTON = () => TON;
-type MFTON = (f: FTON) => ((pipe: Tpipe) => (data: Data) => Promise<any>);
+//type MFTON = (f: FTON) => ((pipe: Tpipe) => (data: Data) => Promise<any>);
 type Plugin = {[key: string]: FTON};
 
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
@@ -59,36 +54,48 @@ export function context(namespace: Namespace,
 
     const on = (f: FTON): ((pipe: Tpipe|string) => (data: Data) => Promise<any>) => {
         const {setup, close} = f();
-        return (pipe: Tpipe|string) => async () => {
+
+        return (pipe: Tpipe|string) => async (data: Data) => {
             let built: Tpipe;
+
             if(typeof pipe === 'string') 
                 built = build([pipe]);
             else
                 built = pipe;
-            const single = async (data: Data) => {
+            const single = async () => {
+                const previousClose = data.ctx?data.ctx.quit:null;
                 try{
-                    data = {...data, ctx:{quit: close}};
+                    data = {...data, ctx:{quit: ()=>{
+                            if(close) close();
+                            if(previousClose) previousClose();
+                        }
+                    }};
                     await s(built)(data);
                 }catch(err){
                     if(close)close();
+                    if(previousClose) previousClose();
                 }
                 return true;
             };
             let multiple: FD[] = [];
             if(Array.isArray(built)){
-                multiple = built.map(x => (async (data: Data) => {
+                multiple = built.map(x => async () => {
+                    const previousClose = data.ctx?data.ctx.quit:null;
                     try{
-                        data = {...data, ctx:{quit: close}};
+                        data = {...data, ctx:{quit: ()=>{
+                            if(close) close();
+                            if(previousClose) previousClose();
+                        }}};
                         if(Array.isArray(x))
                             await s(x)(data);
                         else
                             await s([x])(data);
-
                     }catch(err){
                         if(close)close();
+                        if(previousClose) previousClose();
                     }
                     return true;
-                }));
+                });
             }
             await setup({single, multiple});
         };
@@ -115,12 +122,14 @@ export function context(namespace: Namespace,
                 }
             }else{
                 if(chunk.t === 'p['){
-                    ret = [...ret, p(build(chunk.c))];
+                    ret = [...ret, (data: Data) => {
+                        return p(build(chunk.c))(data);
+                    }];
                 }else if(chunk.t === '['){
-                    ret = [...ret, ()=>serial(build(chunk.c))];
+                    ret = [...ret, (data: Data)=>serial(build(chunk.c), data.ctx)];
                 }else if(chunk.t.startsWith("*")){ 
-                    if(namespace.plugins){
-                        const plugin = plugins[chunk.t.substring(1, chunk.t.length-1)];
+                    if(plugins){
+                        const plugin = plugins[chunk.t.substring(1, chunk.t.length)];
                         const built = build(chunk.c);
                         ret = [...ret, (data: Data) => on(plugin)(built)(data)];
                     }
@@ -149,104 +158,16 @@ export function context(namespace: Namespace,
         };
     }
 
-    /*
-    const parallel: Parallel = async (tasks, mode="all", ctx=null) =>{
-        const promises: Promise<any>[] = [];   
-
-        const data = {
-            data: null,
-            ctx: ctx || {}
-        };
-
-        let quit;
-        if(ctx) quit = ctx.quit;
-    
-        if(!Array.isArray(tasks)){
-            tasks = [tasks, 'throws'];
-        }
-
-        for(const t of tasks){
-            if(typeof t === 'function'){
-                promises.push(t({...data}));
-            }else if(Array.isArray(t)){
-                promises.push(serial(t, data.ctx));
-            }else if(typeof t === 'string'){
-                if(!t.includes("|") && !t.includes("[")){
-                    const m = namespace[t];
-                    if(typeof m === 'function'){
-                        promises.push(m({...data}));
-                    }else{
-                        try{
-                            const x = await m.next(data);
-                            if(dev) path.push(x.value);
-                            if(x.done && quit) quit(false, x.value);
-                        }catch(err){
-                            if(DEBUG.v)
-                                // eslint-disable-next-line no-console
-                                console.log(err);
-                            let message = 'Unknown Error';
-                                if(err instanceof Error) message = err.message;
-                            if(dev) path.push(message);//'throws');
-                            if(quit) quit(true);
-                        }                    
-                    }
-                }else{
-                    const f = _t(t);
-                    if(f !== null){
-                        promises.push(f());
-                    }
-                }
-            }else{
-                try{
-                    const x = await t.next(data);
-                    if(dev) path.push(x.value);
-                    if(x.done && quit) quit(false, x.value);
-                }catch(err){
-                    if(DEBUG.v)
-                        // eslint-disable-next-line no-console
-                        console.log(err);
-                    let message = 'Unknown Error';
-                        if(err instanceof Error) message = err.message;
-                    if(dev) path.push(message);
-                    if(quit) quit(true);
-                }                
-            } 
-        }
-        try{
-            if(mode === "all") await Promise.all(promises);
-            //else if (mode === "any") await Promise.any(promises);
-            else if (mode === "race") await Promise.race(promises);
-            else if (mode === "allSettled") await Promise.allSettled(promises);
-        }catch(err){
-            if(quit) quit(true);
-            if(DEBUG.v)
-                // eslint-disable-next-line no-console
-                console.log(err);
-            throw err;
-        }
-        return true;
-    };
-
-    const p = (x: Tpipe|string) => {
-        let built: Tpipe;
-        if(typeof x === 'string')
-            built = build([x]);
-        else
-            built = x;
-        return (data?: Data) => parallel(built, "all", data?data.ctx:{});
-    };
-    */
-
     const s = (x: F|Tpipe|string) => {
         let built: Tpipe|F;
         if(typeof x === 'string')
             built = build([x]);
         else
             built = x;
-        return async (data?: Data) => await serial(x, data?data.ctx:{});
+        return async (data?: Data) => await serial(built, data?data.ctx:{quit: undefined});
     };
 
-    const serial: Serial = async(tasks, ctx=null) => {
+    const serial: Serial = async(tasks, ctx) => {
         let ok = false;
         const data = {
             data: null,
@@ -256,12 +177,15 @@ export function context(namespace: Namespace,
         let quit;
         if(ctx) quit = ctx.quit;
 
+        console.log('dentro de serial, tasks', tasks);
+
         if(!Array.isArray(tasks)){
             tasks = [tasks, 'throws'];
         }
         let throws = false;
         try{
             for(let t of tasks){ 
+                console.log('task named', t);
                 throws = false;
                 if(typeof t === 'function'){
                     const x = await t(data);
@@ -274,6 +198,7 @@ export function context(namespace: Namespace,
                                 throws = true;
                                 t = t.substring(0, t.length-1);
                             }
+                            console.log('t vale', t);
                             const m = namespace[t];
                             if(typeof m === 'function'){
                                 data.data = await m(data);
@@ -286,7 +211,7 @@ export function context(namespace: Namespace,
                                 }catch(err){
                                     if(DEBUG.v)
                                         // eslint-disable-next-line no-console
-                                        console.log(err);
+                                        console.log(err);                                    
                                     let message = 'Unknown Error';
                                         if(err instanceof Error) message = err.message;
                                     if(dev) path.push(message);
@@ -298,7 +223,7 @@ export function context(namespace: Namespace,
                             const f = _t(t);
                             //if(!Array.isArray(f)){
                             if(f !== null){
-                                data.data = await f();
+                                data.data = await f(data);
                             }
                         }
                     }                    
@@ -307,12 +232,15 @@ export function context(namespace: Namespace,
                     await serial(t, data.ctx);
                 }
                 else{
+                    console.log('vamos');
                     try{
                         const x = await t.next(data);
+                        console.log(x);
                         data.data = x.value;
                         if(dev) path.push(x.value);
                         if(x.done && quit) quit(false, x.value);
                     }catch(err){
+                        console.log(err);
                         if(DEBUG.v)
                             // eslint-disable-next-line no-console
                             console.log(err);
@@ -340,7 +268,7 @@ export function context(namespace: Namespace,
     function _t(t: string){
         const {parsed} = parse(t, Object.keys(plugins));
         const b = build(parsed);
-        if(b) return ()=>serial(b);
+        if(b) return (data: Data)=>serial(b, data.ctx);
         else return null;
     }
 
@@ -356,8 +284,8 @@ export function context(namespace: Namespace,
         return on(parallel())(pipe)(data?data:emptyCtx);
     };
 
-    plugs.serial = (pipe: Tpipe|string) => () => {
-        return serial(pipe);
+    plugs.serial = (pipe: Tpipe|string) => (data?: Data) => {
+        return serial(pipe, data?data.ctx:emptyCtx.ctx);
     };
 
     plugs.p = p;

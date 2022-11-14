@@ -1,8 +1,10 @@
 import { DEBUG, dev, g } from '../index';
 import watch from '../watch';
+import {parse} from '../parse';
 
 DEBUG.v = true;
 
+/*
 test("plugin w", async ()=>{
     const path: string[] = [];
     const a = g(["a"]);
@@ -24,6 +26,19 @@ test("plugin p", async ()=>{
 
     expect(path).toEqual(["a1", "a2", "b"]);
 });
+*/
+test("plugin w with p", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]);
+    const b = g(["b", "throws"]);
+    const c = g(["c1", "c2"]);
+
+    const {serial} = dev(path)({a, b, c}, {w: watch(["*.js"])});
+    await serial(["a|w[p[b,c]]"])();
+    //console.log(JSON.stringify(parse("a|w[p[b,c]]", ["w"])));
+    expect(path).toEqual(["a", "b", "c1", "throws"]);
+});
+
 /*
 test("plugin w and !", async ()=>{
     const path: string[] = [];
