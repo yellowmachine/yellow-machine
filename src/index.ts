@@ -1,10 +1,10 @@
-import { watch as chwatch } from 'chokidar';
-import { emitKeypressEvents } from 'node:readline';
-import { isArray } from 'node:util';
+//import { watch as chwatch } from 'chokidar';
+//import { emitKeypressEvents } from 'node:readline';
 import { parse, type Parsed} from './parse';
+import parallel from './parallel';
 
-emitKeypressEvents(process.stdin);
-process.stdin.setRawMode(true);
+//emitKeypressEvents(process.stdin);
+//process.stdin.setRawMode(true);
 
 type RecordPlugin = {[key: string]: (({serial}:{serial: Serial})=>TON)};
 
@@ -16,7 +16,7 @@ export function setPlugin(plug: RecordPlugin){
 
 export function *g(arr: string[]){
     for(const i of arr){
-        if(i.startsWith('throw')) throw new Error(i);
+        if(i.startsWith('throw') || i.startsWith('!')) throw new Error(i);
         else yield i;
     }
 }
@@ -32,20 +32,22 @@ export type Serial = (tasks: Tpipe|C, ctx?: Ctx) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
-type SETUP = (arg: (data: Data)=>Promise<any>) => Promise<any>;
+type FD = (data: Data)=>Promise<any>;
+export type SingleOrMultiple = {single: FD, multiple: FD[]};
+type SETUP = (arg: SingleOrMultiple) => Promise<any>;
 type TON = {setup: SETUP, close?: (()=>void)};
 export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type P = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type NR = (f: F) => (data?: Data) => Promise<any>;
 
-type FTON = ({s, p, on, nr}:{s: S, p: P, on: MFTON, nr: NR }) => TON;
+type FTON = () => TON;
 type MFTON = (f: FTON) => ((pipe: Tpipe) => (data: Data) => Promise<any>);
 type Plugin = {[key: string]: FTON};
 
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 
 type Quit = (err?: boolean, data?: any)=>void;
-type Ctx = {quit?: Quit}|null;
+export type Ctx = {quit?: Quit}|null;
 
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
@@ -56,14 +58,14 @@ export function context(namespace: Namespace,
                     ){
 
     const on = (f: FTON): ((pipe: Tpipe|string) => (data: Data) => Promise<any>) => {
-        const {setup, close} = f({s, p, on, nr});
+        const {setup, close} = f();
         return (pipe: Tpipe|string) => async () => {
             let built: Tpipe;
             if(typeof pipe === 'string') 
                 built = build([pipe]);
             else
                 built = pipe;
-            await setup(async (data: Data) => {
+            const single = async (data: Data) => {
                 try{
                     data = {...data, ctx:{quit: close}};
                     await s(built)(data);
@@ -71,7 +73,24 @@ export function context(namespace: Namespace,
                     if(close)close();
                 }
                 return true;
-            });
+            };
+            let multiple: FD[] = [];
+            if(Array.isArray(built)){
+                multiple = built.map(x => (async (data: Data) => {
+                    try{
+                        data = {...data, ctx:{quit: close}};
+                        if(Array.isArray(x))
+                            await s(x)(data);
+                        else
+                            await s([x])(data);
+
+                    }catch(err){
+                        if(close)close();
+                    }
+                    return true;
+                }));
+            }
+            await setup({single, multiple});
         };
     };
 
@@ -130,6 +149,7 @@ export function context(namespace: Namespace,
         };
     }
 
+    /*
     const parallel: Parallel = async (tasks, mode="all", ctx=null) =>{
         const promises: Promise<any>[] = [];   
 
@@ -215,9 +235,10 @@ export function context(namespace: Namespace,
             built = x;
         return (data?: Data) => parallel(built, "all", data?data.ctx:{});
     };
+    */
 
-    const s = (x: Tpipe|string) => {
-        let built: Tpipe;
+    const s = (x: F|Tpipe|string) => {
+        let built: Tpipe|F;
         if(typeof x === 'string')
             built = build([x]);
         else
@@ -331,13 +352,21 @@ export function context(namespace: Namespace,
         plugs[key] = (pipe: Tpipe|string) => (data?: Data) => x(pipe)(data?data:emptyCtx);
     }
 
+    const p = (pipe: Tpipe|string) => (data?: Data) => {
+        return on(parallel())(pipe)(data?data:emptyCtx);
+    };
+
     plugs.serial = (pipe: Tpipe|string) => () => {
         return serial(pipe);
     };
 
+    plugs.p = p;
+
+    /*
     plugs.p = (pipe: Tpipe|string) => (data?: Data) =>{
         return p(pipe)(data?data:emptyCtx);
     };
+    */
 
     /*
     plugs.nr = (pipe: Tpipe, data?: Data) => {

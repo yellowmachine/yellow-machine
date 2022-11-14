@@ -14,7 +14,6 @@ test("plugin w", async ()=>{
     expect(path).toEqual(["a", "b", "throws"]);
 });
 
-/*
 test("plugin p", async ()=>{
     const path: string[] = [];
     const a = g(["a1", "a2"]);
@@ -25,7 +24,7 @@ test("plugin p", async ()=>{
 
     expect(path).toEqual(["a1", "a2", "b"]);
 });
-
+/*
 test("plugin w and !", async ()=>{
     const path: string[] = [];
     const a = g(["a"]);
