@@ -384,13 +384,7 @@ export function context(namespace: Namespace,
     const plugs: {[key: string]: (arg0: Tpipe) => (data?: Data)=> Promise<any>} = {};
     for(const key of Object.keys(plugins)){
         const x = on(plugins[key]);
-        plugs[key] = (pipe: Tpipe) => {
-            console.log('1', pipe);
-            return (data?: Data) =>{
-                console.log('2', data);
-                return x(pipe)(data?data:emptyCtx);
-            };
-        }; 
+        plugs[key] = (pipe: Tpipe) => (data?: Data) => x(pipe)(data?data:emptyCtx);
     }
 
     plugs.serial = (pipe: Tpipe) => () => {

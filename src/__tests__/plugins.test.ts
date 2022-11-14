@@ -3,7 +3,7 @@ import watch from '../watch';
 
 DEBUG.v = true;
 
-test("", async ()=>{
+test("plugin w", async ()=>{
     const path: string[] = [];
     const a = g(["a"]);
     const b = g(["b", "throws"]);
@@ -12,4 +12,15 @@ test("", async ()=>{
     await serial(["a", w(["b"])])();
 
     expect(path).toEqual(["a"]);
+});
+
+test("plugin p", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "a2"]);
+    const b = g(["b"]);
+
+    const {serial, p} = dev(path)({a, b});
+    await serial(["a", p(["a", "b"])])();
+
+    expect(path).toEqual(["a1", "a2", "b"]);
 });
