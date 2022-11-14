@@ -28,20 +28,16 @@ function nextToken(t: string, plugins: string[]){
         for(let i=0; i < t.length; i++){
             if(["[", "]"].includes(t.charAt(i))){
                 const token = t.substring(0, i);
-                console.log(token);
                 for(const plug of plugins){
                     if(token.endsWith("|" + plug)){
                         const size = (plug).length;
-                        console.log({token: t.substring(0, i-size), remaining: t.substring(i-size)});
                         return {token: t.substring(0, i-size), remaining: t.substring(i-size)};
                     }
                 }
                 if(plugins.includes(token)){
-                    console.log({token: "*"+token, remaining: t.substring(i)});
                     return {token: "*"+token, remaining: t.substring(i)};
                 }
                 else{
-                    console.log({token, remaining: t.substring(i)});
                     return {token, remaining: t.substring(i)};
                 }
             }
@@ -90,6 +86,5 @@ export function parse(t: string, plugins: string[]){
             break;
         }
     }
-    console.log(pending);
     return {remaining, parsed: pending};
 }

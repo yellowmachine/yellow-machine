@@ -131,7 +131,9 @@ export function context(namespace: Namespace,
                     if(plugins){
                         const plugin = plugins[chunk.t.substring(1, chunk.t.length)];
                         const built = build(chunk.c);
-                        ret = [...ret, (data: Data) => on(plugin)(built)(data)];
+                        ret = [...ret, async (data: Data) => {
+                            await on(plugin)(built)(data);
+                        }];
                     }
                 }
             }
@@ -177,15 +179,12 @@ export function context(namespace: Namespace,
         let quit;
         if(ctx) quit = ctx.quit;
 
-        console.log('dentro de serial, tasks', tasks);
-
         if(!Array.isArray(tasks)){
             tasks = [tasks, 'throws'];
         }
         let throws = false;
         try{
             for(let t of tasks){ 
-                console.log('task named', t);
                 throws = false;
                 if(typeof t === 'function'){
                     const x = await t(data);
@@ -198,7 +197,6 @@ export function context(namespace: Namespace,
                                 throws = true;
                                 t = t.substring(0, t.length-1);
                             }
-                            console.log('t vale', t);
                             const m = namespace[t];
                             if(typeof m === 'function'){
                                 data.data = await m(data);
@@ -232,15 +230,12 @@ export function context(namespace: Namespace,
                     await serial(t, data.ctx);
                 }
                 else{
-                    console.log('vamos');
                     try{
                         const x = await t.next(data);
-                        console.log(x);
                         data.data = x.value;
                         if(dev) path.push(x.value);
                         if(x.done && quit) quit(false, x.value);
                     }catch(err){
-                        console.log(err);
                         if(DEBUG.v)
                             // eslint-disable-next-line no-console
                             console.log(err);
