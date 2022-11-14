@@ -5,6 +5,14 @@ import { parse, type Parsed} from './parse';
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
+type RecordPlugin = {[key: string]: (({serial}:{serial: Serial})=>TON)};
+
+let _plugins: RecordPlugin = {};
+
+export function setPlugin(plug: RecordPlugin){
+    _plugins = {..._plugins, ...plug};
+}
+
 export function *g(arr: string[]){
     for(const i of arr){
         if(i === 'throw') throw new Error(i);
@@ -35,9 +43,10 @@ export const plugin = (f: ({serial}:{serial:Serial}) => TON) => ({on, w}: {on: O
 
 type TON = {setup: ((arg0: ()=>Promise<any>)=>Promise<any>), close: (()=>void)};
 
-type Plugin = Record<string,((
-    {on, w}:{on: ON, w: W}
-    )=>(arg0: Tpipe)=>Promise<any>)>;
+type FTON = ({serial}:{serial: Serial}) => TON;
+//type Plugin = {[key: string]: ((f: FTON) => (pipe: Tpipe)=>Promise<any>)};
+type Plugin = {[key: string]: FTON};
+
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 
 type Ctx = {quit?: Quit}|null;
@@ -48,12 +57,12 @@ export function context(namespace: Namespace,
                         path: string[]=[]
                     ){
 
-    const on = (f: ({serial}:{serial:Serial}) => TON): ((arg0: Tpipe) => Promise<any>) => {
+    const on = (f: FTON): ((pipe: Tpipe) => Promise<any>) => {
         const {setup, close} = f({serial});
         return async (pipe: Tpipe) => {
             await setup(async () => {
                 try{
-                    await serial(pipe, {quit: close});
+                    if(pipe) await serial(pipe, {quit: close});
                 }catch(err){
                     close();
                 }
@@ -90,9 +99,7 @@ export function context(namespace: Namespace,
                     if(namespace.plugins){
                         const plugin = plugins[chunk.t.substring(0, chunk.t.length-1)];
                         const built = build(chunk.c);
-                        //const x = partial_w(["*.js"])(w);
-                        //ret = [...ret, () => x(built)];
-                        ret = [...ret, () => plugin({w, on})(built)];
+                        ret = [...ret, () => on(plugin)(built)];
                     }
                 }
             }
@@ -367,6 +374,18 @@ export function context(namespace: Namespace,
         else return null;
     }
 
+    const plugs: {[key: string]: (arg0: Tpipe) => () => Promise<any>} = {};
+    for(const key of Object.keys(plugins)){
+        const x = on(plugins[key]);
+        plugs[key] = (pipe: Tpipe) => () => x(pipe); 
+    }
+
+    plugs.serial = (pipe: Tpipe) => async () => {
+        if(pipe) await serial(pipe);
+    };
+
+    return plugs;
+/*
     return {
         w,
         watch,        
@@ -375,7 +394,9 @@ export function context(namespace: Namespace,
         serial,
         nr,
         on,
-        plug: (r: (({serial}:{serial: Serial})=>TON)) => (pipe: Tpipe) => () => on(r)(pipe), 
-        run: (t: string) => serial(t)
+        plug, 
+        run: (t: string) => serial(t),
+        //plugs
     };
+    */
 }

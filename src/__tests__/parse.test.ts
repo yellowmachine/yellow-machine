@@ -133,6 +133,7 @@ test("parse p with , | and !", ()=>{
     expect(parsed).toEqual(["a", {t: "p[", c: ["b|x,c!|y"]}, "d"]);
 });
 
+/*
 test("execution with p", async ()=>{
     const path: string[] = [];
     
@@ -144,3 +145,4 @@ test("execution with p", async ()=>{
     await run("a|p[b|c]");
     expect(path).toEqual(["a", "b", "c"]);
 });
+*/

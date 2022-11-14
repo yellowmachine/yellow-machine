@@ -1,4 +1,4 @@
-import { DEBUG, type Serial } from '.';
+import { DEBUG, SHOW_QUIT_MESSAGE, type Serial } from '.';
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
@@ -67,7 +67,7 @@ function watch({serial}:{serial: Serial}, files: string[], f: F): {promise: Prom
             else{
                 await serial(f, {quit: close});
             }                
-            //if(SHOW_QUIT_MESSAGE.v)
+            if(SHOW_QUIT_MESSAGE.v)
                 // eslint-disable-next-line no-console
                 console.log("Press " + q + " to quit!");
         }catch(err){
