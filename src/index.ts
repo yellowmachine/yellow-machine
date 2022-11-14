@@ -30,14 +30,15 @@ export type Tpipe = C[];
 export type Serial = (tasks: Tpipe|C, ctx?: Ctx) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
-
-type TON = {setup: ((arg0: ()=>Promise<any>)=>Promise<any>), close: (()=>void)};
-export type S = (pipe: Tpipe) => (data: Data) => Promise<any>;
-export type P = (pipe: Tpipe) => (data: Data) => Promise<any>;
-export type NR = (f: F) => (data: Data) => Promise<any>;
+//type SETUP = ((arg0: ()=>Promise<any>)=>Promise<any>);
+type SETUP = (f: F|Tpipe) => (data: Data) => Promise<any>;
+type TON = {setup: SETUP, close: (()=>void)};
+export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
+export type P = (pipe: Tpipe) => (data?: Data) => Promise<any>;
+export type NR = (f: F) => (data?: Data) => Promise<any>;
 
 type FTON = ({s, p, on, nr}:{s: S, p: P, on: MFTON, nr: NR, }) => TON;
-type MFTON = (f: FTON) => ((pipe: Tpipe) => Promise<any>);
+type MFTON = (f: FTON) => ((pipe: Tpipe) => (data: Data) => Promise<any>);
 type Plugin = {[key: string]: FTON};
 
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
@@ -53,12 +54,14 @@ export function context(namespace: Namespace,
                         path: string[]=[]
                     ){
 
-    const on = (f: FTON): ((pipe: Tpipe) => Promise<any>) => {
+    const on = (f: FTON): ((pipe: Tpipe) => (data: Data) => Promise<any>) => {
         const {setup, close} = f({s, p, on, nr/*, build*/});
-        return async (pipe: Tpipe) => {
+        return (pipe: Tpipe) => async (data: Data) => {
+            console.log('before setup', pipe, data);
             await setup(async () => {
                 try{
-                    await s(pipe)({ctx:{quit: close}});
+                    data = {...data, ctx:{quit: close}};
+                    await s(pipe)(data);
                 }catch(err){
                     close();
                 }
@@ -95,7 +98,7 @@ export function context(namespace: Namespace,
                     if(namespace.plugins){
                         const plugin = plugins[chunk.t.substring(0, chunk.t.length-1)];
                         const built = build(chunk.c);
-                        ret = [...ret, () => on(plugin)(built)];
+                        ret = [...ret, (data: Data) => on(plugin)(built)(data)];
                     }
                 }
             }
@@ -105,11 +108,11 @@ export function context(namespace: Namespace,
 
     function nr(f: F|Tpipe){
         let exited = true;
-        return async function(data: Data){
+        return async function(data?: Data){
             if(exited){
                 try{
                     exited = false;
-                    return await serial(f, data.ctx);
+                    return await serial(f, data?data.ctx:{});
                 }catch(err){
                     if(DEBUG.v)
                         // eslint-disable-next-line no-console
@@ -272,11 +275,13 @@ export function context(namespace: Namespace,
         return true;
     };
 
-    const p = (x: Tpipe)=> async (data: Data)=> await parallel(x, "all", data.ctx);
+    const p = (x: Tpipe) => (data?: Data) => parallel(x, "all", data?data.ctx:{});
 
-    const s = (x: Tpipe)=> async (data: Data)=> await serial(x, data.ctx);
+    const s = (x: Tpipe)=> async (data?: Data)=> await serial(x, data?data.ctx:{});
 
     const serial: Serial = async(tasks, ctx=null) => {
+
+        console.log('tasks', tasks);
 
         let ok = false;
         const data = {
@@ -374,23 +379,32 @@ export function context(namespace: Namespace,
         else return null;
     }
 
-    const plugs: {[key: string]: (arg0: Tpipe) => () => Promise<any>} = {};
+    const emptyCtx = {ctx: {quit: ()=>undefined}};
+
+    const plugs: {[key: string]: (arg0: Tpipe) => (data?: Data)=> Promise<any>} = {};
     for(const key of Object.keys(plugins)){
         const x = on(plugins[key]);
-        plugs[key] = (pipe: Tpipe) => () => x(pipe); 
+        plugs[key] = (pipe: Tpipe) => {
+            console.log('1', pipe);
+            return (data?: Data) =>{
+                console.log('2', data);
+                return x(pipe)(data?data:emptyCtx);
+            };
+        }; 
     }
 
-    plugs.serial = (pipe: Tpipe) => async () => {
-        await serial(pipe);
+    plugs.serial = (pipe: Tpipe) => () => {
+        return serial(pipe);
     };
 
-    plugs.p = (pipe: Tpipe) => async () => {
-        await p(pipe);
+    plugs.p = (pipe: Tpipe) => (data?: Data) =>{
+        return p(pipe)(data?data:emptyCtx);
     };
 
-    plugs.nr = (pipe: Tpipe) => async () => {
-        await nr(pipe);
-    };
+    /*
+    plugs.nr = (pipe: Tpipe, data?: Data) => {
+        return nr(pipe)(data);
+    };*/
 
     /*
     plugs.run = (t: string) => async () => {

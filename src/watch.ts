@@ -1,8 +1,6 @@
-import { DEBUG, SHOW_QUIT_MESSAGE, type S } from '.';
+import { DEBUG, SHOW_QUIT_MESSAGE, type S, type Tpipe, type Data, type F } from '.';
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
-
-type F = ()=>Promise<any>;
 
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
@@ -10,7 +8,7 @@ process.stdin.setRawMode(true);
 export default (files: string[]) => ({s}:{s: S}) => {
     let _close: null|(()=>void) = null;
     return {
-        setup: (f: F) => {
+        setup: (f: F|Tpipe) => (data: Data) => {
             const {promise, close} = watch({s}, files, f);
             _close = close; 
             return promise;
@@ -21,7 +19,7 @@ export default (files: string[]) => ({s}:{s: S}) => {
     };
 };
 
-function watch({s}:{s: S}, files: string[], f: F): {promise: Promise<any>, close: ()=>void}{
+function watch({s}:{s: S}, files: string[], f: F|Tpipe): {promise: Promise<any>, close: ()=>void}{
     const q = 'q';
 
     const h = (ch: string) => {
