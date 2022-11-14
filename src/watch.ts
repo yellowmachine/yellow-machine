@@ -1,24 +1,28 @@
-import { DEBUG, SHOW_QUIT_MESSAGE, type S, type Tpipe, type F } from '.';
+import { DEBUG, SHOW_QUIT_MESSAGE, type S, type Data } from '.';
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
-export default (files: string[]) => ({s}:{s: S}) => {
+type F = (data: Data) => Promise<any>;
+
+export default (files: string[]) => () => {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    let _close = () => {};
+    let _close: null|(()=>void) = null;
     return {
-        setup: (f: F|Tpipe) => (/*data: Data*/) => {
-            const {promise, close} = watch({s}, files, f);
+        setup: (f: F) => {
+            const {promise, close} = watch(files, f);
             _close = close; 
             return promise;
         },
-        close: _close
+        close: () => {
+            if(_close)_close();
+        }
     };
 };
 
-function watch({s}:{s: S}, files: string[], f: F|Tpipe): {promise: Promise<any>, close: ()=>void}{
+function watch(files: string[], f: F): {promise: Promise<any>, close: ()=>void}{
     const q = 'q';
 
     const h = (ch: string) => {
@@ -59,11 +63,7 @@ function watch({s}:{s: S}, files: string[], f: F|Tpipe): {promise: Promise<any>,
 
     async function run(){
         try{
-            if(typeof f === 'function')
-                await s([f, 'throws'])({ctx: {quit: close}});
-            else{
-                await s(f)({ctx: {quit: close}});
-            }                
+            await f({ctx: {quit: close}});         
             if(SHOW_QUIT_MESSAGE.v)
                 // eslint-disable-next-line no-console
                 console.log("Press " + q + " to quit!");

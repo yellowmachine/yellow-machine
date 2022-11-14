@@ -11,9 +11,10 @@ test("plugin w", async ()=>{
     const {serial, w} = dev(path)({a, b}, {w: watch(["*.js"])});
     await serial(["a", w(["b"])])();
 
-    expect(path).toEqual(["a"]);
+    expect(path).toEqual(["a", "b", "throws"]);
 });
 
+/*
 test("plugin p", async ()=>{
     const path: string[] = [];
     const a = g(["a1", "a2"]);
@@ -35,6 +36,18 @@ test("plugin w and !", async ()=>{
 
     expect(path).toEqual(["a"]);
 });
+
+test("plugin w and ! and compact", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]);
+    const b = g(["b"]);
+
+    const {serial} = dev(path)({a, b}, {w: watch(["*.js"])});
+    await serial("a|w[b]")();
+
+    expect(path).toEqual(["a", "throws"]);
+});
+
 
 test("plugin p and compact mode", async ()=>{
     const path: string[] = [];
@@ -67,7 +80,7 @@ test("plugin p and compact mode and ,", async ()=>{
     const {serial, p} = dev(path)({a, b, c});
     await serial(["a", p("a|c,b")])();
 
-    expect(path).toEqual(["a1", "throws", "b"]);
+    expect(path).toEqual(["a1", "throw", "b"]);
 });
 
 test("plugin p and full compact mode", async ()=>{
@@ -79,5 +92,6 @@ test("plugin p and full compact mode", async ()=>{
     const {serial} = dev(path)({a, b, c});
     await serial("a|p[a|c,b]")();
 
-    expect(path).toEqual(["a1", "throws", "b"]);
+    expect(path).toEqual(["a1", "throw", "b"]);
 });
+*/

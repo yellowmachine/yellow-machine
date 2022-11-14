@@ -1,5 +1,6 @@
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
+import { isArray } from 'node:util';
 import { parse, type Parsed} from './parse';
 
 emitKeypressEvents(process.stdin);
@@ -31,7 +32,7 @@ export type Serial = (tasks: Tpipe|C, ctx?: Ctx) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
-type SETUP = (arg: ()=>Promise<any>) => (data: Data) => Promise<any>;
+type SETUP = (arg: (data: Data)=>Promise<any>) => Promise<any>;
 type TON = {setup: SETUP, close?: (()=>void)};
 export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type P = (pipe: Tpipe) => (data?: Data) => Promise<any>;
@@ -56,13 +57,13 @@ export function context(namespace: Namespace,
 
     const on = (f: FTON): ((pipe: Tpipe|string) => (data: Data) => Promise<any>) => {
         const {setup, close} = f({s, p, on, nr});
-        return (pipe: Tpipe|string) => async (data: Data) => {
+        return (pipe: Tpipe|string) => async () => {
             let built: Tpipe;
             if(typeof pipe === 'string') 
                 built = build([pipe]);
             else
                 built = pipe;
-            await setup(async () => {
+            await setup(async (data: Data) => {
                 try{
                     data = {...data, ctx:{quit: close}};
                     await s(built)(data);
@@ -98,9 +99,9 @@ export function context(namespace: Namespace,
                     ret = [...ret, p(build(chunk.c))];
                 }else if(chunk.t === '['){
                     ret = [...ret, ()=>serial(build(chunk.c))];
-                }else{ //w_...[
+                }else if(chunk.t.startsWith("*")){ 
                     if(namespace.plugins){
-                        const plugin = plugins[chunk.t.substring(0, chunk.t.length-1)];
+                        const plugin = plugins[chunk.t.substring(1, chunk.t.length-1)];
                         const built = build(chunk.c);
                         ret = [...ret, (data: Data) => on(plugin)(built)(data)];
                     }
@@ -163,7 +164,9 @@ export function context(namespace: Namespace,
                             if(DEBUG.v)
                                 // eslint-disable-next-line no-console
                                 console.log(err);
-                            if(dev) path.push('throws');
+                            let message = 'Unknown Error';
+                                if(err instanceof Error) message = err.message;
+                            if(dev) path.push(message);//'throws');
                             if(quit) quit(true);
                         }                    
                     }
@@ -182,7 +185,9 @@ export function context(namespace: Namespace,
                     if(DEBUG.v)
                         // eslint-disable-next-line no-console
                         console.log(err);
-                    if(dev) path.push('throws');
+                    let message = 'Unknown Error';
+                        if(err instanceof Error) message = err.message;
+                    if(dev) path.push(message);
                     if(quit) quit(true);
                 }                
             } 
@@ -261,7 +266,9 @@ export function context(namespace: Namespace,
                                     if(DEBUG.v)
                                         // eslint-disable-next-line no-console
                                         console.log(err);
-                                    if(dev) path.push('throws');
+                                    let message = 'Unknown Error';
+                                        if(err instanceof Error) message = err.message;
+                                    if(dev) path.push(message);
                                     if(quit) quit(true);
                                     throw err;
                                 }                            
@@ -310,7 +317,7 @@ export function context(namespace: Namespace,
     };
 
     function _t(t: string){
-        const {parsed} = parse(t);
+        const {parsed} = parse(t, Object.keys(plugins));
         const b = build(parsed);
         if(b) return ()=>serial(b);
         else return null;
