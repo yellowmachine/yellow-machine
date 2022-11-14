@@ -23,8 +23,6 @@ export function *g(arr: string[]){
 export const DEBUG = {v: false};
 export const SHOW_QUIT_MESSAGE = {v: false};
 
-type FX = ({serial}:{serial: Serial})=>TON;
-type Quit = (err?: boolean, data?: any)=>void;
 export type Data = {data?: any, ctx: Ctx};
 export type F = ((arg0: Data) => any);
 type C = Generator|AsyncGenerator|F|string|Tpipe;
@@ -32,30 +30,22 @@ export type Tpipe = C[];
 export type Serial = (tasks: Tpipe|C, ctx?: Ctx) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
-type W = (files: string[],f: Tpipe|F) => () => Promise<any>;
-
-export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
-
-export const partial_w = (files: string[]) => (w: W) => (pipe: Tpipe) => w(files, pipe);
-
-type ON = (f: FX) => (pipe: Tpipe) => Promise<any>;
-export const plugin = (f: ({serial}:{serial:Serial}) => TON) => ({on, w}: {on: ON, w: W}) => on(f); 
 
 type TON = {setup: ((arg0: ()=>Promise<any>)=>Promise<any>), close: (()=>void)};
-
 export type S = (pipe: Tpipe) => (data: Data) => Promise<any>;
 export type P = (pipe: Tpipe) => (data: Data) => Promise<any>;
 export type NR = (f: F) => (data: Data) => Promise<any>;
-//export type BUILD = (parsed: (string|Parsed)[]) => Tpipe;
-type FTON = ({s, p, on, nr}:{s: S, p: P, on: FFTON, nr: NR, 
-    //build: BUILD
-}) => TON;
-type FFTON = (f: FTON) => ((pipe: Tpipe) => Promise<any>);
+
+type FTON = ({s, p, on, nr}:{s: S, p: P, on: MFTON, nr: NR, }) => TON;
+type MFTON = (f: FTON) => ((pipe: Tpipe) => Promise<any>);
 type Plugin = {[key: string]: FTON};
 
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 
+type Quit = (err?: boolean, data?: any)=>void;
 type Ctx = {quit?: Quit}|null;
+
+export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
 export function context(namespace: Namespace,
                         plugins: Plugin={}, 
