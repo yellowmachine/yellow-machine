@@ -46,3 +46,38 @@ test("plugin p and compact mode", async ()=>{
 
     expect(path).toEqual(["a1", "a2", "b"]);
 });
+
+test("plugin p and compact mode and ,", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "a2"]);
+    const b = g(["b"]);
+
+    const {serial, p} = dev(path)({a, b});
+    await serial(["a", p("a,b")])();
+
+    expect(path).toEqual(["a1", "a2", "b"]);
+});
+
+test("plugin p and compact mode and ,", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "throw"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    const {serial, p} = dev(path)({a, b, c});
+    await serial(["a", p("a|c,b")])();
+
+    expect(path).toEqual(["a1", "throws", "b"]);
+});
+
+test("plugin p and full compact mode", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "throw"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    const {serial} = dev(path)({a, b, c});
+    await serial("a|p[a|c,b]")();
+
+    expect(path).toEqual(["a1", "throws", "b"]);
+});

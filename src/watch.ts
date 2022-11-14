@@ -1,4 +1,4 @@
-import { DEBUG, SHOW_QUIT_MESSAGE, type S, type Tpipe, type Data, type F } from '.';
+import { DEBUG, SHOW_QUIT_MESSAGE, type S, type Tpipe, type F } from '.';
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
@@ -6,16 +6,15 @@ emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
 export default (files: string[]) => ({s}:{s: S}) => {
-    let _close: null|(()=>void) = null;
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    let _close = () => {};
     return {
-        setup: (f: F|Tpipe) => (data: Data) => {
+        setup: (f: F|Tpipe) => (/*data: Data*/) => {
             const {promise, close} = watch({s}, files, f);
             _close = close; 
             return promise;
         },
-        close: () => {
-            if(_close) close();
-        }
+        close: _close
     };
 };
 

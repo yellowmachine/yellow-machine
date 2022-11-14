@@ -15,7 +15,7 @@ export function setPlugin(plug: RecordPlugin){
 
 export function *g(arr: string[]){
     for(const i of arr){
-        if(i === 'throw') throw new Error(i);
+        if(i.startsWith('throw')) throw new Error(i);
         else yield i;
     }
 }
@@ -242,7 +242,6 @@ export function context(namespace: Namespace,
                     data.data = x;
                 }
                 else if(typeof t === 'string'){
-
                     if(t !== 'throws'){
                         if(!t.includes("|") && !t.includes("[")){
                             if(t.charAt(t.length-1) === "!"){
