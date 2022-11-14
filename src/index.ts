@@ -11,7 +11,7 @@ export function setPlugin(plug: RecordPlugin){
 
 export function *g(arr: string[]){
     for(const i of arr){
-        if(i.startsWith('throw') || i.startsWith('!')) throw new Error(i);
+        if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
         else yield i;
     }
 }
@@ -248,6 +248,7 @@ export function context(namespace: Namespace,
             ok = true;
         }catch(err){
             if(quit) quit(true);
+            console.log('quit done');
             if(tasks.at(-1) === 'throws' || throws){     
                 throw err;
             }

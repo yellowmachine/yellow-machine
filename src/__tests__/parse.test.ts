@@ -3,19 +3,19 @@ import { parse } from '../parse';
 
 DEBUG.v = false;
 
-/*
 test("parse most simple", ()=>{
-    const {remaining, parsed} = parse("a|b|c");
-    expect(parsed).toEqual(["a", "b", "c"]);
+    const {remaining, parsed} = parse("a|b|c", []);
+    expect(parsed).toEqual(["a|b|c"]);
     expect(remaining).toBe("");
 });
 
 test("parse most simple with []", ()=>{
-    const {remaining, parsed} = parse("a|[b]|c");
-    expect(parsed).toEqual(["a", ["b"], "c"]);
+    const {remaining, parsed} = parse("a|[b]|c", []);
+    expect(parsed).toEqual(["a", {t: "[", c: ["b"]}, "c"]);
     expect(remaining).toBe("");
 });
 
+/*
 test("parse most simple with |[]|", ()=>{
     const {remaining, parsed} = parse("a[b]c");
     expect(parsed).toEqual(["a", ["b"], "c"]);
@@ -111,7 +111,6 @@ test("parallel with compact mode", async ()=>{
     await parallel(["a", "a|b|c"]);
     expect(path).toEqual(["a", "a2", "b", "c"]);
 });
-*/
 
 test("parse simple", ()=>{
     const {parsed} = parse("a|b|c");
@@ -133,7 +132,6 @@ test("parse p with , | and !", ()=>{
     expect(parsed).toEqual(["a", {t: "p[", c: ["b|x,c!|y"]}, "d"]);
 });
 
-/*
 test("execution with p", async ()=>{
     const path: string[] = [];
     
