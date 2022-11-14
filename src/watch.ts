@@ -1,4 +1,4 @@
-import { DEBUG, SHOW_QUIT_MESSAGE, type Serial } from '.';
+import { DEBUG, SHOW_QUIT_MESSAGE, type S } from '.';
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
@@ -7,11 +7,11 @@ type F = ()=>Promise<any>;
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
-export default (files: string[]) => ({serial}:{serial: Serial}) => {
+export default (files: string[]) => ({s}:{s: S}) => {
     let _close: null|(()=>void) = null;
     return {
         setup: (f: F) => {
-            const {promise, close} = watch({serial}, files, f);
+            const {promise, close} = watch({s}, files, f);
             _close = close; 
             return promise;
         },
@@ -21,7 +21,7 @@ export default (files: string[]) => ({serial}:{serial: Serial}) => {
     };
 };
 
-function watch({serial}:{serial: Serial}, files: string[], f: F): {promise: Promise<any>, close: ()=>void}{
+function watch({s}:{s: S}, files: string[], f: F): {promise: Promise<any>, close: ()=>void}{
     const q = 'q';
 
     const h = (ch: string) => {
@@ -63,9 +63,9 @@ function watch({serial}:{serial: Serial}, files: string[], f: F): {promise: Prom
     async function run(){
         try{
             if(typeof f === 'function')
-                await serial([f, 'throws'], {quit: close});
+                await s([f, 'throws'])({ctx: {quit: close}});
             else{
-                await serial(f, {quit: close});
+                await s(f)({ctx: {quit: close}});
             }                
             if(SHOW_QUIT_MESSAGE.v)
                 // eslint-disable-next-line no-console

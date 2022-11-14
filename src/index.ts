@@ -43,8 +43,14 @@ export const plugin = (f: ({serial}:{serial:Serial}) => TON) => ({on, w}: {on: O
 
 type TON = {setup: ((arg0: ()=>Promise<any>)=>Promise<any>), close: (()=>void)};
 
-type FTON = ({serial}:{serial: Serial}) => TON;
-//type Plugin = {[key: string]: ((f: FTON) => (pipe: Tpipe)=>Promise<any>)};
+export type S = (pipe: Tpipe) => (data: Data) => Promise<any>;
+export type P = (pipe: Tpipe) => (data: Data) => Promise<any>;
+export type NR = (f: F) => (data: Data) => Promise<any>;
+//export type BUILD = (parsed: (string|Parsed)[]) => Tpipe;
+type FTON = ({s, p, on, nr}:{s: S, p: P, on: FFTON, nr: NR, 
+    //build: BUILD
+}) => TON;
+type FFTON = (f: FTON) => ((pipe: Tpipe) => Promise<any>);
 type Plugin = {[key: string]: FTON};
 
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
@@ -58,11 +64,11 @@ export function context(namespace: Namespace,
                     ){
 
     const on = (f: FTON): ((pipe: Tpipe) => Promise<any>) => {
-        const {setup, close} = f({serial});
+        const {setup, close} = f({s, p, on, nr/*, build*/});
         return async (pipe: Tpipe) => {
             await setup(async () => {
                 try{
-                    if(pipe) await serial(pipe, {quit: close});
+                    await s(pipe)({ctx:{quit: close}});
                 }catch(err){
                     close();
                 }
@@ -126,6 +132,7 @@ export function context(namespace: Namespace,
         };
     }
 
+    /*
     function w(files: string[],f: Tpipe|F): ()=>Promise<any>{
         return () => watch(files, f);
     }
@@ -200,6 +207,7 @@ export function context(namespace: Namespace,
         }
         return p;
     }
+    */
 
     const parallel: Parallel = async (tasks, mode="all", ctx=null) =>{
         const promises: Promise<any>[] = [];   
@@ -275,6 +283,8 @@ export function context(namespace: Namespace,
     };
 
     const p = (x: Tpipe)=> async (data: Data)=> await parallel(x, "all", data.ctx);
+
+    const s = (x: Tpipe)=> async (data: Data)=> await serial(x, data.ctx);
 
     const serial: Serial = async(tasks, ctx=null) => {
 
@@ -381,22 +391,22 @@ export function context(namespace: Namespace,
     }
 
     plugs.serial = (pipe: Tpipe) => async () => {
-        if(pipe) await serial(pipe);
+        await serial(pipe);
     };
 
-    return plugs;
-/*
-    return {
-        w,
-        watch,        
-        parallel,        
-        p,
-        serial,
-        nr,
-        on,
-        plug, 
-        run: (t: string) => serial(t),
-        //plugs
+    plugs.p = (pipe: Tpipe) => async () => {
+        await p(pipe);
+    };
+
+    plugs.nr = (pipe: Tpipe) => async () => {
+        await nr(pipe);
+    };
+
+    /*
+    plugs.run = (t: string) => async () => {
+        await serial(t);
     };
     */
+
+    return plugs;
 }
