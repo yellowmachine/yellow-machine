@@ -10,14 +10,17 @@ emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
 export default (files: string[]) => () => {
-    let wclose: () => boolean;
+    let _close: Quit;
     return {
-        setup: ({single, wrapClose}: SingleOrMultiple) => {
+        setup: ({single}: SingleOrMultiple) => {
             const {promise, close} = watch(files, single);
-            wclose = wrapClose(close);
+            _close = close;
             return promise;
         },
-        close: () => wclose()
+        close: () => {
+            _close();
+            return true;
+        }
     };
 };
 
