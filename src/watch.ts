@@ -12,9 +12,9 @@ process.stdin.setRawMode(true);
 export default (files: string[]) => () => {
     let _close: Quit;
     return {
-        setup: ({single, wrapClose}: SingleOrMultiple) => {
+        setup: ({single}: SingleOrMultiple) => {
             const {promise, close} = watch(files, single);
-            _close = wrapClose(close);
+            _close = close;
             return promise;
         },
         close: () => _close()
@@ -51,9 +51,8 @@ const watch = (files: string[], f: SingleOrMultiple["single"]) => {
             else if(resolve) resolve(data);
             if(watcher)
                 watcher.close();
-            return true;
         }
-        return false;
+        return true;
     }
 
     async function exitedRun(){
