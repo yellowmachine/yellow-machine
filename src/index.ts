@@ -56,16 +56,15 @@ export function context(namespace: Namespace={},
                 built = pipe;
             const single = async () => {
                 const previousClose = data.ctx?data.ctx.quit:null;
+                const backClose = () => {
+                    if(close) close();
+                    if(previousClose) previousClose();
+                };
                 try{
-                    data = {...data, ctx:{quit: ()=>{
-                            if(close) close();
-                            if(previousClose) previousClose();
-                        }
-                    }};
+                    data = {...data, ctx:{quit: ()=>backClose()}};
                     await s(built)(data);
                 }catch(err){
-                    if(close)close();
-                    if(previousClose) previousClose();
+                    backClose();
                 }
                 return true;
             };
@@ -73,18 +72,18 @@ export function context(namespace: Namespace={},
             if(Array.isArray(built)){
                 multiple = built.map(x => async () => {
                     const previousClose = data.ctx?data.ctx.quit:null;
+                    const backClose = () => {
+                        if(close) close();
+                        if(previousClose) previousClose();
+                    };
                     try{
-                        data = {...data, ctx:{quit: ()=>{
-                            if(close) close();
-                            if(previousClose) previousClose();
-                        }}};
+                        data = {...data, ctx:{quit: ()=>backClose()}};
                         if(Array.isArray(x))
                             await s(x)(data);
                         else
                             await s([x])(data);
                     }catch(err){
-                        if(close)close();
-                        if(previousClose) previousClose();
+                        backClose();
                     }
                     return true;
                 });
