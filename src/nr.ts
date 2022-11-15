@@ -1,11 +1,9 @@
 import { DEBUG, type SingleOrMultiple } from '.';
-import uid from 'tiny-uid';
 
 export default  () => {
-    const key = uid();
     return {
         setup: ({single}: SingleOrMultiple) => {
-            return nr(key, single);  
+            return nr(single)();  
         },
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         close: () => {
@@ -17,11 +15,11 @@ type F = () => Promise<any>;
 
 const cacheExited: {[key: string]: boolean} = {};
 
-const nr = async (key: string, f: F) => {
-    
-    if(typeof cacheExited[key] || cacheExited[key] === undefined){
+const nr = (f: F) => {
+    let exited = true;
+    return async () => {
         try{
-            cacheExited[key] = false;
+            exited = false;
             return await f();
         }catch(err){
             if(DEBUG.v)
@@ -29,7 +27,7 @@ const nr = async (key: string, f: F) => {
                 console.log(err);
             throw(err);
         }finally{
-            cacheExited[key] = true;
+            exited = true;
         }
-    }
+    };
 };
