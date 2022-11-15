@@ -12,15 +12,12 @@ process.stdin.setRawMode(true);
 export default (files: string[]) => () => {
     let _close: Quit;
     return {
-        setup: ({single}: SingleOrMultiple) => {
+        setup: ({single, wrapClose}: SingleOrMultiple) => {
             const {promise, close} = watch(files, single);
-            _close = close;
+            _close = wrapClose(close);
             return promise;
         },
-        close: () => {
-            _close();
-            return true;
-        }
+        close: () => _close()
     };
 };
 

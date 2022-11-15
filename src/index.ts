@@ -21,7 +21,7 @@ export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: 
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
 type FD = ()=>Promise<any>;
-export type SingleOrMultiple = {single: FD, multiple: FD[]};
+export type SingleOrMultiple = {single: FD, multiple: FD[], wrapClose: (c: Quit) => () => boolean};
 type SETUP = (arg: SingleOrMultiple) => Promise<any>;
 type TON = {setup: SETUP, close?: Quit};
 export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
@@ -96,7 +96,7 @@ export function context(namespace: Namespace={},
                     return true;
                 });
             }
-            await setup({single, multiple});
+            await setup({single, multiple, wrapClose: (c) => () => concatClose(c, prevClose)});
         };
     };
 
