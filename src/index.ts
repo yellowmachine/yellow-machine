@@ -21,7 +21,7 @@ export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: 
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
 type FD = ()=>Promise<any>;
-export type SingleOrMultiple = {single: FD, multiple: FD[], prevClose: Quit|undefined};
+export type SingleOrMultiple = {single: FD, multiple: FD[], wrapClose: (c: Quit) => () =>boolean};
 type SETUP = (arg: SingleOrMultiple) => Promise<any>;
 type TON = {setup: SETUP, close?: Quit};
 export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
@@ -40,11 +40,13 @@ export function concatClose(close?: Quit, prevClose?: Quit){
     if(close){
         if(close()){
             if(prevClose) return prevClose();
-            else return false;
-        }else return false;
+            else return true;
+        }else return true;
     }
-    else if(prevClose) return prevClose();
-    else return false;
+    else if(prevClose){
+        return prevClose();
+    } 
+    else return true;
 }
 
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
@@ -94,7 +96,7 @@ export function context(namespace: Namespace={},
                     return true;
                 });
             }
-            await setup({single, multiple, prevClose});
+            await setup({single, multiple, wrapClose: (c) => () => concatClose(c, prevClose)});
         };
     };
 
@@ -163,9 +165,11 @@ export function context(namespace: Namespace={},
             tasks = [tasks, 'throws'];
         }
         let throws = false;
+        let question = false;
         try{
             for(let t of tasks){
                 throws = false;
+                question = false;
                 if(typeof t === 'function'){
                     const x = await t(data);
                     data.data = x;
@@ -177,9 +181,18 @@ export function context(namespace: Namespace={},
                                 throws = true;
                                 t = t.substring(0, t.length-1);
                             }
+                            if(t.charAt(t.length-1) === "?"){
+                                question = true;
+                                t = t.substring(0, t.length-1);
+                            }
                             const m = namespace[t];
                             if(typeof m === 'function'){
-                                data.data = await m(data);
+                                try{
+                                    data.data = await m(data);
+                                }catch(err){
+                                    if(!question) throw err;
+                                    else break;
+                                }
                             }else{
                                 try{
                                     const x = await m.next(data);
@@ -193,8 +206,12 @@ export function context(namespace: Namespace={},
                                     let message = 'Unknown Error';
                                         if(err instanceof Error) message = err.message;
                                     if(dev) path.push(message);
-                                    if(quit) quit(true);
-                                    throw err;
+                                    //throw err;
+                                    if(!question){
+                                        if(quit) quit(true);
+                                        throw err;
+                                    } 
+                                    else break;
                                 }                            
                             }
                         }else{

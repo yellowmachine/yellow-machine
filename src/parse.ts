@@ -8,6 +8,12 @@ function nextToken(t: string, plugins: string[]){
         return {token: "]!", remaining: t.substring(2)};
     else if(t.startsWith("]!,"))
         return {token: "]!,", remaining: t.substring(3)};
+    //?
+    else if(t.startsWith("]?"))
+        return {token: "]?", remaining: t.substring(2)};
+    else if(t.startsWith("]?,"))
+        return {token: "]?,", remaining: t.substring(3)};
+    //
     else if(t.startsWith('],'))
         return {token: "],", remaining: t.substring(2)};
     else if(t.charAt(0) === '[')
@@ -49,7 +55,7 @@ export function parse(t: string, plugins: string[]){
         const token = nextToken(remaining, plugins);
         if(token === null) break;
         remaining = token.remaining;
-        if(!["]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
+        if(!["]?", "]?,", "]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
             let t = token.token;
             if(t.startsWith('|'))
                 t = t.substring(1);
@@ -68,9 +74,13 @@ export function parse(t: string, plugins: string[]){
             const aux = parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
-        }else if(token.token === "]!" ||token.token === "]!," || token.token === "]," || token.token === "]" || remaining === ""){   
+        }else if(token.token === "]?" ||token.token === "]?," || 
+                 token.token === "]!" ||token.token === "]!," || 
+                 token.token === "]," || token.token === "]" || remaining === ""){   
             if(token.token.includes("!"))
                 pending.push("throws");
+            if(token.token.includes("?"))
+                pending.push("?");
             break;
         }
     }
