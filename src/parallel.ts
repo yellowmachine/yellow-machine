@@ -4,9 +4,6 @@ export default () => () => {
     return {
         setup: ({multiple}: {multiple: ArrFD}) => {
             return parallel(multiple);  
-        },
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        close: () => {
         }
     };
 };
