@@ -5,7 +5,7 @@ import { emitKeypressEvents } from 'node:readline';
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
-type F = (data: Data) => Promise<any>;
+type F = () => Promise<any>;
 
 export default (files: string[]) => () => {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -66,7 +66,7 @@ const watch = (files: string[], f: F) => {
 
     async function run(){
         try{
-            await f({ctx: {quit: close}});         
+            await f();         
             if(SHOW_QUIT_MESSAGE.v)
                 // eslint-disable-next-line no-console
                 console.log("Press " + q + " to quit!");
