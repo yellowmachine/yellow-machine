@@ -1,6 +1,7 @@
 import { parse, type Parsed} from './parse';
 import parallel from './parallel';
 import _nr from './nr';
+export {default as watch, SHOW_QUIT_MESSAGE} from './watch';
 
 export function *g(arr: string[]){
     for(const i of arr){
