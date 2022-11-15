@@ -1,7 +1,6 @@
 import {openSync, close, writeSync, rmSync} from 'fs';
 import { DEBUG, context as C, type Data, type F, type Tpipe, type Serial } from '../index';
 import watch from '../watch';
-import nr from '../nr';
 
 DEBUG.v = true;
 
