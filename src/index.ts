@@ -1,14 +1,6 @@
 import { parse, type Parsed} from './parse';
 import parallel from './parallel';
-import nr from './nr';
-
-type RecordPlugin = {[key: string]: (({serial}:{serial: Serial})=>TON)};
-
-let _plugins: RecordPlugin = {};
-
-export function setPlugin(plug: RecordPlugin){
-    _plugins = {..._plugins, ...plug};
-}
+import _nr from './nr';
 
 export function *g(arr: string[]){
     for(const i of arr){
@@ -24,7 +16,7 @@ export type Data = {data?: any, ctx: Ctx};
 export type F = ((arg0: Data) => any);
 type C = Generator|AsyncGenerator|F|string|Tpipe;
 export type Tpipe = C[];
-export type Serial = (tasks: Tpipe|C, ctx?: Ctx) => Promise<any>;
+export type Serial = (tasks: Tpipe|C, ctx: Ctx) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
@@ -37,13 +29,12 @@ export type P = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type NR = (f: F) => (data?: Data) => Promise<any>;
 
 type FTON = () => TON;
-//type MFTON = (f: FTON) => ((pipe: Tpipe) => (data: Data) => Promise<any>);
 type Plugin = {[key: string]: FTON};
 
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 
 type Quit = (err?: boolean, data?: any)=>void;
-export type Ctx = {quit?: Quit}|null;
+export type Ctx = {quit: Quit}|null;
 
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
@@ -122,16 +113,23 @@ export function context(namespace: Namespace={},
                     ret = [...ret, chunk];
                 }
             }else{
-                if(chunk.t === 'p['){
+                /*if(chunk.t === 'p['){
                     ret = [...ret, (data: Data) => {
                         return p(build(chunk.c))(data);
                     }];
-                }else if(chunk.t === '['){
+                }else */if(chunk.t === '['){
                     ret = [...ret, (data: Data)=>serial(build(chunk.c), data.ctx)];
                 }else if(chunk.t.startsWith("*")){ 
-                    if(plugins){
+                    const built = build(chunk.c);
+                    if(chunk.t === '*p'){
+                        ret = [...ret, async (data: Data) => await p(built)(data)];
+                    }
+                    else if(chunk.t === '*nr'){
+                        ret = [...ret, async (data: Data) => await nr(built)(data)];
+                    }
+                    else if(plugins){
                         const plugin = plugins[chunk.t.substring(1, chunk.t.length)];
-                        const built = build(chunk.c);
+                        //const built = build(chunk.c);
                         ret = [...ret, async (data: Data) => {
                             await on(plugin)(built)(data);
                         }];
@@ -155,7 +153,7 @@ export function context(namespace: Namespace={},
         let ok = false;
         const data = {
             data: null,
-            ctx: ctx  || {}
+            ctx: ctx//  || {}
         };
 
         let quit;
@@ -201,7 +199,6 @@ export function context(namespace: Namespace={},
                             }
                         }else{
                             const f = _t(t);
-                            //if(!Array.isArray(f)){
                             if(f !== null){
                                 data.data = await f(data);
                             }
@@ -243,7 +240,7 @@ export function context(namespace: Namespace={},
     };
 
     function _t(t: string){
-        const {parsed} = parse(t, Object.keys(plugins));
+        const {parsed} = parse(t, ['nr', 'p', ...Object.keys(plugins)]);
         const b = build(parsed);
         if(b) return (data: Data)=>serial(b, data.ctx);
         else return null;
@@ -267,9 +264,11 @@ export function context(namespace: Namespace={},
 
     plugs.p = p;
 
-    plugs.nr = (pipe: F|Tpipe|string) => (data?: Data) => {
-        return on(nr())(pipe)(data?data:emptyCtx);
+    const nr = (pipe: F|Tpipe|string) => (data?: Data) => {
+        return on(_nr())(pipe)(data?data:emptyCtx);
     };
+
+    plugs.nr = nr;
 
     return plugs;
 }

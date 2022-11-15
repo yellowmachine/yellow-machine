@@ -3,43 +3,71 @@ import { parse } from '../parse';
 
 DEBUG.v = false;
 
+const plugins = ['nr', 'p'];
+
+test("parse empty", ()=>{
+    const {remaining, parsed} = parse("", plugins);
+    expect(parsed).toEqual([]);
+    expect(remaining).toBe("");
+});
+
 test("parse most simple", ()=>{
-    const {remaining, parsed} = parse("a|b|c", []);
+    const {remaining, parsed} = parse("a", plugins);
+    expect(parsed).toEqual(['a']);
+    expect(remaining).toBe("");
+});
+
+test("parse most simple with ,", ()=>{
+    const {remaining, parsed} = parse("a,b", plugins);
+    expect(parsed).toEqual(['a,b']);
+    expect(remaining).toBe("");
+});
+
+test("parse most simple with |", ()=>{
+    const {remaining, parsed} = parse("a|b|c", plugins);
     expect(parsed).toEqual(["a|b|c"]);
     expect(remaining).toBe("");
 });
 
+test("parse most simple with , |", ()=>{
+    const {remaining, parsed} = parse("a,x|b|c", plugins);
+    expect(parsed).toEqual(["a,x|b|c"]);
+    expect(remaining).toBe("");
+});
+
 test("parse most simple with []", ()=>{
-    const {remaining, parsed} = parse("a|[b]|c", []);
+    const {remaining, parsed} = parse("a|[b]|c", plugins);
     expect(parsed).toEqual(["a", {t: "[", c: ["b"]}, "c"]);
     expect(remaining).toBe("");
 });
 
+test("parse most simple with [] without |[...]|", ()=>{
+    const {remaining, parsed} = parse("a[b]c", plugins);
+    expect(parsed).toEqual(["a", {t: "[", c: ["b"]}, "c"]);
+    expect(remaining).toBe("");
+});
+
+test("parse most simple without ending", ()=>{
+    const {remaining, parsed} = parse("a[b[c", plugins);
+    expect(parsed).toEqual(["a", {t: "[", c: ["b", {t: "[", c: ["c"]}]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse most simple with p[]", ()=>{
+    const {remaining, parsed} = parse("a|p[b]", plugins);
+
+    expect(parsed).toEqual(["a", {t: "*p", c: [{t: "[", c: ["b"]}]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse most simple with q[] q is not plugin", ()=>{
+    const {remaining, parsed} = parse("a|q[b]", plugins);
+
+    expect(parsed).toEqual(["a|q", {t: "[", c: ['b']}]);
+    expect(remaining).toBe("");
+});
+
 /*
-test("parse most simple with |[]|", ()=>{
-    const {remaining, parsed} = parse("a[b]c");
-    expect(parsed).toEqual(["a", ["b"], "c"]);
-    expect(remaining).toBe("");
-});
-
-test("parse with p[]", ()=>{
-    const {remaining, parsed} = parse("p[b|c]");
-    expect(parsed).toEqual([{p: ["b", "c"]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse with []", ()=>{
-    const {remaining, parsed} = parse("a|[b|c]|d");
-    expect(parsed).toEqual(["a", ["b", "c"], "d"]);
-    expect(remaining).toBe("");
-});
-
-test("parse with [] and p[]", ()=>{
-    const {remaining, parsed} = parse("a|p[b|c]|d");
-    expect(parsed).toEqual(["a", {p: ["b", "c"]}, "d"]);
-    expect(remaining).toBe("");
-});
-
 test("build simple from context with inner parse and implicit parse", async ()=>{
     const path: string[] = [];
     

@@ -14,17 +14,7 @@ function nextToken(t: string, plugins: string[]){
         return {token: "[", remaining: t.substring(1)};
     else if(t.charAt(0) === ']')
         return {token: "]", remaining: t.substring(1)};
-    else if(t.startsWith("p["))
-        return {token: "p[", remaining: t.substring(2)};
-    /*else if(t.startsWith("w_")){
-        for(let i=0; i < t.length; i++){
-            if(t.charAt(i) === "[")
-                return {token: t.substring(0, i), remaining: t.substring(i+1)};
-        }
-        throw new Error("] not found");
-    }
-    */
-   else{
+    else{
         for(let i=0; i < t.length; i++){
             if(["[", "]"].includes(t.charAt(i))){
                 const token = t.substring(0, i);
@@ -41,13 +31,8 @@ function nextToken(t: string, plugins: string[]){
                     return {token, remaining: t.substring(i)};
                 }
             }
-            //if(t.substring(i).startsWith("|w_"))
-            //    return {token: t.substring(0, i), remaining: t.substring(i+1)};
-            if(t.substring(i).startsWith("|p["))
-                return {token: t.substring(0, i), remaining: t.substring(i+1)};
         }
         return {token: t, remaining: ""};
-        //throw new Error("| or [ or ] not found");
     }
 }
 

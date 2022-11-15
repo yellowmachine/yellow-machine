@@ -17,7 +17,7 @@ test("not reentrant", async() => {
     async function f(d: Data){
         path.push('f');
         await sleep(1000);
-        if(d.ctx) if(d.ctx.quit) d.ctx.quit(); // <------
+        d.ctx?.quit();
     }
 
     const fileName = "./src/__tests__/b.hey";
@@ -43,7 +43,7 @@ test("not reentrant compact mode", async() => {
     async function f(d: Data){
         path.push('f');
         await sleep(1000);
-        if(d.ctx) if(d.ctx.quit) d.ctx.quit(); // <------
+        d.ctx?.quit();
     }
 
     const fileName = "./src/__tests__/b.hey";
