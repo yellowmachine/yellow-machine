@@ -1,8 +1,8 @@
-import { DEBUG, type SingleOrMultiple } from '.';
+import { DEBUG } from '.';
 
 export default () => () => {
     return {
-        setup: ({multiple}: SingleOrMultiple) => {
+        setup: ({multiple}: {multiple: ArrFD}) => {
             return parallel(multiple);  
         },
         // eslint-disable-next-line @typescript-eslint/no-empty-function

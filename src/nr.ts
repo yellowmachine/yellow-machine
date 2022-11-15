@@ -1,8 +1,8 @@
-import { DEBUG, type SingleOrMultiple } from '.';
+import { DEBUG } from '.';
 
 export default  () => {
     return {
-        setup: ({single}: SingleOrMultiple) => {
+        setup: ({single}: {single: F}) => {
             return nr(single)();  
         },
         // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -12,8 +12,6 @@ export default  () => {
 };
 
 type F = () => Promise<any>;
-
-const cacheExited: {[key: string]: boolean} = {};
 
 const nr = (f: F) => {
     let exited = true;

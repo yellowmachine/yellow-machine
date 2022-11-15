@@ -1,4 +1,4 @@
-import { DEBUG, SHOW_QUIT_MESSAGE, type SingleOrMultiple, type Data } from '.';
+import { DEBUG, SHOW_QUIT_MESSAGE } from '.';
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
@@ -11,7 +11,7 @@ export default (files: string[]) => () => {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     let _close: null|Close;
     return {
-        setup: ({single}: SingleOrMultiple) => {
+        setup: ({single}: {single: F}) => {
             const {promise, close} = watch(files, single);
             _close = close;
             return promise;

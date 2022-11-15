@@ -34,7 +34,7 @@ type Plugin = {[key: string]: FTON};
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 
 type Quit = (err?: boolean, data?: any)=>void;
-export type Ctx = {quit: Quit}|null;
+export type Ctx = {quit: Quit};
 
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
