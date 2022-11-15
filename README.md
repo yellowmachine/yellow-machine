@@ -3,7 +3,7 @@
 Example of use:
 
 ```ts
-import { context as C, dev} from 'yellow-machine';
+import { context as C, dev, watch} from 'yellow-machine';
 
 async function f1(){...}
 async function f2(){...}
@@ -11,14 +11,16 @@ async function f3(){...}
 async function up(){...}
 async function down(){...}
 
-const {serial, w, p, parallel} = C({f3, up, down}) // we create a context given a namespace
+const {serial, w, p, parallel} = C({f3, up, down}, {w: watch(["*.js"])}) // we create a context given a namespace
 
 // then we could do:
 
 await serial([f1, f2, "f3"]) // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
 //
-await serial(["up", w(["*.js"], [k1, "k"]), "down"]) // w is watch some files and do the task associated ([k1, "k"]). If pressed key 'q', by exception or programmatically quit(), then we get out of watch and "down" is executed.
+await serial(["up", w([k1, "k"]), "down"]) // w is watch some files and do the task associated ([k1, "k"]). If pressed key 'q', by exception or programmatically quit(), then we get out of watch and "down" is executed.
 //
+
+
 await parallel([w(["*.js"], [dojs]), w(["*.css"], [docss])])
 //
 const x = [w(["*.js"], [dojs]), w(["*.css"], [docss])]

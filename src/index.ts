@@ -21,7 +21,7 @@ export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: 
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
 type FD = ()=>Promise<any>;
-export type SingleOrMultiple = {single: FD, multiple: FD[]};
+export type SingleOrMultiple = {single: FD, multiple: FD[], prevClose: Quit|undefined};
 type SETUP = (arg: SingleOrMultiple) => Promise<any>;
 type TON = {setup: SETUP, close?: Quit};
 export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
@@ -33,8 +33,19 @@ type Plugin = {[key: string]: FTON};
 
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 
-type Quit = (err?: boolean, data?: any)=>void;
+export type Quit = (err?: boolean, data?: any)=>boolean;
 export type Ctx = {quit: Quit};
+
+export function concatClose(close?: Quit, prevClose?: Quit){
+    if(close){
+        if(close()){
+            if(prevClose) return prevClose();
+            else return false;
+        }else return false;
+    }
+    else if(prevClose) return prevClose();
+    else return false;
+}
 
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
@@ -50,16 +61,16 @@ export function context(namespace: Namespace={},
         return (pipe: F|Tpipe|string) => async (data: Data) => {
             let built: F|Tpipe;
 
+            const prevClose = data.ctx?data.ctx.quit:undefined;
+
+            const backClose = () => {
+                return concatClose(close, prevClose);
+            };
             if(typeof pipe === 'string') 
                 built = build([pipe]);
             else
                 built = pipe;
             const single = async () => {
-                const previousClose = data.ctx?data.ctx.quit:null;
-                const backClose = () => {
-                    if(close) close();
-                    if(previousClose) previousClose();
-                };
                 try{
                     data = {...data, ctx:{quit: ()=>backClose()}};
                     await s(built)(data);
@@ -71,11 +82,6 @@ export function context(namespace: Namespace={},
             let multiple: FD[] = [];
             if(Array.isArray(built)){
                 multiple = built.map(x => async () => {
-                    const previousClose = data.ctx?data.ctx.quit:null;
-                    const backClose = () => {
-                        if(close) close();
-                        if(previousClose) previousClose();
-                    };
                     try{
                         data = {...data, ctx:{quit: ()=>backClose()}};
                         if(Array.isArray(x))
@@ -88,7 +94,7 @@ export function context(namespace: Namespace={},
                     return true;
                 });
             }
-            await setup({single, multiple});
+            await setup({single, multiple, prevClose});
         };
     };
 
@@ -240,7 +246,7 @@ export function context(namespace: Namespace={},
         else return null;
     }
 
-    const emptyCtx = {ctx: {quit: ()=>undefined}};
+    const emptyCtx = {ctx: {quit: ()=>false}};
 
     const plugs: {[key: string]: (arg0: F|Tpipe|string) => (data?: Data)=> Promise<any>} = {};
     for(const key of Object.keys(plugins)){
@@ -249,8 +255,6 @@ export function context(namespace: Namespace={},
         plugs[key] = (pipe: F|Tpipe|string) => async (data?: Data) => {
             await x(pipe)(data?data:emptyCtx);
         };
-        //const x = on(plugins[key]);
-        //plugs[key] = (pipe: F|Tpipe|string) => (data?: Data) => x(pipe)(data?data:emptyCtx);
     }
 
     const p = (pipe: F|Tpipe|string) => (data?: Data) => {
