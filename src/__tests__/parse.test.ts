@@ -56,7 +56,7 @@ test("parse most simple without ending", ()=>{
 test("parse most simple with p[]", ()=>{
     const {remaining, parsed} = parse("a|p[b]", plugins);
 
-    expect(parsed).toEqual(["a", {t: "*p", c: [{t: "[", c: ["b"]}]}]);
+    expect(parsed).toEqual(["a", {t: "*p", c: ["b"]}]);
     expect(remaining).toBe("");
 });
 

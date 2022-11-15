@@ -25,7 +25,7 @@ function nextToken(t: string, plugins: string[]){
                     }
                 }
                 if(plugins.includes(token)){
-                    return {token: "*"+token, remaining: t.substring(i)};
+                    return {token: "*"+token, remaining: t.substring(i+1)};
                 }
                 else{
                     return {token, remaining: t.substring(i)};

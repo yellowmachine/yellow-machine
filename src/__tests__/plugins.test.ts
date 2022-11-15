@@ -1,5 +1,6 @@
 import { DEBUG, dev, g } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
+import {parse} from '../parse';
 
 DEBUG.v = false;
 wDebug.v = true;
@@ -38,7 +39,7 @@ test("plugin w with p", async ()=>{
                        p[
                          b,c`]
     )();
-    expect(path).toEqual(["a", "b", "c1", "throws"]);
+    expect(path).toEqual(["a", "b", "c1", "throws", "c2"]);
 });
 
 test("plugin w and !", async ()=>{
@@ -97,4 +98,20 @@ test("plugin p and full compact mode", async ()=>{
     await serial("a|p[a|c,b]")();
 
     expect(path).toEqual(["a1", "throw", "b"]);
+});
+
+test("plugin p and full compact mode v2", async ()=>{
+    const path: string[] = [];
+    const up = g(["up"]);
+    const dql = g(["dql1", "dql!"]);
+    const test = g(["test"]);
+    const down = g(["down"]);
+
+    const {serial} = dev(path)({up, dql, test, down}, {w: watch(["*"])});
+    await serial(`up[
+        w[ dql | test ]
+        down`
+    )();
+
+    expect(path).toEqual(["up", "dql1", "test", "dql!", "down"]);
 });
