@@ -1,6 +1,6 @@
 import { parse, type Parsed} from './parse';
 import parallel from './parallel';
-//import _nr from './nr';
+import _nr from './nr';
 
 export function *g(arr: string[]){
     for(const i of arr){
@@ -120,9 +120,9 @@ export function context(namespace: Namespace={},
                     if(chunk.t === '*p'){
                         ret = [...ret, async (data: Data) => await p(built)(data)];
                     }
-                    //else if(chunk.t === '*nr'){
-                    //    ret = [...ret, async (data: Data) => await nr(built)(data)];
-                    //}
+                    else if(chunk.t === '*nr'){
+                        ret = [...ret, async (data: Data) => await nr(built)(data)];
+                    }
                     else if(plugins){
                         const plugin = plugins[chunk.t.substring(1, chunk.t.length)];
                         ret = [...ret, async (data: Data) => {
@@ -264,12 +264,11 @@ export function context(namespace: Namespace={},
 
     plugs.p = p;
 
-    /*
     const nr = (pipe: F|Tpipe|string) => (data?: Data) => {
-        return on(_nr())(pipe)(data?data:emptyCtx);
+        return on(_nr)(pipe)(data?data:emptyCtx);
     };
 
-    plugs.nr = nr;*/
+    plugs.nr = nr;
 
     return plugs;
 }

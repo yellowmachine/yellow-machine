@@ -1,6 +1,8 @@
-import { DEBUG, type SingleOrMultiple, type Data } from '.';
+import { DEBUG, type SingleOrMultiple } from '.';
+import uid from 'tiny-uid';
 
-export default (key: string) => () => {
+export default  () => {
+    const key = uid();
     return {
         setup: ({single}: SingleOrMultiple) => {
             return nr(key, single);  

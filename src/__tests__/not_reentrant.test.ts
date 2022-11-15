@@ -14,7 +14,7 @@ test("not reentrant", async() => {
     const path: string[] = [];
 
     const fileName = "./src/__tests__/b.hey";
-    const {w, serial, nrk} = C({}, {w: watch([fileName]), nrk: nr('key')});
+    const {w, serial, nr} = C({}, {w: watch([fileName])});
 
     async function f(d: Data){
         path.push('f');
@@ -29,7 +29,7 @@ test("not reentrant", async() => {
         count += 1;
     }, 200);
 
-    await serial([w(nrk(f))])();
+    await serial([w(nr(f))])();
     clearInterval(interval);
     rmSync(fileName);
     expect(path).toEqual(['f']);
@@ -39,7 +39,7 @@ test("not reentrant compact mode", async() => {
     let count = 0;
     const path: string[] = [];
     const fileName = "./src/__tests__/b.hey";
-    const {serial} = C({f}, {w: watch([fileName]), nrk: nr('key')});
+    const {serial} = C({f}, {w: watch([fileName])});
 
     async function f(d: Data){
         path.push('f');
@@ -54,7 +54,7 @@ test("not reentrant compact mode", async() => {
         count += 1;
     }, 200);
 
-    await serial("w[nrk[f")();
+    await serial("w[nr[f")();
     clearInterval(interval);
     rmSync(fileName);
     expect(path).toEqual(['f']);
