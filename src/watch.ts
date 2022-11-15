@@ -1,32 +1,32 @@
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
+import { type SingleOrMultiple, type Quit, concatClose } from '.';
+
 export const SHOW_QUIT_MESSAGE = {v: false};
 export const DEBUG = {v: false};
 
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
-type F = () => Promise<any>;
-
 export default (files: string[]) => () => {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    let _close: null|Close;
+    let _close: Quit;
+    let _prev: Quit|undefined;
     return {
-        setup: ({single}: {single: F}) => {
+        setup: ({single, prevClose}: SingleOrMultiple) => {
             const {promise, close} = watch(files, single);
             _close = close;
+            _prev = prevClose;
             return promise;
         },
         close: () => {
-            if(_close)_close();
+            return concatClose(_close, _prev);
         }
     };
 };
 
-type Close = (err?: boolean, data?: any) => void;
-
-const watch = (files: string[], f: F) => {
+const watch = (files: string[], f: SingleOrMultiple["single"]) => {
     const q = 'q';
 
     const h = (ch: string) => {
@@ -56,7 +56,9 @@ const watch = (files: string[], f: F) => {
             else if(resolve) resolve(data);
             if(watcher)
                 watcher.close();
+            return true;
         }
+        return false;
     }
 
     async function exitedRun(){
