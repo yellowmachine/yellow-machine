@@ -1,9 +1,9 @@
 import { DEBUG, type SingleOrMultiple, type Data } from '.';
 
-export default () => () => {
+export default (key: string) => () => {
     return {
         setup: ({single}: SingleOrMultiple) => {
-            return nr(single);  
+            return nr(key, single);  
         },
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         close: () => {
@@ -13,21 +13,21 @@ export default () => () => {
 
 type F = () => Promise<any>;
 
-async function nr(f: F){
-    let exited = true;
-    return async function(){
-        if(exited){
-            try{
-                exited = false;
-                return await f();
-            }catch(err){
-                if(DEBUG.v)
-                    // eslint-disable-next-line no-console
-                    console.log(err);
-                throw(err);
-            }finally{
-                exited = true;
-            }
+const cacheExited: {[key: string]: boolean} = {};
+
+const nr = async (key: string, f: F) => {
+    
+    if(typeof cacheExited[key] || cacheExited[key] === undefined){
+        try{
+            cacheExited[key] = false;
+            return await f();
+        }catch(err){
+            if(DEBUG.v)
+                // eslint-disable-next-line no-console
+                console.log(err);
+            throw(err);
+        }finally{
+            cacheExited[key] = true;
         }
-    };
-}
+    }
+};

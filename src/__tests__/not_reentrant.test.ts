@@ -1,6 +1,7 @@
 import {openSync, close, writeSync, rmSync} from 'fs';
 import { DEBUG, context as C, type Data, type F, type Tpipe, type Serial } from '../index';
 import watch from '../watch';
+import nr from '../nr';
 
 DEBUG.v = true;
 
@@ -12,7 +13,8 @@ test("not reentrant", async() => {
     let count = 0;
     const path: string[] = [];
 
-    const {w, serial, nr} = C({}, {w: watch(["*.js"])});
+    const fileName = "./src/__tests__/b.hey";
+    const {w, serial, nrk} = C({}, {w: watch([fileName]), nrk: nr('key')});
 
     async function f(d: Data){
         path.push('f');
@@ -20,7 +22,6 @@ test("not reentrant", async() => {
         d.ctx?.quit();
     }
 
-    const fileName = "./src/__tests__/b.hey";
     const interval = setInterval(()=>{
         const fh = openSync(fileName, 'a');
         writeSync(fh, ""+count);
@@ -28,17 +29,17 @@ test("not reentrant", async() => {
         count += 1;
     }, 200);
 
-    await serial([w(nr(f))]);
-    expect(path).toEqual(['f']);
+    await serial([w(nrk(f))])();
     clearInterval(interval);
     rmSync(fileName);
+    expect(path).toEqual(['f']);
 });
 
 test("not reentrant compact mode", async() => {
     let count = 0;
     const path: string[] = [];
-
-    const {serial} = C({f}, {w: watch(["*.js"])});
+    const fileName = "./src/__tests__/b.hey";
+    const {serial} = C({f}, {w: watch([fileName]), nrk: nr('key')});
 
     async function f(d: Data){
         path.push('f');
@@ -46,7 +47,6 @@ test("not reentrant compact mode", async() => {
         d.ctx?.quit();
     }
 
-    const fileName = "./src/__tests__/b.hey";
     const interval = setInterval(()=>{
         const fh = openSync(fileName, 'a');
         writeSync(fh, ""+count);
@@ -54,8 +54,9 @@ test("not reentrant compact mode", async() => {
         count += 1;
     }, 200);
 
-    await serial("w[nr[f");
-    expect(path).toEqual(['f']);
+    await serial("w[nrk[f")();
     clearInterval(interval);
     rmSync(fileName);
+    expect(path).toEqual(['f']);
+    
 });

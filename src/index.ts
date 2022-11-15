@@ -1,6 +1,6 @@
 import { parse, type Parsed} from './parse';
 import parallel from './parallel';
-import _nr from './nr';
+//import _nr from './nr';
 
 export function *g(arr: string[]){
     for(const i of arr){
@@ -113,23 +113,18 @@ export function context(namespace: Namespace={},
                     ret = [...ret, chunk];
                 }
             }else{
-                /*if(chunk.t === 'p['){
-                    ret = [...ret, (data: Data) => {
-                        return p(build(chunk.c))(data);
-                    }];
-                }else */if(chunk.t === '['){
+                if(chunk.t === '['){
                     ret = [...ret, (data: Data)=>serial(build(chunk.c), data.ctx)];
                 }else if(chunk.t.startsWith("*")){ 
                     const built = build(chunk.c);
                     if(chunk.t === '*p'){
                         ret = [...ret, async (data: Data) => await p(built)(data)];
                     }
-                    else if(chunk.t === '*nr'){
-                        ret = [...ret, async (data: Data) => await nr(built)(data)];
-                    }
+                    //else if(chunk.t === '*nr'){
+                    //    ret = [...ret, async (data: Data) => await nr(built)(data)];
+                    //}
                     else if(plugins){
                         const plugin = plugins[chunk.t.substring(1, chunk.t.length)];
-                        //const built = build(chunk.c);
                         ret = [...ret, async (data: Data) => {
                             await on(plugin)(built)(data);
                         }];
@@ -164,7 +159,7 @@ export function context(namespace: Namespace={},
         }
         let throws = false;
         try{
-            for(let t of tasks){ 
+            for(let t of tasks){
                 throws = false;
                 if(typeof t === 'function'){
                     const x = await t(data);
@@ -250,8 +245,13 @@ export function context(namespace: Namespace={},
 
     const plugs: {[key: string]: (arg0: F|Tpipe|string) => (data?: Data)=> Promise<any>} = {};
     for(const key of Object.keys(plugins)){
-        const x = on(plugins[key]);
-        plugs[key] = (pipe: F|Tpipe|string) => (data?: Data) => x(pipe)(data?data:emptyCtx);
+        const plugin = plugins[key];
+        const x = on(plugin);
+        plugs[key] = (pipe: F|Tpipe|string) => async (data?: Data) => {
+            await x(pipe)(data?data:emptyCtx);
+        };
+        //const x = on(plugins[key]);
+        //plugs[key] = (pipe: F|Tpipe|string) => (data?: Data) => x(pipe)(data?data:emptyCtx);
     }
 
     const p = (pipe: F|Tpipe|string) => (data?: Data) => {
@@ -264,11 +264,12 @@ export function context(namespace: Namespace={},
 
     plugs.p = p;
 
+    /*
     const nr = (pipe: F|Tpipe|string) => (data?: Data) => {
         return on(_nr())(pipe)(data?data:emptyCtx);
     };
 
-    plugs.nr = nr;
+    plugs.nr = nr;*/
 
     return plugs;
 }

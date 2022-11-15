@@ -25,7 +25,6 @@ export default (files: string[]) => () => {
 type Close = (err?: boolean, data?: any) => void;
 
 const watch = (files: string[], f: F) => {
-
     const q = 'q';
 
     const h = (ch: string) => {
