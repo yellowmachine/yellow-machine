@@ -1,5 +1,8 @@
-import { context as C } from '../index';
-import watch from '../watch';
+import { context as C, DEBUG } from '../index';
+import watch, {DEBUG as wDebug} from '../watch';
+
+DEBUG.v = false;
+wDebug.v = false;
 
 test("quiting w with keypress q", async ()=> {
     const path: string[] = [];

@@ -1,7 +1,8 @@
 import { DEBUG, dev, g } from '../index';
-import watch from '../watch';
+import watch, {DEBUG as wDebug} from '../watch';
 
-DEBUG.v = true;
+DEBUG.v = false;
+wDebug.v = true;
 
 test("plugin w", async ()=>{
     const path: string[] = [];

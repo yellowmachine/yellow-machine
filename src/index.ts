@@ -9,8 +9,7 @@ export function *g(arr: string[]){
     }
 }
 
-export const DEBUG = {v: false};
-export const SHOW_QUIT_MESSAGE = {v: false};
+export const DEBUG = {v: false, w: false};
 
 export type Data = {data?: any, ctx: Ctx};
 export type F = ((arg0: Data) => any);

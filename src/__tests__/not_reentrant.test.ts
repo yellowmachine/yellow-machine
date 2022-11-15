@@ -1,8 +1,9 @@
 import {openSync, close, writeSync, rmSync} from 'fs';
-import { DEBUG, context as C, type Data, type F, type Tpipe, type Serial } from '../index';
-import watch from '../watch';
+import { DEBUG, context as C, type Data } from '../index';
+import watch, {DEBUG as wDebug} from '../watch';
 
 DEBUG.v = true;
+wDebug.v = true;
 
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));

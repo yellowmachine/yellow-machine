@@ -1,5 +1,3 @@
-import { DEBUG } from '.';
-
 export default () => () => {
     return {
         setup: ({multiple}: {multiple: ArrFD}) => {
@@ -23,9 +21,8 @@ const parallel = async (tasks: ArrFD, mode="all") =>{
         else if (mode === "race") await Promise.race(promises);
         else if (mode === "allSettled") await Promise.allSettled(promises);
     }catch(err){
-        if(DEBUG.v)
-            // eslint-disable-next-line no-console
-            console.log(err);
+        // eslint-disable-next-line no-console
+        console.log(err);
         throw err;
     }
     return true;

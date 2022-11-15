@@ -1,6 +1,8 @@
-import { DEBUG, SHOW_QUIT_MESSAGE } from '.';
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
+
+export const SHOW_QUIT_MESSAGE = {v: false};
+export const DEBUG = {v: false};
 
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
@@ -70,9 +72,8 @@ const watch = (files: string[], f: F) => {
                 // eslint-disable-next-line no-console
                 console.log("Press " + q + " to quit!");
         }catch(err){
-            if(DEBUG.v)
-                // eslint-disable-next-line no-console
-                console.log(err);
+            // eslint-disable-next-line no-console
+            console.log(err);
         }
     }
 
