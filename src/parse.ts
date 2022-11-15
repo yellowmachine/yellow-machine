@@ -38,7 +38,10 @@ function nextToken(t: string, plugins: string[]){
 
 export type Parsed = {t: string, c: (Parsed|string)[]};
 
+const removeWhite = (t: string) => t.replace(/\s/g,'');
+
 export function parse(t: string, plugins: string[]){
+    t = removeWhite(t);
     let remaining = t;
     
     const pending: (Parsed|string)[] = [];

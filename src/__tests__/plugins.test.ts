@@ -32,7 +32,11 @@ test("plugin w with p", async ()=>{
     const c = g(["c1", "c2"]);
 
     const {serial} = dev(path)({a, b, c}, {w: watch(["*.js"])});
-    await serial(["a|w[p[b,c"])();
+    //await serial(["a|w[p[b,c"])();
+    await serial([`a|w[
+                       p[
+                         b,c`]
+    )();
     expect(path).toEqual(["a", "b", "c1", "throws"]);
 });
 
