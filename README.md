@@ -3,201 +3,270 @@
 Example of use:
 
 ```ts
-import { context as C, dev} from 'yellow-machine';
-
-async function f1(){...}
-async function f2(){...}
-async function f3(){...}
-async function up(){...}
-async function down(){...}
-
-const {serial, w, p, parallel} = C({f3, up, down}) // we create a context given a namespace
-
-// then we could do:
-
-await serial([f1, f2, "f3"]) // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
-//
-await serial(["up", w(["*.js"], [k1, "k"]), "down"]) // w is watch some files and do the task associated ([k1, "k"]). If pressed key 'q', by exception or programmatically quit(), then we get out of watch and "down" is executed.
-//
-await parallel([w(["*.js"], [dojs]), w(["*.css"], [docss])])
-//
-const x = [w(["*.js"], [dojs]), w(["*.css"], [docss])]
-await serial("up", p(x), "end")  // p is a wrapper over parallel
-//
-await serial("up", p([a, b, c], "all"), "end")  // default mode is "all". Possible values are: "all"|"race"|"allSettled"
-//I would like to use mode "any" but I have to understand why typescript doesn't let me. I will study this issue
-//if mode is "all" and for example "a" throws, then "end" will not execute.
-//
-await serial([f1, f2, 'throws']) //if f1, for example, throws, then f2 is not executed and the exception is raised
-//
-await serial([f1, f2, [f3, f4], f5]) //serial are default option when nested array is encountered
-
-//note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
-test('watch with generators', async ()=>{
-    const path: string[] = [];
-    function *ab(){
-        yield 'a';
-        yield 'b';
-    }
-
-    function *x(){
-        yield "1";
-        yield "2"; // you could throw some exception inside generators and outer w will stop immediately
-        return "3";
-    }
-  
-    const {serial, w} = dev(path)({ab: ab(), x: x()});
-    const p = serial(["ab", w(["*"], ["x"]), "ab"]);
-    await p;
-    expect(path).toEqual(["a", "1", "2", "3", "b"]);
-});
-```
-
-To test paths I think this is the way:
-
-```js
-function create(G, ctx){
-    const {serial, w} = G(ctx);
-    return serial(["ab", w(["*"], ["x"]), "ab"]); 
-}
-
-const p = create(dev(path), ctx_dev)
-//or in production
-const p = create(C, ctx_production)
-```
-
-This is a real example:
-
-```js
-const {context as C} = require("yellow-machine")
+// C will create a context given producer/consumers and plugins
+// watch is a plugin
+const {context: C, watch, g} = require("yellow-machine")
 const npm = require('npm-commands')
-const {docker} = require('./docker')
-const {dgraph} = require('./dgraph')
+const {docker} = require('./docker')  // this is a producer / consumer
+const {dgraph} = require('./dgraph')  // this is a producer / consumer
 const config = require("./config")
 
+
 function test(){
-    npm().run('test');
+    npm().run('tap');
 }
 
-const {up, down} = docker({name: "my-container-dgraph", 
+// up will start a docker image and down will stop it
+const {up, down} = docker({name: "my-container-dgraph-v13", 
                            image: "dgraph/standalone:master", 
-                           port: "8080", 
-                           waitOn: "http://localhost:8080"
+                           port: "8080"
                         })
 
-//compact mode
-async function main(){
-    const {serial, w} = C()
-    await serial([up, 
-               [w(["*.graphql", "*.test.js"], 
-                  [loadSchema, test]), 
-                down
-               ]
-             ]);
-}
+// it loads a graphql to a instance of dgraph
+const dql = dgraph(config)
 
-//or you prefer more flexibility
-async function main(){
-    const {watch, serial} = C()
-
-    let ok = await serial([up])
-    if(!ok){
-        console.log("Could not start docker")
-    }
-    else{
-        await watch(["./tests/*.js", "./schema/*.*"],  
-                     async ({ctx: {quit}})=>{
-            ok = await serial([loadSchema, test]) 
-            //if(!ok)   
-            //    quit()
-            });
-        await serial([down])
-    }
+async function main() {
+    // C(namespace, plugins)
+    // serial is called to start the pipeline of tasks
+    const {serial} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
+    await serial(`up[  
+                      w[ dql? | test ]
+                      down`
+    )();
+    // if up is ok, then enters into next scope. w watchs for file changes and
+    // dispatch the pipe: if dql is ok then test is executed
+    // if dql fails, if it were just "dql" then would throw an exception that stops watch
+    // but due to '?' the exception is catched and w continues.
+    // if key 'q' is pressed then watch finishes and down is executed
 }
 
 main()
 ```
 
-Pipes can be nested: `[f1, [k1, k2], z1]`. If k1 throws, the sequence is: f1...k1...z1.
+Things you can do:
 
-If we have `[f1, [k1, k2, 'throws'], z1]` if k1 throws then z1 is not executed.
+```ts
+// argument to serial can be a string or an array. Every element of the array can be the same
+await serial([f1, f2, "f3"]) // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
 
-If we have both: 
+// we use the plugin w. You pass w: watch(["./te... in the plugins sections and 
+// you get in const {serial, w} = C({
+const {serial, w, p} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
+await serial(["up", w([k1, "k"]), "down"])
 
-`[f1, w("*.js", [k2, k3]), z1]` and
+// p is shorthand for parallel
+await serial("up", p([a, b, c]), "end")
+
+// or
+await serial("up|p[a,b,c]|end")
+// end will execute when p finishes. Now the mode of p is all: await Promise.all(promises);
+
+// throwing
+await serial([a, b, 'throws']) //if f1, for example, throws, then f2 is not executed and the exception is raised
+
+// or
+await serial('[a|b]!')
+
+// you can use ! the next way
+await serial('a|b!|c!|d') // if b or c throws then the whole pipe throws
+
+// default nested to serial
+await serial([f1, f2, [f3, f4], f5]) 
+
+//note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
+test("plugin w and !", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]); // g is useful to create generators. You pass an array of strings
+    const b = g(["b!"]); // if a string starts with "trhow" or ends with ! the exception is trhown
+    const c = g(["c"]);
+
+    const {serial, w} = dev(path)({a, b, c}, {w: watch(["*.js"])});
+    await serial(["a", w("b"), "c"])();
+    // or await serial("a|w[b]c])();
+
+    expect(path).toEqual(["a", "b!", "c"]);
+```
+
+To test paths I think this is the way:
 
 ```js
-function k2({ctx}){
+function create(G, ctx, plugins){
+    const {serial, w} = G(ctx, plugins);
+    return serial(["ab", w(["*"], ["x"]), "ab"]); 
+}
+
+const p = create(dev(path), ctx_dev, plugins)
+//or in production
+const p = create(C, ctx_production, plugins)
+```
+
+A producer consumer is passed a type Data:
+
+```ts
+type Data = {data?: any, ctx: Ctx};
+type Ctx = {quit: Quit};
+type Quit = (err?: boolean, data?: any)=>boolean;
+
+function producerConsumer({ctx}){
     ctx.quit();
+    return //some data
 }
 ```
+Plugins:
 
-Then the execution is f1 ... k2 ... k3 ... z1.
+`p` to execute an array of pipes in parallel
+`w` to watch some files
+`nr` means not reentrant
 
----
-
-The types are:
-
-```ts
-export type Data = {data?: any, ctx: {quit: ()=>void}};
-export type F = ((arg0: Data) => any);
-type C = Generator|AsyncGenerator|F|string|Tpipe;
-export type Tpipe = C[];
-export type Serial = (tasks: Tpipe|C, ctx?: any) => Promise<any>;
-export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: any) => Promise<any>;
-
-```
-
-The data returned from a function is assigned to the data property of the object type Data passed to the next function in the pipeline:
-
-`nr` means not reentrant. Example:
+Example of a producer / consumer:
 
 ```ts
-const {w, serial, nr} = C();
-
-await serial([
-            w(["*.ts"], 
-                nr([f]) // please note that nr(f) implies nr([f, 'throws'])
-            )
-    ]);
-```
-
-`f` will be executed triggered by `w`, but only if it exited yet. If not, the call is discarded.
-
-You can write your own logic. Suppose you want to write a `nr`, this is how you would do:
-
-```ts
-function custom_nr({serial}:{serial: Serial}){
-    return function (f: F|Tpipe){
-        let exited = true;
-        return async function(data: Data){
-            if(exited){
-                try{
-                    exited = false;
-                    return await serial(f, data.ctx);
-                }finally{
-                    exited = true;
+exports.docker = function({image, port, name, waitOn=null}){
+    const docker = new Docker()
+    let container = null
+    if(waitOn === null){
+        waitOn = "http://localhost:" + port
+    }
+    return {
+        up: async () => { // a producer / consumer
+            try{
+                container = await docker.container.create({
+                    Image: image,
+                    name,
+                    PortBindings: {
+                        "8080/tcp": [{
+                            "HostIP":"0.0.0.0",
+                            "HostPort": port
+                        }]
+                    }
+                })
+                await container.start()
+                await _waitOn({
+                    resources: [waitOn]
+                });
+                console.log('docker started')
+            }catch(err){
+                console.log(err)
+                if(container){
+                    await stopAndDelete(container)
                 }
+                throw err
             }
-        };
-    };
+        },
+        down: async () => { // a producer / consumer
+            await stopAndDelete(container)
+        }
+    }
 }
-//...
-const {w, serial} = C();
-
-const nr = custom_nr({serial});
 ```
 
-You can enable or disable some logs:
+An example of a plugin:
 
 ```ts
-import { DEBUG, SHOW_QUIT_MESSAGE } from 'yellow-machine';
+// watch
 
-//default false
-DEBUG.v = true // will log all exceptions cached
+export default (files: string[]) => () => {
+    let _close: Quit;
+    return {
+        setup: ({single}: SingleOrMultiple) => {
+            const {promise, close} = watch(files, single);
+            _close = close;
+            return promise;
+        },
+        close: () => _close()
+    };
+};
 
-//default false
-SHOW_QUIT_MESSAGE.v = true // will print in console the message "Press q to quit!" when watching
+const watch = (files: string[], f: SingleOrMultiple["single"]) => {
+    const q = 'q';
+
+    const h = (ch: string) => {
+        if(ch === q){
+            close();
+        }
+    };
+    process.stdin.on('keypress', h);        
+
+    let resolve: (null|((arg0: (any)) => void)) = null;
+    let reject: (null|(() => void)) = null;
+
+    const p = new Promise((_resolve, _reject) => {
+        resolve = _resolve;
+        reject = _reject;
+    });
+
+    let exited = false;
+    function close(err = false, data: any = null){
+        if(!exited){
+            exited = true;
+            process.stdin.pause();
+            process.stdin.removeListener("keypress", h);
+            if(err){
+                if(reject) reject();
+            }
+            else if(resolve) resolve(data);
+            if(watcher)
+                watcher.close();
+        }
+        return true;
+    }
+
+    async function run(){
+        try{
+            await f();         
+            if(SHOW_QUIT_MESSAGE.v)
+                // eslint-disable-next-line no-console
+                console.log("Press " + q + " to quit!");
+        }catch(err){
+            // eslint-disable-next-line no-console
+            console.log(err);
+        }
+    }
+
+    let watcher: null | ReturnType<typeof chwatch> = null;
+    
+    watcher = chwatch(files, {ignoreInitial: true}).
+        on('all', (event, path) => {
+            // eslint-disable-next-line no-console
+            //console.log(event, path);
+            run();
+        });
+    run();
+    
+    return {promise: p, close};
+};
+```
+
+Other plugin example:
+
+```ts
+// nr
+export default  () => {
+    return {
+        setup: ({single}: {single: F}) => {
+            return nr(single)();  
+        },
+        //close: () => some boolean // if you return false then it does not bubble up the close
+    };
+};
+
+type F = () => Promise<any>;
+
+const nr = (f: F) => {
+    let exited = true;
+    return async () => {
+        try{
+            exited = false;
+            return await f();
+        }catch(err){
+            // eslint-disable-next-line no-console
+            console.log(err);
+            throw(err);
+        }finally{
+            exited = true;
+        }
+    };
+};
 ```
 
 You can see a repo using this library:
@@ -206,26 +275,3 @@ You can see a repo using this library:
 
 
 Tests: `npm run test`
-
-Work in progress:
-
-```ts
-await serial("a|b|c"); // ok
-await serial(["i", "a|b|c", "j"]); // ok
-await serial("a|p[x|y]") //ok
-
-//shorthand for "a|[b]|c"
-await serial(["a[b]c"]) // (ok) if b throws, it's cached immediately and c is executed
-await serial(["a[b!]c"]) // (ok) if b throws, c is not executed 
-```
-
-What about this?:
-```ts
-const {serial} = C({up, load, test, 
-                    w_js_grapql: //starts with "w_", so it will be a watch 
-                        ["./src/*.js", "./schema/*.graphql"]
-                });
-
-await serial(["up[w_js_graphql[load|test]|down]"])
-```
-I'm not sure if it's useful or not because I want as simple as possible.

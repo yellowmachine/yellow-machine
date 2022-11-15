@@ -1,72 +1,88 @@
-import { Parallel, Serial, Tpipe, Data } from ".";
-
 type B = (string|B|P)[]|undefined;
-type P = {p: B};
+type P = {p?: B, w?: {files: string[], pipe: B}};
 
-export const build = (obj: {serial?: B, parallel?: B}, 
-                     {serial, parallel, p}: 
-                            {serial: Serial, 
-                             parallel: Parallel, 
-                             p: (arg: Tpipe) => (data: Data)=>Promise<any>}) => {
+function nextToken(t: string, plugins: string[]){
+    if(t === "") return null;
 
-    function x(tasks: B, ret: Tpipe){
-        if(tasks === undefined) return ret;
-        for(const t of tasks){
-            if(t !== undefined){
-                if(Array.isArray(t)){
-                    ret.push(x(t, []));
-                }else if(typeof t === 'string'){
-                    ret.push(t);
-                }else{
-                    const pipe = x(t.p, []);
-                    ret.push(p(pipe));
+    if(t.startsWith("]!"))
+        return {token: "]!", remaining: t.substring(2)};
+    else if(t.startsWith("]!,"))
+        return {token: "]!,", remaining: t.substring(3)};
+    //?
+    else if(t.startsWith("]?"))
+        return {token: "]?", remaining: t.substring(2)};
+    else if(t.startsWith("]?,"))
+        return {token: "]?,", remaining: t.substring(3)};
+    //
+    else if(t.startsWith('],'))
+        return {token: "],", remaining: t.substring(2)};
+    else if(t.charAt(0) === '[')
+        return {token: "[", remaining: t.substring(1)};
+    else if(t.charAt(0) === ']')
+        return {token: "]", remaining: t.substring(1)};
+    else{
+        for(let i=0; i < t.length; i++){
+            if(["[", "]"].includes(t.charAt(i))){
+                const token = t.substring(0, i);
+                for(const plug of plugins){
+                    if(token.endsWith("|" + plug)){
+                        const size = (plug).length;
+                        return {token: t.substring(0, i-size), remaining: t.substring(i-size)};
+                    }
+                }
+                if(plugins.includes(token)){
+                    return {token: "*"+token, remaining: t.substring(i+1)};
+                }
+                else{
+                    return {token, remaining: t.substring(i)};
                 }
             }
         }
-        return ret;
+        return {token: t, remaining: ""};
     }
-    if(obj.serial){
-        const pipe = x(obj.serial, []);
-        return () => serial(pipe);
-    } 
-    else if (obj.parallel){
-        const pipe = x(obj.parallel, []);
-        return () => parallel(pipe);
-    }  
-};
+}
 
-export function parse(t: string): {remaining: string, parsed: B}{
+export type Parsed = {t: string, c: (Parsed|string)[]};
 
-    let parsed: B = [];
-    let partial = "";
-    let i = -1;
+const removeWhite = (t: string) => t.replace(/\s/g,'');
+
+export function parse(t: string, plugins: string[]){
+    t = removeWhite(t);
+    let remaining = t;
+    
+    const pending: (Parsed|string)[] = [];
     for(;;){
-        i = i + 1;
-        const c = t.substring(i, i+1);
-        const next = t.substring(i+1, i+2);
-        if(c === 'p' && next === "["){
-            if(partial != "")
-                parsed = [...partial.split("|").filter(k => k !== ""), ...parsed];
-            const {remaining, parsed: _parsed} = parse(t.substring(i+2));
-            parsed.push({p: _parsed});
-            t = remaining;
-            i = -1;
-            partial = "";
-        }
-        else if( c === "["){
-            parsed = [...partial.split("|").filter(k => k !== ""), ...parsed];
-            const {remaining, parsed: _parsed} = parse(t.substring(i+1));
-            parsed.push(_parsed);
-            t = remaining;
-            i = -1;
-            partial = "";
-        }else if(c === "]" || c === ""){
-            if(partial != "")
-                parsed = [...parsed, ...partial.split("|").filter(k => k !== ""), ];
+        const token = nextToken(remaining, plugins);
+        if(token === null) break;
+        remaining = token.remaining;
+        if(!["]?", "]?,", "]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
+            let t = token.token;
+            if(t.startsWith('|'))
+                t = t.substring(1);
+            if(t.charAt(t.length - 1) === "|")
+                t = t.substring(0, t.length-1);
+            pending.push(t);
+        }else if(token.token === "p["){
+            const aux = parse(remaining, plugins);
+            pending.push({t: token.token, c: aux.parsed});
+            remaining = aux.remaining;
+        }else if(token.token === '['){
+            const aux = parse(remaining, plugins);
+            pending.push({t: token.token, c: aux.parsed});
+            remaining = aux.remaining;
+        }else if(token.token.startsWith("*")){
+            const aux = parse(remaining, plugins);
+            pending.push({t: token.token, c: aux.parsed});
+            remaining = aux.remaining;
+        }else if(token.token === "]?" ||token.token === "]?," || 
+                 token.token === "]!" ||token.token === "]!," || 
+                 token.token === "]," || token.token === "]" || remaining === ""){   
+            if(token.token.includes("!"))
+                pending.push("throws");
+            if(token.token.includes("?"))
+                pending.push("?");
             break;
-        }else{
-            partial = partial + c;
         }
     }
-    return {remaining: t.substring(1+partial.length), parsed};
+    return {remaining, parsed: pending};
 }

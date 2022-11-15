@@ -1,41 +1,27 @@
 import {openSync, close, writeSync, rmSync} from 'fs';
-import { DEBUG, context as C, type Data, type F, type Tpipe, type Serial } from '../index';
+import { DEBUG, context as C, type Data } from '../index';
+import watch, {DEBUG as wDebug} from '../watch';
 
 DEBUG.v = true;
+wDebug.v = true;
 
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function custom_nr({serial}:{serial: Serial}){
-    return function (f: F|Tpipe){
-        let exited = true;
-        return async function(data: Data){
-            if(exited){
-                try{
-                    exited = false;
-                    return await serial(f, data.ctx);
-                }finally{
-                    exited = true;
-                }
-            }
-        };
-    };
 }
 
 test("not reentrant", async() => {
     let count = 0;
     const path: string[] = [];
 
-    const {w, serial, nr} = C();
+    const fileName = "./src/__tests__/b.hey";
+    const {w, serial, nr} = C({}, {w: watch([fileName])});
 
     async function f(d: Data){
         path.push('f');
         await sleep(1000);
-        d.ctx.quit();
+        d.ctx?.quit();
     }
 
-    const fileName = "./src/__tests__/b.hey";
     const interval = setInterval(()=>{
         const fh = openSync(fileName, 'a');
         writeSync(fh, ""+count);
@@ -43,31 +29,24 @@ test("not reentrant", async() => {
         count += 1;
     }, 200);
 
-    await serial([
-            w([fileName], 
-                nr(f)
-            )
-    ]);
-    expect(path).toEqual(['f']);
+    await serial([w(nr(f))])();
     clearInterval(interval);
     rmSync(fileName);
+    expect(path).toEqual(['f']);
 });
 
-test("not reentrant with custom nr", async() => {
+test("not reentrant compact mode", async() => {
     let count = 0;
     const path: string[] = [];
-
-    const {w, serial} = C();
-
-    const nr = custom_nr({serial});
+    const fileName = "./src/__tests__/b.hey";
+    const {serial} = C({f}, {w: watch([fileName])});
 
     async function f(d: Data){
         path.push('f');
         await sleep(1000);
-        d.ctx.quit();
+        d.ctx?.quit();
     }
 
-    const fileName = "./src/__tests__/b.hey";
     const interval = setInterval(()=>{
         const fh = openSync(fileName, 'a');
         writeSync(fh, ""+count);
@@ -75,12 +54,9 @@ test("not reentrant with custom nr", async() => {
         count += 1;
     }, 200);
 
-    await serial([
-            w([fileName], 
-                nr([f])
-            )
-    ]);
-    expect(path).toEqual(['f']);
+    await serial("w[nr[f")();
     clearInterval(interval);
     rmSync(fileName);
+    expect(path).toEqual(['f']);
+    
 });
