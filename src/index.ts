@@ -194,13 +194,11 @@ export function context(namespace: Namespace={},
                     try{
                         data.data = await t(data);
                     }catch(err){
-                        console.log('flag 1', tasks);
+                        console.log('catch 0');
+                        console.log(tasks, err instanceof Error && err.message);
                         if(tasks.at(-1) === '?') throw new Error('Stop');
-                    //    console.log('catch v2', tasks, err instanceof Error && err.message);
-                    //    throw err;
+                        throw err;
                     }
-                    //const x = await t(data);
-                    //data.data = x;
                 }
                 else if(typeof t === 'string'){
                     if(t !== 'throws' && t !== '?'){
@@ -228,8 +226,8 @@ export function context(namespace: Namespace={},
                                         data.data = await m(data);
                                     }                                    
                                 }catch(err){
-                                    console.log('flag 2', tasks);
-                                    //if(err instanceof Error && err.message.startsWith("Stop pipe")) return false;
+                                    console.log('catch 1');
+                                    console.log(tasks, err instanceof Error && err.message);
                                     if(tasks.at(-1) === '?') throw new Error('Stop');
                                     else if(!question) throw err;                                    
                                     return false;
@@ -246,8 +244,8 @@ export function context(namespace: Namespace={},
                                     if(dev) path.push(response.value);
                                     if(response.done && quit) quit(false, response.value);    
                                 }catch(err){
-                                    console.log('flag 3', tasks);
-                                    //if(err instanceof Error && err.message.startsWith("Stop pipe")) break;
+                                    console.log('catch 2');
+                                    console.log(tasks, err instanceof Error && err.message);
                                     if(DEBUG.v)
                                         // eslint-disable-next-line no-console
                                         console.log(err);                                    
@@ -257,10 +255,8 @@ export function context(namespace: Namespace={},
                                     if(tasks.at(-1) === '?') throw new Error('Stop');
                                     else if(!question){
                                         if(quit) quit(true);
-                                        console.log('thowing');
                                         throw err;
                                     } 
-                                    console.log('returning false');
                                     return false;
                                 }                            
                             }
@@ -270,11 +266,10 @@ export function context(namespace: Namespace={},
                                 try{
                                     data.data = await f(data);
                                 }catch(err){
-                                    console.log('flag 4', tasks);
+                                    console.log('catch 3');
+                                    console.log(tasks, err instanceof Error && err.message);
                                     if(tasks.at(-1) === '?') throw new Error('Stop');
-
-                                //    if(err instanceof Error && err.message.startsWith("Stop pipe")) return true;
-                                //    throw err;
+                                    throw err;
                                 }
                             }
                         }
@@ -284,10 +279,9 @@ export function context(namespace: Namespace={},
                     try{
                         await serial(t, data.ctx);
                     }catch(err){
-                        console.log('flag 5', tasks);
+                        console.log('catch 4');
+                        console.log(tasks, err instanceof Error && err.message);
                         if(tasks.at(-1) === '?') throw new Error('Stop');
-                        if(err instanceof Error && err.message.startsWith("Stop")) break;
-                    //    throw err;
                     }
                 }
                 else{
@@ -297,7 +291,8 @@ export function context(namespace: Namespace={},
                         if(dev) path.push(x.value);
                         if(x.done && quit) quit(false, x.value);
                     }catch(err){
-                        console.log('aqui?', tasks);
+                        console.log('catch 5');
+                        console.log(tasks, err instanceof Error && err.message);
                         if(DEBUG.v)
                             // eslint-disable-next-line no-console
                             console.log(err);
@@ -309,15 +304,11 @@ export function context(namespace: Namespace={},
             }
             ok = true;
         }catch(err){
-            console.log(tasks);
-            console.log(err instanceof Error && err.message);
+            console.log('catch final');
+            console.log(tasks, err instanceof Error && err.message);
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
-            //if(err instanceof Error && err.message.startsWith("Stop")) ;
-            //if(err instanceof Error && err.message.startsWith("Stop pipe")) throw err;
-            //if(tasks.at(-1) !== '?') return false;
             if(quit) quit(true);
             if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
-                console.log('throwwing 2');
                 throw err;
             }
             else{
@@ -327,7 +318,6 @@ export function context(namespace: Namespace={},
             }
             throw err;
         }
-        console.log('return ok');
         return ok;
     };
 
@@ -353,8 +343,13 @@ export function context(namespace: Namespace={},
         return on(parallel())(pipe)(data?data:emptyCtx);
     };
 
-    plugs.serial = (pipe: F|Tpipe|string) => (data?: Data) => {
-        return serial(pipe, data?data.ctx:emptyCtx.ctx);
+    plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
+        try{
+            return await serial(pipe, data?data.ctx:emptyCtx.ctx);
+        }catch(err){
+            if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
+            return false;
+        }
     };
 
     plugs.p = p;
