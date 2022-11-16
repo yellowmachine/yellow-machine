@@ -142,7 +142,9 @@ export function context(namespace: Namespace={},
                         ret = [...ret, async (data: Data) => await nr(built)(data)];
                     }
                     else if(plugins){
-                        const plugin = plugins[chunk.t.substring(1, chunk.t.length)];
+                        const name = chunk.t.substring(1, chunk.t.length);
+                        const plugin = plugins[name];
+                        if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
                         ret = [...ret, async (data: Data) => {
                             await on(plugin)(built)(data);
                         }];
@@ -197,6 +199,7 @@ export function context(namespace: Namespace={},
                                 t = t.substring(0, t.length-1);
                             }
                             const m = namespace[t];
+                            if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
                             if(typeof m === 'function'){
                                 try{
                                     data.data = await m(data);
@@ -217,7 +220,6 @@ export function context(namespace: Namespace={},
                                     let message = 'Unknown Error';
                                         if(err instanceof Error) message = err.message;
                                     if(dev) path.push(message);
-                                    //throw err;
                                     if(!question){
                                         if(quit) quit(true);
                                         throw err;
@@ -254,6 +256,7 @@ export function context(namespace: Namespace={},
             }
             ok = true;
         }catch(err){
+            if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             if(quit) quit(true);
             if(tasks.at(-1) === 'throws' || throws){     
                 throw err;
