@@ -170,7 +170,6 @@ export function context(namespace: Namespace={},
     };
 
     const serial: Serial = async(tasks, ctx) => {
-        let ok = false;
         const data = {
             data: null,
             ctx: ctx//  || {}
@@ -187,53 +186,38 @@ export function context(namespace: Namespace={},
         let dontReentrate = false;
         try{
             for(let t of tasks){
-                throws = false;
-                question = false;
-                dontReentrate = false;
-                if(typeof t === 'function'){
-                    try{
+                try{
+                    throws = false;
+                    question = false;
+                    dontReentrate = false;
+                    if(typeof t === 'function'){
                         data.data = await t(data);
-                    }catch(err){
-                        //console.log('catch 0');
-                        //console.log(tasks, err instanceof Error && err.message);
-                        if(tasks.at(-1) === '?') break; 
-                        throw err;
                     }
-                }
-                else if(typeof t === 'string'){
-                    if(t !== 'throws' && t !== '?'){
-                        if(!t.includes("|") && !t.includes("[")){
-                            if(t.charAt(t.length-1) === "!"){
-                                throws = true;
-                                t = t.substring(0, t.length-1);
-                            }
-                            if(t.charAt(t.length-1) === "?"){
-                                question = true;
-                                t = t.substring(0, t.length-1);
-                            }
-                            if(t.charAt(0) === '^'){
-                                t = t.substring(1);
-                                dontReentrate = true;
-                            }
-                            const m = namespace[t];
-                            if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
-                            if(typeof m === 'function'){
-                                try{
+                    else if(typeof t === 'string'){
+                        if(t !== 'throws' && t !== '?'){
+                            if(!t.includes("|") && !t.includes("[")){
+                                if(t.charAt(t.length-1) === "!"){
+                                    throws = true;
+                                    t = t.substring(0, t.length-1);
+                                }
+                                if(t.charAt(t.length-1) === "?"){
+                                    question = true;
+                                    t = t.substring(0, t.length-1);
+                                }
+                                if(t.charAt(0) === '^'){
+                                    t = t.substring(1);
+                                    dontReentrate = true;
+                                }
+                                const m = namespace[t];
+                                if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
+                                if(typeof m === 'function'){
                                     if(dontReentrate){
                                         data.data = await nr(m)(data);
                                     }
                                     else{
                                         data.data = await m(data);
                                     }                                    
-                                }catch(err){
-                                    //console.log('catch 1');
-                                    //console.log(tasks, err instanceof Error && err.message);
-                                    if(tasks.at(-1) === '?') break;
-                                    else if(!question) throw err;                                    
-                                    return false;
-                                }
-                            }else{
-                                try{
+                                }else{
                                     let response: {done?: boolean, value: any};
                                     if(dontReentrate){
                                         response = await nr((data: Data)=>m.next(data))(data);
@@ -242,71 +226,46 @@ export function context(namespace: Namespace={},
                                     }
                                     data.data = response.value;
                                     if(dev) path.push(response.value);
-                                    if(response.done && quit) quit(false, response.value);    
-                                }catch(err){
-                                    //console.log('catch 2');
-                                    //console.log(tasks, err instanceof Error && err.message);
-                                    if(DEBUG.v)
-                                        // eslint-disable-next-line no-console
-                                        console.log(err);                                    
-                                    let message = 'Unknown Error';
-                                        if(err instanceof Error) message = err.message;
-                                    if(dev) path.push(message);
-                                    if(tasks.at(-1) === '?') break;
-                                    else if(!question){
-                                        if(quit) quit(true);
-                                        throw err;
-                                    } 
-                                    return false;
-                                }                            
-                            }
-                        }else{
-                            const f = _t(t);
-                            if(f !== null){
-                                try{
+                                    if(response.done && quit) quit(false, response.value);                                                            
+                                }
+                            }else{
+                                const f = _t(t);
+                                if(f !== null){
                                     data.data = await f(data);
-                                }catch(err){
-                                    //console.log('catch 3');
-                                    //console.log(tasks, err instanceof Error && err.message);
-                                    if(tasks.at(-1) === '?') break;
-                                    throw err;
                                 }
                             }
-                        }
-                    }                    
-                }
-                else if(Array.isArray(t)){
-                    try{
-                        await serial(t, data.ctx);
-                    }catch(err){
-                        //console.log('catch 4');
-                        //console.log(tasks, err instanceof Error && err.message);
-                        if(tasks.at(-1) === '?') break;
-                        throw err;
+                        }                    
                     }
-                }
-                else{
-                    try{
+                    else if(Array.isArray(t)){
+                        await serial(t, data.ctx);
+                    }
+                    else{
                         const x = await t.next(data);
                         data.data = x.value;
                         if(dev) path.push(x.value);
-                        if(x.done && quit) quit(false, x.value);
-                    }catch(err){
-                        //console.log('catch 5');
-                        //console.log(tasks, err instanceof Error && err.message);
-                        if(DEBUG.v)
-                            // eslint-disable-next-line no-console
-                            console.log(err);
-                        if(dev) path.push('throws');
+                        if(x.done && quit) quit(false, x.value);                                               
+                    }    
+                }
+                catch(err){
+                    if(DEBUG.v)
+                        // eslint-disable-next-line no-console
+                        console.log(err);
+                    if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
+                    if(dev && err instanceof Error && err.message !== "no log") 
+                        path.push(err instanceof Error? err.message: "unknown error");
+                    if(tasks.at(-1) === '?') return false;
+                    else if(!question){
                         if(quit) quit(true);
-                        throw err;
-                    }                                               
-                } 
+                        if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!")))
+                            throw new Error('no log');
+                        else    
+                            throw err;
+                    } 
+                    return false;
+                }
             }
-            ok = true;
+            return true;
         }catch(err){
-            //console.log('catch final');
-            //console.log(tasks, err instanceof Error && err.message);
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             if(quit) quit(true);
             if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
@@ -319,9 +278,8 @@ export function context(namespace: Namespace={},
             }
             throw err;
         }
-        return ok;
     };
-
+    
     function _t(t: string){
         const {parsed} = parse(t, ['nr', 'p', ...Object.keys(plugins)]);
         const b = build(parsed);
