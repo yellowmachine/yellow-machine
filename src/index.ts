@@ -266,7 +266,12 @@ export function context(namespace: Namespace={},
                     }                    
                 }
                 else if(Array.isArray(t)){
-                    await serial(t, data.ctx);
+                    try{
+                        await serial(t, data.ctx);
+                    }catch(err){
+                        if(err instanceof Error && err.message.startsWith("Stop pipe")) break;
+                        throw err;
+                    }
                 }
                 else{
                     try{
@@ -286,8 +291,9 @@ export function context(namespace: Namespace={},
             }
             ok = true;
         }catch(err){
-            if(err instanceof Error && err.message.startsWith("Stop pipe")) throw err;
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
+            if(err instanceof Error && err.message.startsWith("Stop pipe")) throw err;
+            if(tasks.at(-1) !== '?') throw new Error("Stop pipe");
             if(quit) quit(true);
             if(tasks.at(-1) === 'throws' || (throws && tasks.at(-1) !== '?')){     
                 throw err;
