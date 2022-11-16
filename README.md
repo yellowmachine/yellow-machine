@@ -129,13 +129,22 @@ Plugins:
 `p` to execute an array of pipes in parallel
 `w` to watch some files
 `nr` means not reentrant
-`sw` : receive an array of Tpipe; not coded yet, a switch plugin that is constructed with a function like this:
+`sw` switch: is constructed with a function like this
 
 ```ts
-function(data: any){
-    ...
-    return i // where i: number is the index of the Tpipe to be executed
-}
+import _sw from './switch';
+...
+const a = g(["a"]);
+const b = g(["b"]);
+const c = g(["c"]);
+
+function decide(data: any): number{
+        if(data === 'a') return 0;
+        else return 1;
+    }
+
+const {serial} = dev(path)({a, b, c}, {sw: _sw(decide)});
+await serial("a|sw[b,c]")(); // a ... b
 ```
 
 Example of a producer / consumer:
