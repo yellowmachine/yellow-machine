@@ -1,5 +1,6 @@
 import { DEBUG, dev, g } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
+import _sw from '../switch';
 
 DEBUG.v = false;
 wDebug.v = true;
@@ -15,7 +16,6 @@ test("plugin w", async ()=>{
     expect(path).toEqual(["a", "b", "throws"]);
 });
 
-/*
 test("plugin p", async ()=>{
     const path: string[] = [];
     const a = g(["a1", "a2"]);
@@ -131,4 +131,20 @@ test("plugin p and full compact mode with ?", async ()=>{
 
     expect(path).toEqual(["up", "dql 1", "test", "dql!", undefined, "test!", "down"]);
 });
-*/
+
+test("plugin sw", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    function decide(data: any): number{
+        if(data.data === 'a') return 0;
+        else return 1;
+    }
+
+    const {serial} = dev(path)({a, b}, {sw: _sw(decide)});
+    await serial("a|sw[b,c]")();
+
+    expect(path).toEqual(["a", "b"]);
+});

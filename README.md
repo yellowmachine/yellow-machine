@@ -78,6 +78,13 @@ await serial('a|b!|c!|d')(); // if b or c throws then the whole pipe throws
 // default nested to serial
 await serial([f1, f2, [f3, f4], f5])();
 
+// soon: more expressions
+"w[^a|b,c" // a is non reentrant
+
+"w[a|b,^c" // c is non reentrant
+
+"w^[a,b]"  // [a,b] is non reentrant
+
 //note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
 test("plugin w and !", async ()=>{
     const path: string[] = [];
@@ -112,8 +119,8 @@ type Data = {data?: any, ctx: Ctx};
 type Ctx = {quit: Quit};
 type Quit = (err?: boolean, data?: any)=>boolean;
 
-function producerConsumer({ctx}){
-    ctx.quit();
+function someProducerConsumer({ctx}){
+    ctx.quit(); // call quit programatically
     return //some data
 }
 ```
@@ -122,6 +129,14 @@ Plugins:
 `p` to execute an array of pipes in parallel
 `w` to watch some files
 `nr` means not reentrant
+`sw` : receive an array of Tpipe; not coded yet, a switch plugin that is constructed with a function like this:
+
+```ts
+function(data: any){
+    ...
+    return i // where i: number is the index of the Tpipe to be executed
+}
+```
 
 Example of a producer / consumer:
 
@@ -277,6 +292,5 @@ const nr = (f: F) => {
 You can see a repo using this library:
 
 [example testing a dgraph schema](https://github.com/yellowmachine/example-test-your-dgraph)
-
 
 Tests: `npm run test`

@@ -1,6 +1,8 @@
 import { parse, type Parsed} from './parse';
 import parallel from './parallel';
 import _nr from './nr';
+import _sw from './switch';
+
 export {default as watch, SHOW_QUIT_MESSAGE} from './watch';
 
 export function *g(arr: string[]){
@@ -20,9 +22,9 @@ export type Serial = (tasks: Tpipe|C, ctx: Ctx) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
-type FD = ()=>Promise<any>;
+type FD = ()=>(Promise<any>);
 export type SingleOrMultiple = {single: FD, multiple: FD[]};
-type SETUP = (arg: SingleOrMultiple) => Promise<any>;
+type SETUP = (arg: SingleOrMultiple) => Promise<any>|((data: Data)=>Promise<any>);
 type TON = {setup: SETUP, close?: Quit};
 export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type P = (pipe: Tpipe) => (data?: Data) => Promise<any>;
@@ -96,7 +98,9 @@ export function context(namespace: Namespace={},
                     return true;
                 });
             }
-            await setup({single, multiple});
+            const returned = setup({single, multiple});
+            if(typeof returned === 'function') await returned(data);
+            await returned;
         };
     };
 

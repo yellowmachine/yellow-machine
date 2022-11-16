@@ -2,8 +2,7 @@ export default  () => {
     return {
         setup: ({single}: {single: F}) => {
             return nr(single)();  
-        },
-        //close: () => true
+        }
     };
 };
 

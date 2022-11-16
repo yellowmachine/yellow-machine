@@ -1,14 +1,14 @@
+import { type SingleOrMultiple, type Quit } from '.';
+
 export default () => () => {
     return {
-        setup: ({multiple}: {multiple: ArrFD}) => {
+        setup: ({multiple}: SingleOrMultiple) => {
             return parallel(multiple);  
         }
     };
 };
 
-type ArrFD = (()=>Promise<any>)[];
-
-const parallel = async (tasks: ArrFD, mode="all") =>{
+const parallel = async (tasks: SingleOrMultiple["multiple"], mode="all") =>{
 
     const promises: Promise<any>[] = [];   
 
