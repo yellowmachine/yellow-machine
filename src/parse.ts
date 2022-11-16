@@ -8,10 +8,10 @@ export function nextToken(t: string, plugins: string[]){
         return {token: "]!", remaining: t.substring(2)};
     else if(t.startsWith("]!,"))
         return {token: "]!,", remaining: t.substring(3)};
-    else if(t.startsWith("]?"))
-        return {token: "]?", remaining: t.substring(2)};
-    else if(t.startsWith("]?,"))
-        return {token: "]?,", remaining: t.substring(3)};
+    else if(t.startsWith("?"))
+        return {token: "?", remaining: t.substring(1)};
+    else if(t.startsWith("?,"))
+        return {token: "?,", remaining: t.substring(2)};
     else if(t.startsWith('],'))
         return {token: "],", remaining: t.substring(2)};
     else if(t.startsWith('^['))
@@ -53,6 +53,7 @@ const removeWhite = (t: string) => t.replace(/\s/g,'');
 export function parse(t: string, plugins: string[]){
     t = removeWhite(t);
     let remaining = t;
+    let extra: string|null = null;
     
     const pending: (Parsed|string)[] = [];
     for(;;){
@@ -60,7 +61,7 @@ export function parse(t: string, plugins: string[]){
 
         if(token === null) break;
         remaining = token.remaining;
-        if(!["^[", "]?", "]?,", "]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
+        if(!["^[", "?", "?,", "]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
             let t = token.token;
             if(t.startsWith('|'))
                 t = t.substring(1);
@@ -72,8 +73,8 @@ export function parse(t: string, plugins: string[]){
                         t2 = t2.substring(1);
                         pending.push({t: "*nr", c: parse(t2, plugins).parsed});    
                     }else{
-                        const xx = parse(t2, plugins).parsed;
-                        pending.push({t: "[", c: xx});
+                        //const xx = parse(t2, plugins).parsed;
+                        pending.push({t: "[", c: parse(t2, plugins).parsed});
                     }        
                 }
             }else{
@@ -108,23 +109,18 @@ export function parse(t: string, plugins: string[]){
             const aux = parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
-        }else if(token.token === "]?" || token.token === "]?," || 
-                 token.token === "]!" || token.token === "]!," || 
+        }else if(token.token === "?" || token.token === "?,"){
+            extra = "?";
+            if(token.token.length == 2){
+                break;
+            }
+        }else if(token.token === "]!" || token.token === "]!," || 
                  token.token === "]," || token.token === "]" || remaining === ""){   
             if(token.token.includes("!"))
                 pending.push("throws");
-            if(token.token.includes("?")){
-                pending.push('?');
-                /*const last = pending.pop();
-                if(last && typeof last !== 'string'){
-                    last.c.push('?');
-                }else{
-                    pending.push(last || {t: "[", c: []});
-                }
-                */
-            }
             break;
         }
     }
+    if(extra) pending.push(extra);
     return {remaining, parsed: pending};
 }

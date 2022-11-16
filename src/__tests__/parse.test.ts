@@ -108,6 +108,6 @@ test("parse most simple with q[] q is not plugin", ()=>{
 
 test("parse ]?", ()=>{
     const {remaining, parsed} = parse("a[b!|c]?x", plugins);
-    expect(parsed).toEqual(["a",{t: "[", c: ["b!|c", "?"]}, "x"]);
+    expect(parsed).toEqual(["a",{t: "[", c: ["b!|c"]}, "x", "?"]);
     expect(remaining).toBe("");
 });

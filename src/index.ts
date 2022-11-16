@@ -191,11 +191,19 @@ export function context(namespace: Namespace={},
                 question = false;
                 notR = false;
                 if(typeof t === 'function'){
-                    const x = await t(data);
-                    data.data = x;
+                    try{
+                        data.data = await t(data);
+                    }catch(err){
+                        console.log('flag 1', tasks);
+                        if(tasks.at(-1) === '?') throw new Error('Stop');
+                    //    console.log('catch v2', tasks, err instanceof Error && err.message);
+                    //    throw err;
+                    }
+                    //const x = await t(data);
+                    //data.data = x;
                 }
                 else if(typeof t === 'string'){
-                    if(t !== 'throws'){
+                    if(t !== 'throws' && t !== '?'){
                         if(!t.includes("|") && !t.includes("[")){
                             if(t.charAt(t.length-1) === "!"){
                                 throws = true;
@@ -220,10 +228,11 @@ export function context(namespace: Namespace={},
                                         data.data = await m(data);
                                     }                                    
                                 }catch(err){
-                                    if(err instanceof Error && err.message.startsWith("Stop pipe")) break;
-                                    if(tasks.at(-1) === '?') throw new Error("Stop pipe");
+                                    console.log('flag 2', tasks);
+                                    //if(err instanceof Error && err.message.startsWith("Stop pipe")) return false;
+                                    if(tasks.at(-1) === '?') throw new Error('Stop');
                                     else if(!question) throw err;                                    
-                                    else break;
+                                    return false;
                                 }
                             }else{
                                 try{
@@ -237,19 +246,22 @@ export function context(namespace: Namespace={},
                                     if(dev) path.push(response.value);
                                     if(response.done && quit) quit(false, response.value);    
                                 }catch(err){
-                                    if(err instanceof Error && err.message.startsWith("Stop pipe")) break;
+                                    console.log('flag 3', tasks);
+                                    //if(err instanceof Error && err.message.startsWith("Stop pipe")) break;
                                     if(DEBUG.v)
                                         // eslint-disable-next-line no-console
                                         console.log(err);                                    
                                     let message = 'Unknown Error';
                                         if(err instanceof Error) message = err.message;
                                     if(dev) path.push(message);
-                                    if(tasks.at(-1) === '?') throw new Error("Stop pipe");
+                                    if(tasks.at(-1) === '?') throw new Error('Stop');
                                     else if(!question){
                                         if(quit) quit(true);
+                                        console.log('thowing');
                                         throw err;
                                     } 
-                                    else break;
+                                    console.log('returning false');
+                                    return false;
                                 }                            
                             }
                         }else{
@@ -258,8 +270,11 @@ export function context(namespace: Namespace={},
                                 try{
                                     data.data = await f(data);
                                 }catch(err){
-                                    if(err instanceof Error && err.message.startsWith("Stop pipe")) break;
-                                    throw err;
+                                    console.log('flag 4', tasks);
+                                    if(tasks.at(-1) === '?') throw new Error('Stop');
+
+                                //    if(err instanceof Error && err.message.startsWith("Stop pipe")) return true;
+                                //    throw err;
                                 }
                             }
                         }
@@ -269,8 +284,10 @@ export function context(namespace: Namespace={},
                     try{
                         await serial(t, data.ctx);
                     }catch(err){
-                        if(err instanceof Error && err.message.startsWith("Stop pipe")) break;
-                        throw err;
+                        console.log('flag 5', tasks);
+                        if(tasks.at(-1) === '?') throw new Error('Stop');
+                        if(err instanceof Error && err.message.startsWith("Stop")) break;
+                    //    throw err;
                     }
                 }
                 else{
@@ -280,6 +297,7 @@ export function context(namespace: Namespace={},
                         if(dev) path.push(x.value);
                         if(x.done && quit) quit(false, x.value);
                     }catch(err){
+                        console.log('aqui?', tasks);
                         if(DEBUG.v)
                             // eslint-disable-next-line no-console
                             console.log(err);
@@ -291,11 +309,15 @@ export function context(namespace: Namespace={},
             }
             ok = true;
         }catch(err){
+            console.log(tasks);
+            console.log(err instanceof Error && err.message);
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
-            if(err instanceof Error && err.message.startsWith("Stop pipe")) throw err;
-            if(tasks.at(-1) !== '?') throw new Error("Stop pipe");
+            //if(err instanceof Error && err.message.startsWith("Stop")) ;
+            //if(err instanceof Error && err.message.startsWith("Stop pipe")) throw err;
+            //if(tasks.at(-1) !== '?') return false;
             if(quit) quit(true);
-            if(tasks.at(-1) === 'throws' || (throws && tasks.at(-1) !== '?')){     
+            if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
+                console.log('throwwing 2');
                 throw err;
             }
             else{
@@ -303,7 +325,9 @@ export function context(namespace: Namespace={},
                     // eslint-disable-next-line no-console
                     console.log(err);
             }
+            throw err;
         }
+        console.log('return ok');
         return ok;
     };
 

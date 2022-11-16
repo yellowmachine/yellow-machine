@@ -175,7 +175,7 @@ test("]? nested []", async ()=>{
     expect(path).toEqual(["a", "throws"]);
 });
 
-test("]? without !", async ()=>{
+test.only("]? without !", async ()=>{
     const path: string[] = [];
     const a = g(["a"]);
     const b = g(["throws"]);
@@ -183,20 +183,8 @@ test("]? without !", async ()=>{
     const x = g(["x"]);
 
     const {serial} = dev(path)({a, b, c, x}, {});
-    await serial("a[b|c]?x")();
-
-    expect(path).toEqual(["a", "throws"]);
-});
-
-test("]? without ! and c?]", async ()=>{
-    const path: string[] = [];
-    const a = g(["a"]);
-    const b = g(["throws"]);
-    const c = g(["c"]);
-    const x = g(["x"]);
-
-    const {serial} = dev(path)({a, b, c, x}, {});
-    await serial("a[b|c?]x")();
+    const response = await serial("a[b|c]?x")();
+    console.log(response);
 
     expect(path).toEqual(["a", "throws"]);
 });
