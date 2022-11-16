@@ -14,11 +14,11 @@ test("next token basic pipeline", ()=>{
 });
 
 test("next token basic pipeline with ^", ()=>{
-    expect(nextToken("^a|b,c[", plugins)).toEqual({remaining: "[", token: "^a|b,c"});
+    expect(nextToken("^a|b,c[", plugins)).toEqual({remaining: "a|b,c[", token: "^"});
 });
 
 test("next token basic pipeline with ^ and ^", ()=>{
-    expect(nextToken("^a|b,^c[", plugins)).toEqual({remaining: "[", token: "^a|b,^c"});
+    expect(nextToken("^a|b,^c[", plugins)).toEqual({remaining: "a|b,^c[", token: "^"});
 });
 
 test("next token basic pipeline with p", ()=>{
@@ -51,7 +51,7 @@ test("parse most simple", ()=>{
 
 test("parse most simple with ,", ()=>{
     const {remaining, parsed} = parse("a,b", plugins);
-    expect(parsed).toEqual(['a,b']);
+    expect(parsed).toEqual([{t: "[", c: ["a"]}, {t: "[", c: ["b"]}]);
     expect(remaining).toBe("");
 });
 
@@ -63,7 +63,7 @@ test("parse most simple with |", ()=>{
 
 test("parse most simple with , |", ()=>{
     const {remaining, parsed} = parse("a,x|b|c", plugins);
-    expect(parsed).toEqual(["a,x|b|c"]);
+    expect(parsed).toEqual([{t: "[", c: ["a"]}, {t: "[", c: ["x|b|c"]}]);
     expect(remaining).toBe("");
 });
 

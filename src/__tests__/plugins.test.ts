@@ -1,6 +1,7 @@
 import { DEBUG, dev, g } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 import _sw from '../switch';
+import { parse } from '../parse';
 
 DEBUG.v = false;
 wDebug.v = true;
@@ -96,7 +97,6 @@ test("plugin p and full compact mode", async ()=>{
 
     const {serial} = dev(path)({a, b, c});
     await serial("a|p[a|c,b]")();
-
     expect(path).toEqual(["a1", "throw", "b"]);
 });
 

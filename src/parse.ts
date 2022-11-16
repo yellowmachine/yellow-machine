@@ -20,6 +20,8 @@ export function nextToken(t: string, plugins: string[]){
         return {token: "[", remaining: t.substring(1)};
     else if(t.charAt(0) === ']')
         return {token: "]", remaining: t.substring(1)};
+    else if(t.startsWith("^"))
+        return {token: "^", remaining: t.substring(1)};
     else{
         for(let i=0; i < t.length; i++){
             if(["[", "]"].includes(t.charAt(i)) || t.substring(i).startsWith("^[")){
@@ -57,6 +59,7 @@ export function parse(t: string, plugins: string[]){
     const pending: (Parsed|string)[] = [];
     for(;;){
         const token = nextToken(remaining, plugins);
+
         if(token === null) break;
         remaining = token.remaining;
         if(!["^[", "]?", "]?,", "]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
@@ -65,11 +68,23 @@ export function parse(t: string, plugins: string[]){
                 t = t.substring(1);
             if(t.charAt(t.length - 1) === "|")
                 t = t.substring(0, t.length-1);
-            if(t.startsWith("^")){
-                t = t.substring(1);
-                pending.push({t: "*nr", c: [t]});    
+            if(t.includes(',')){
+                for(let t2 of t.split(',')){
+                    if(t2.startsWith("^")){
+                        t2 = t2.substring(1);
+                        pending.push({t: "*nr", c: parse(t2, plugins).parsed});    
+                    }else{
+                        const xx = parse(t2, plugins).parsed;
+                        pending.push({t: "[", c: xx});
+                    }        
+                }
             }else{
-                pending.push(t);
+                if(t.startsWith("^")){
+                    t = t.substring(1);
+                    pending.push({t: "*nr", c: [t]});    
+                }else{
+                    pending.push(t);
+                }
             }
         // pending to test if i can remove
         }else if(token.token === "p["){
@@ -81,6 +96,16 @@ export function parse(t: string, plugins: string[]){
             const aux = parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
+        }
+        else if(token.token === '^'){
+            if(token.token.includes(',')){
+                const c = remaining.split(',').map(x => parse(x, plugins).parsed);
+                c.forEach(x=>pending.push({t: "[", c: x}));
+            }else{
+                const aux = parse(remaining, plugins);
+                pending.push({t: token.token, c: aux.parsed});
+                remaining = aux.remaining;
+            }
         }
         else if(token.token === '['){
             const aux = parse(remaining, plugins);
