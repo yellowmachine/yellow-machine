@@ -196,7 +196,7 @@ export function context(namespace: Namespace={},
                     }catch(err){
                         console.log('catch 0');
                         console.log(tasks, err instanceof Error && err.message);
-                        if(tasks.at(-1) === '?') throw new Error('Stop');
+                        if(tasks.at(-1) === '?') break; //throw new Error('Stop');
                         throw err;
                     }
                 }
@@ -228,7 +228,7 @@ export function context(namespace: Namespace={},
                                 }catch(err){
                                     console.log('catch 1');
                                     console.log(tasks, err instanceof Error && err.message);
-                                    if(tasks.at(-1) === '?') throw new Error('Stop');
+                                    if(tasks.at(-1) === '?') break; //throw new Error('Stop');
                                     else if(!question) throw err;                                    
                                     return false;
                                 }
@@ -252,7 +252,7 @@ export function context(namespace: Namespace={},
                                     let message = 'Unknown Error';
                                         if(err instanceof Error) message = err.message;
                                     if(dev) path.push(message);
-                                    if(tasks.at(-1) === '?') throw new Error('Stop');
+                                    if(tasks.at(-1) === '?') break; //throw new Error('Stop');
                                     else if(!question){
                                         if(quit) quit(true);
                                         throw err;
@@ -268,7 +268,7 @@ export function context(namespace: Namespace={},
                                 }catch(err){
                                     console.log('catch 3');
                                     console.log(tasks, err instanceof Error && err.message);
-                                    if(tasks.at(-1) === '?') throw new Error('Stop');
+                                    if(tasks.at(-1) === '?') break; //throw new Error('Stop');
                                     throw err;
                                 }
                             }
@@ -281,7 +281,8 @@ export function context(namespace: Namespace={},
                     }catch(err){
                         console.log('catch 4');
                         console.log(tasks, err instanceof Error && err.message);
-                        if(tasks.at(-1) === '?') throw new Error('Stop');
+                        if(tasks.at(-1) === '?') break; //throw new Error('Stop');
+                        throw err;
                     }
                 }
                 else{

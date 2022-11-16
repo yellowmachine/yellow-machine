@@ -183,7 +183,8 @@ test("]? without !", async ()=>{
     const x = g(["x"]);
 
     const {serial} = dev(path)({a, b, c, x}, {});
-    await serial("a[b|c]?x")();
+    const response = await serial("a[b|c]?x")();
 
+    expect(response).toBe(true);
     expect(path).toEqual(["a", "throws"]);
 });
