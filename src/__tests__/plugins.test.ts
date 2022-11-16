@@ -11,7 +11,7 @@ test("plugin w", async ()=>{
     const b = g(["b", "throws"]);
 
     const {serial, w} = dev(path)({a, b}, {w: watch(["*.js"])});
-    await serial(["a", w(["b"])])();
+    await serial(["a", w(["b"])])({data: "someinitial data", ctx: {quit: ()=>true}});
 
     expect(path).toEqual(["a", "b", "throws"]);
 });

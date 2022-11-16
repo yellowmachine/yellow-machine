@@ -7,8 +7,8 @@ Example of use:
 // watch is a plugin
 const {context: C, watch, g} = require("yellow-machine")
 const npm = require('npm-commands')
-const {docker} = require('./docker')  // this is a producer / consumer
-const {dgraph} = require('./dgraph')  // this is a producer / consumer
+const {docker} = require('./docker')  
+const {dgraph} = require('./dgraph')  
 const config = require("./config")
 
 
@@ -16,12 +16,14 @@ function test(){
     npm().run('tap');
 }
 
+// up and down are producer / consumers
 // up will start a docker image and down will stop it
 const {up, down} = docker({name: "my-container-dgraph-v13", 
                            image: "dgraph/standalone:master", 
                            port: "8080"
                         })
 
+// dql is a producer / consumer
 // it loads a graphql to a instance of dgraph
 const dql = dgraph(config)
 
@@ -47,31 +49,34 @@ Things you can do:
 
 ```ts
 // argument to serial can be a string or an array. Every element of the array can be the same
-await serial([f1, f2, "f3"]) // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
+await serial([f1, f2, "f3"])(); // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
+
+// with initial data
+await serial([f1, f2, "f3"])({data: "someinitial data", ctx: {quit: ()=>true}}); // it will be changed in next version so it will be no necessary to pass ctx
 
 // we use the plugin w. You pass w: watch(["./te... in the plugins sections and 
 // you get in const {serial, w} = C({
 const {serial, w, p} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-await serial(["up", w([k1, "k"]), "down"])
+await serial(["up", w([k1, "k"]), "down"])();
 
 // p is shorthand for parallel
-await serial("up", p([a, b, c]), "end")
+await serial("up", p([a, b, c]), "end")();
 
 // or
-await serial("up|p[a,b,c]|end")
+await serial("up|p[a,b,c]|end")();
 // end will execute when p finishes. Now the mode of p is all: await Promise.all(promises);
 
 // throwing
-await serial([a, b, 'throws']) //if f1, for example, throws, then f2 is not executed and the exception is raised
+await serial([a, b, 'throws'])(); //if f1, for example, throws, then f2 is not executed and the exception is raised
 
 // or
-await serial('[a|b]!')
+await serial('[a|b]!')();
 
 // you can use ! the next way
-await serial('a|b!|c!|d') // if b or c throws then the whole pipe throws
+await serial('a|b!|c!|d')(); // if b or c throws then the whole pipe throws
 
 // default nested to serial
-await serial([f1, f2, [f3, f4], f5]) 
+await serial([f1, f2, [f3, f4], f5])();
 
 //note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
 test("plugin w and !", async ()=>{
@@ -91,8 +96,8 @@ To test paths I think this is the way:
 
 ```js
 function create(G, ctx, plugins){
-    const {serial, w} = G(ctx, plugins);
-    return serial(["ab", w(["*"], ["x"]), "ab"]); 
+    const {...} = G(ctx, plugins);
+    return serial(...); 
 }
 
 const p = create(dev(path), ctx_dev, plugins)
