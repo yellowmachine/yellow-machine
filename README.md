@@ -81,6 +81,8 @@ await serial([f1, f2, [f3, f4], f5])();
 // soon: more expressions
 "w[^a|b,c" // a is non reentrant
 
+"w[a|^b,c" // b is non reentrant
+
 "w[a|b,^c" // c is non reentrant
 
 "w^[a,b]"  // [a,b] is non reentrant
