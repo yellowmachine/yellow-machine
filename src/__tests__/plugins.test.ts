@@ -139,11 +139,11 @@ test("plugin sw", async ()=>{
     const c = g(["c"]);
 
     function decide(data: any): number{
-        if(data.data === 'a') return 0;
+        if(data === 'a') return 0;
         else return 1;
     }
 
-    const {serial} = dev(path)({a, b}, {sw: _sw(decide)});
+    const {serial} = dev(path)({a, b, c}, {sw: _sw(decide)});
     await serial("a|sw[b,c]")();
 
     expect(path).toEqual(["a", "b"]);

@@ -99,7 +99,7 @@ export function context(namespace: Namespace={},
                 });
             }
             const returned = setup({single, multiple});
-            if(typeof returned === 'function') await returned(data);
+            if(typeof returned === 'function') await returned(data.data);
             await returned;
         };
     };
