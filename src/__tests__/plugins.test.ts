@@ -188,3 +188,17 @@ test("]? without !", async ()=>{
     expect(response).toBe(true);
     expect(path).toEqual(["a", "throws"]);
 });
+
+test("]? without !", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]);
+    const b = g(["throws"]);
+    const c = g(["c"]);
+    const x = g(["x"]);
+
+    const {serial} = dev(path)({a, b, c, x}, {});
+    const response = await serial("a[b|c]x")();
+
+    expect(response).toBe(false);
+    expect(path).toEqual(["a", "throws"]);
+});

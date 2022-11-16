@@ -184,19 +184,19 @@ export function context(namespace: Namespace={},
         }
         let throws = false;
         let question = false;
-        let notR = false;
+        let dontReentrate = false;
         try{
             for(let t of tasks){
                 throws = false;
                 question = false;
-                notR = false;
+                dontReentrate = false;
                 if(typeof t === 'function'){
                     try{
                         data.data = await t(data);
                     }catch(err){
-                        console.log('catch 0');
-                        console.log(tasks, err instanceof Error && err.message);
-                        if(tasks.at(-1) === '?') break; //throw new Error('Stop');
+                        //console.log('catch 0');
+                        //console.log(tasks, err instanceof Error && err.message);
+                        if(tasks.at(-1) === '?') break; 
                         throw err;
                     }
                 }
@@ -213,29 +213,29 @@ export function context(namespace: Namespace={},
                             }
                             if(t.charAt(0) === '^'){
                                 t = t.substring(1);
-                                notR = true;
+                                dontReentrate = true;
                             }
                             const m = namespace[t];
                             if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
                             if(typeof m === 'function'){
                                 try{
-                                    if(notR){
+                                    if(dontReentrate){
                                         data.data = await nr(m)(data);
                                     }
                                     else{
                                         data.data = await m(data);
                                     }                                    
                                 }catch(err){
-                                    console.log('catch 1');
-                                    console.log(tasks, err instanceof Error && err.message);
-                                    if(tasks.at(-1) === '?') break; //throw new Error('Stop');
+                                    //console.log('catch 1');
+                                    //console.log(tasks, err instanceof Error && err.message);
+                                    if(tasks.at(-1) === '?') break;
                                     else if(!question) throw err;                                    
                                     return false;
                                 }
                             }else{
                                 try{
                                     let response: {done?: boolean, value: any};
-                                    if(notR){
+                                    if(dontReentrate){
                                         response = await nr((data: Data)=>m.next(data))(data);
                                     }else{
                                         response = await m.next(data);
@@ -244,15 +244,15 @@ export function context(namespace: Namespace={},
                                     if(dev) path.push(response.value);
                                     if(response.done && quit) quit(false, response.value);    
                                 }catch(err){
-                                    console.log('catch 2');
-                                    console.log(tasks, err instanceof Error && err.message);
+                                    //console.log('catch 2');
+                                    //console.log(tasks, err instanceof Error && err.message);
                                     if(DEBUG.v)
                                         // eslint-disable-next-line no-console
                                         console.log(err);                                    
                                     let message = 'Unknown Error';
                                         if(err instanceof Error) message = err.message;
                                     if(dev) path.push(message);
-                                    if(tasks.at(-1) === '?') break; //throw new Error('Stop');
+                                    if(tasks.at(-1) === '?') break;
                                     else if(!question){
                                         if(quit) quit(true);
                                         throw err;
@@ -266,9 +266,9 @@ export function context(namespace: Namespace={},
                                 try{
                                     data.data = await f(data);
                                 }catch(err){
-                                    console.log('catch 3');
-                                    console.log(tasks, err instanceof Error && err.message);
-                                    if(tasks.at(-1) === '?') break; //throw new Error('Stop');
+                                    //console.log('catch 3');
+                                    //console.log(tasks, err instanceof Error && err.message);
+                                    if(tasks.at(-1) === '?') break;
                                     throw err;
                                 }
                             }
@@ -279,9 +279,9 @@ export function context(namespace: Namespace={},
                     try{
                         await serial(t, data.ctx);
                     }catch(err){
-                        console.log('catch 4');
-                        console.log(tasks, err instanceof Error && err.message);
-                        if(tasks.at(-1) === '?') break; //throw new Error('Stop');
+                        //console.log('catch 4');
+                        //console.log(tasks, err instanceof Error && err.message);
+                        if(tasks.at(-1) === '?') break;
                         throw err;
                     }
                 }
@@ -292,8 +292,8 @@ export function context(namespace: Namespace={},
                         if(dev) path.push(x.value);
                         if(x.done && quit) quit(false, x.value);
                     }catch(err){
-                        console.log('catch 5');
-                        console.log(tasks, err instanceof Error && err.message);
+                        //console.log('catch 5');
+                        //console.log(tasks, err instanceof Error && err.message);
                         if(DEBUG.v)
                             // eslint-disable-next-line no-console
                             console.log(err);
@@ -305,8 +305,8 @@ export function context(namespace: Namespace={},
             }
             ok = true;
         }catch(err){
-            console.log('catch final');
-            console.log(tasks, err instanceof Error && err.message);
+            //console.log('catch final');
+            //console.log(tasks, err instanceof Error && err.message);
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             if(quit) quit(true);
             if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
