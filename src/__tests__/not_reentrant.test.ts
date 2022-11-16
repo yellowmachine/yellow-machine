@@ -60,3 +60,30 @@ test("not reentrant compact mode", async() => {
     expect(path).toEqual(['f']);
     
 });
+
+test("not reentrant ^", async() => {
+    let count = 0;
+    const path: string[] = [];
+
+    const fileName = "./src/__tests__/b.hey";
+
+    async function f(d: Data){
+        path.push('f');
+        await sleep(1000);
+        d.ctx?.quit();
+    }
+
+    const interval = setInterval(()=>{
+        const fh = openSync(fileName, 'a');
+        writeSync(fh, ""+count);
+        close(fh);
+        count += 1;
+    }, 200);
+
+    const {serial} = C({f}, {w: watch([fileName])});
+
+    await serial("w^[f")();
+    clearInterval(interval);
+    rmSync(fileName);
+    expect(path).toEqual(['f']);
+});

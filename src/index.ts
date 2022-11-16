@@ -110,8 +110,17 @@ export function context(namespace: Namespace={},
                 if(chunk.includes(',')){
                     const aux = chunk.split(",").filter(x => x !== "");
                     const aux2 = aux.map(x => {
-                        if(x.includes('|')) return x.split('|').filter(y => y !== "");
-                        else return x;
+                        if(x.startsWith('^')){
+                            x = x.substring(1);
+                            if(x.includes('|')){
+                                return async (data: Data) => await nr(x.split('|').filter(y => y !== ""))(data);
+                            }else
+                                return async (data: Data) => await nr(x)(data);
+                        }
+                        else{
+                            if(x.includes('|')) return x.split('|').filter(y => y !== "");
+                            else return x;
+                        }
                     });
                     ret = [...ret, ...aux2];
                 }else if(chunk.includes('|')){
@@ -120,7 +129,9 @@ export function context(namespace: Namespace={},
                     ret = [...ret, chunk];
                 }
             }else{
-                if(chunk.t === '['){
+                if(chunk.t === '^['){
+                    ret = [...ret, (data: Data)=>nr(build(chunk.c))(data)];
+                }else if(chunk.t === '['){
                     ret = [...ret, (data: Data)=>serial(build(chunk.c), data.ctx)];
                 }else if(chunk.t.startsWith("*")){ 
                     const built = build(chunk.c);
