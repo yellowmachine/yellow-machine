@@ -269,31 +269,23 @@ const watch = (files: string[], f: SingleOrMultiple["single"]) => {
 Other plugin example:
 
 ```ts
-// nr
-export default  () => {
+// switch
+import {type Data, type SingleOrMultiple} from '.';
+type SWF = (data: any)=>number;
+
+export default (f: SWF) => () => {
     return {
-        setup: ({single}: {single: F}) => {
-            return nr(single)();  
-        },
-        //close: () => some boolean // if you return false then it does not bubble up the close
+        setup: ({multiple}: SingleOrMultiple) => {
+            return select(multiple, f); // you can return a promise
+                                        // or a function that return a promise
+        }
     };
 };
 
-type F = () => Promise<any>;
-
-const nr = (f: F) => {
-    let exited = true;
-    return async () => {
-        try{
-            exited = false;
-            return await f();
-        }catch(err){
-            // eslint-disable-next-line no-console
-            console.log(err);
-            throw(err);
-        }finally{
-            exited = true;
-        }
+const select = (tasks: SingleOrMultiple["multiple"], f: SWF) =>{
+    return async (data: Data) => {
+        const task = tasks[f(data)];
+        return await task();
     };
 };
 ```
