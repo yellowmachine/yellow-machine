@@ -20,8 +20,6 @@ export function nextToken(t: string, plugins: string[]){
         return {token: "[", remaining: t.substring(1)};
     else if(t.charAt(0) === ']')
         return {token: "]", remaining: t.substring(1)};
-    //else if(t.startsWith("^"))
-    //    return {token: "^", remaining: t.substring(1)};
     else{
         for(let i=0; i < t.length; i++){
             if(["[", "]"].includes(t.charAt(i)) || t.substring(i).startsWith("^[")){
@@ -86,11 +84,6 @@ export function parse(t: string, plugins: string[]){
                     pending.push(t);
                 }
             }
-        // pending to test if i can remove
-        }else if(token.token === "p["){
-            const aux = parse(remaining, plugins);
-            pending.push({t: token.token, c: aux.parsed});
-            remaining = aux.remaining;
         }
         else if(token.token === "^["){
             const aux = parse(remaining, plugins);
@@ -115,13 +108,21 @@ export function parse(t: string, plugins: string[]){
             const aux = parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
-        }else if(token.token === "]?" ||token.token === "]?," || 
-                 token.token === "]!" ||token.token === "]!," || 
+        }else if(token.token === "]?" || token.token === "]?," || 
+                 token.token === "]!" || token.token === "]!," || 
                  token.token === "]," || token.token === "]" || remaining === ""){   
             if(token.token.includes("!"))
                 pending.push("throws");
-            if(token.token.includes("?"))
-                pending.push("?");
+            if(token.token.includes("?")){
+                pending.push('?');
+                /*const last = pending.pop();
+                if(last && typeof last !== 'string'){
+                    last.c.push('?');
+                }else{
+                    pending.push(last || {t: "[", c: []});
+                }
+                */
+            }
             break;
         }
     }

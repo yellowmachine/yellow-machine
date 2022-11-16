@@ -87,6 +87,12 @@ await serial([f1, f2, [f3, f4], f5])();
 
 "w^[a,b]"  // [a,b] is non reentrant
 
+// you don't need to close with ] at the end of the expression:
+"p[a,b"
+
+// if b throw, c is not executed and exception should be out, but ? catch it
+"a[b!|c]?x" // x should not be executed but at the moment this isn't what it does
+
 //note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
 test("plugin w and !", async ()=>{
     const path: string[] = [];

@@ -148,3 +148,16 @@ test("plugin sw", async ()=>{
 
     expect(path).toEqual(["a", "b"]);
 });
+
+test("]?", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]);
+    const b = g(["throws"]);
+    const c = g(["c"]);
+    const x = g(["x"]);
+
+    const {serial} = dev(path)({a, b, c, x}, {});
+    await serial("a[b!|c]?x")();
+
+    expect(path).toEqual(["a", "throws"]);
+});
