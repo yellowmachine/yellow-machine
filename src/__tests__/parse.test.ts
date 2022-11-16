@@ -14,11 +14,11 @@ test("next token basic pipeline", ()=>{
 });
 
 test("next token basic pipeline with ^", ()=>{
-    expect(nextToken("^a|b,c[", plugins)).toEqual({remaining: "a|b,c[", token: "^"});
+    expect(nextToken("^a|b,c[", plugins)).toEqual({remaining: "[", token: "^a|b,c"});
 });
 
 test("next token basic pipeline with ^ and ^", ()=>{
-    expect(nextToken("^a|b,^c[", plugins)).toEqual({remaining: "a|b,^c[", token: "^"});
+    expect(nextToken("^a|b,^c[", plugins)).toEqual({remaining: "[", token: "^a|b,^c"});
 });
 
 test("next token basic pipeline with p", ()=>{

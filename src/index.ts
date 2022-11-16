@@ -135,7 +135,11 @@ export function context(namespace: Namespace={},
             }else{
                 if(chunk.t === '^['){
                     ret = [...ret, (data: Data)=>nr(build(chunk.c))(data)];
-                }else if(chunk.t === '['){
+                }
+                //else if(chunk.t.startsWith("^")){
+
+                //}
+                else if(chunk.t === '['){
                     ret = [...ret, (data: Data)=>serial(build(chunk.c), data.ctx)];
                 }else if(chunk.t.startsWith("*")){ 
                     const built = build(chunk.c);
@@ -183,10 +187,12 @@ export function context(namespace: Namespace={},
         }
         let throws = false;
         let question = false;
+        let notR = false;
         try{
             for(let t of tasks){
                 throws = false;
                 question = false;
+                notR = false;
                 if(typeof t === 'function'){
                     const x = await t(data);
                     data.data = x;
@@ -202,21 +208,35 @@ export function context(namespace: Namespace={},
                                 question = true;
                                 t = t.substring(0, t.length-1);
                             }
+                            if(t.charAt(0) === '^'){
+                                t = t.substring(1);
+                                notR = true;
+                            }
                             const m = namespace[t];
                             if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
                             if(typeof m === 'function'){
                                 try{
-                                    data.data = await m(data);
+                                    if(notR){
+                                        data.data = await nr(m)(data);
+                                    }
+                                    else{
+                                        data.data = await m(data);
+                                    }                                    
                                 }catch(err){
                                     if(!question) throw err;
                                     else break;
                                 }
                             }else{
                                 try{
-                                    const x = await m.next(data);
-                                    data.data = x.value;
-                                    if(dev) path.push(x.value);
-                                    if(x.done && quit) quit(false, x.value);
+                                    let response: {done?: boolean, value: any};
+                                    if(notR){
+                                        response = await nr((data: Data)=>m.next(data))(data);
+                                    }else{
+                                        response = await m.next(data);
+                                    }
+                                    data.data = response.value;
+                                    if(dev) path.push(response.value);
+                                    if(response.done && quit) quit(false, response.value);    
                                 }catch(err){
                                     if(DEBUG.v)
                                         // eslint-disable-next-line no-console

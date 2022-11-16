@@ -20,8 +20,8 @@ export function nextToken(t: string, plugins: string[]){
         return {token: "[", remaining: t.substring(1)};
     else if(t.charAt(0) === ']')
         return {token: "]", remaining: t.substring(1)};
-    else if(t.startsWith("^"))
-        return {token: "^", remaining: t.substring(1)};
+    //else if(t.startsWith("^"))
+    //    return {token: "^", remaining: t.substring(1)};
     else{
         for(let i=0; i < t.length; i++){
             if(["[", "]"].includes(t.charAt(i)) || t.substring(i).startsWith("^[")){
