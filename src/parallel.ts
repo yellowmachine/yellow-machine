@@ -1,9 +1,9 @@
-import { type SingleOrMultiple, type Quit } from '.';
+import { type SingleOrMultiple } from '.';
 
-export default () => () => {
+export default (mode: "all"|"race"|"allSettled" = "all") => () => {
     return {
         setup: ({multiple}: SingleOrMultiple) => {
-            return parallel(multiple);  
+            return parallel(multiple, mode);  
         }
     };
 };
