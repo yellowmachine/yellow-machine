@@ -1,11 +1,11 @@
-import { type SingleOrMultiple, type Data, type FD } from '.';
+import { type SETUP, type Data, type FD } from '.';
 
 type BFUNC = null|((arg0: Data[])=>Data[]);
 type MODE = "custom"|"buffer"|"nobuffer";
 
 export default  (mode: MODE = "nobuffer", bfunc: BFUNC = null) => () => {
     return {
-        setup: ({single}: SingleOrMultiple) => {
+        setup: ({single}: SETUP) => {
             return nr(single, bfunc, mode);  
         }
     };

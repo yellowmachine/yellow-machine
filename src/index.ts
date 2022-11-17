@@ -24,9 +24,9 @@ export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: 
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
 export type FD = (data?: Data)=>(Promise<any>);
-export type SingleOrMultiple = {single: FD, multiple: FD[]};
-type SETUP = (arg: SingleOrMultiple) => Promise<any>|((data: Data)=>Promise<any>);
-type TON = {setup: SETUP, close?: Quit};
+export type SETUP = {single: FD, multiple: FD[]};
+type _SETUP = (arg: SETUP) => Promise<any>|((data: Data)=>Promise<any>);
+type TON = {setup: _SETUP, close?: Quit};
 export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type P = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type NR = (f: F) => (data?: Data) => Promise<any>;

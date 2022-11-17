@@ -205,7 +205,7 @@ An example of a plugin:
 export default (files: string[]) => () => {
     let _close: Quit;
     return {
-        setup: ({single}: SingleOrMultiple) => {
+        setup: ({single}: SETUP) => {
             const {promise, close} = watch(files, single);
             _close = close;
             return promise;
@@ -214,7 +214,7 @@ export default (files: string[]) => () => {
     };
 };
 
-const watch = (files: string[], f: SingleOrMultiple["single"]) => {
+const watch = (files: string[], f: SETUP["single"]) => {
     const q = 'q';
 
     const h = (ch: string) => {
@@ -278,19 +278,19 @@ Other plugin example:
 
 ```ts
 // switch
-import {type Data, type SingleOrMultiple} from '.';
+import {type Data, type SETUP} from '.';
 type SWF = (data: any)=>number;
 
 export default (f: SWF) => () => {
     return {
-        setup: ({multiple}: SingleOrMultiple) => {
+        setup: ({multiple}: SETUP) => {
             return select(multiple, f); // you can return a promise
                                         // or a function that return a promise
         }
     };
 };
 
-const select = (tasks: SingleOrMultiple["multiple"], f: SWF) =>{
+const select = (tasks: SETUP["multiple"], f: SWF) =>{
     return async (data: Data) => {
         const task = tasks[f(data)];
         return await task();

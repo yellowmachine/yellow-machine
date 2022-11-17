@@ -1,14 +1,14 @@
-import { type SingleOrMultiple } from '.';
+import { type SETUP } from '.';
 
 export default (mode: "all"|"race"|"allSettled" = "all") => () => {
     return {
-        setup: ({multiple}: SingleOrMultiple) => {
+        setup: ({multiple}: SETUP) => {
             return parallel(multiple, mode);  
         }
     };
 };
 
-const parallel = async (tasks: SingleOrMultiple["multiple"], mode="all") =>{
+const parallel = async (tasks: SETUP["multiple"], mode="all") =>{
 
     const promises: Promise<any>[] = [];   
 

@@ -1,7 +1,7 @@
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
-import { type SingleOrMultiple, type Quit } from '.';
+import { type SETUP, type Quit } from '.';
 
 export const SHOW_QUIT_MESSAGE = {v: false};
 export const DEBUG = {v: false};
@@ -12,7 +12,7 @@ process.stdin.setRawMode(true);
 export default (files: string[]) => () => {
     let _close: Quit;
     return {
-        setup: ({single}: SingleOrMultiple) => {
+        setup: ({single}: SETUP) => {
             const {promise, close} = watch(files, single);
             _close = close;
             return promise;
@@ -21,7 +21,7 @@ export default (files: string[]) => () => {
     };
 };
 
-const watch = (files: string[], f: SingleOrMultiple["single"]) => {
+const watch = (files: string[], f: SETUP["single"]) => {
     const q = 'q';
 
     const h = (ch: string) => {

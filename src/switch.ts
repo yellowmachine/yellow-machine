@@ -1,15 +1,15 @@
-import {type Data, type SingleOrMultiple} from '.';
+import {type Data, type SETUP} from '.';
 type SWF = (data: any)=>number;
 
 export default (f: SWF) => () => {
     return {
-        setup: ({multiple}: SingleOrMultiple) => {
+        setup: ({multiple}: SETUP) => {
             return select(multiple, f);  
         }
     };
 };
 
-const select = (tasks: SingleOrMultiple["multiple"], f: SWF) =>{
+const select = (tasks: SETUP["multiple"], f: SWF) =>{
     return async (data: Data) => {
         const task = tasks[f(data)];
         return await task(data);
