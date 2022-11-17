@@ -186,97 +186,86 @@ export function context(namespace: Namespace={},
         let dontReentrate = false;
         try{
             for(let t of tasks){
-                try{
-                    throws = false;
-                    question = false;
-                    dontReentrate = false;
-                    if(typeof t === 'function'){
-                        data.data = await t(data);
-                    }
-                    else if(typeof t === 'string'){
-                        if(t !== 'throws' && t !== '?'){
-                            if(!t.includes("|") && !t.includes("[")){
-                                if(t.charAt(t.length-1) === "!"){
-                                    throws = true;
-                                    t = t.substring(0, t.length-1);
-                                }
-                                if(t.charAt(t.length-1) === "?"){
-                                    question = true;
-                                    t = t.substring(0, t.length-1);
-                                }
-                                if(t.charAt(0) === '^'){
-                                    t = t.substring(1);
-                                    dontReentrate = true;
-                                }
-                                const m = namespace[t];
-                                if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
-                                if(typeof m === 'function'){
-                                    if(dontReentrate){
-                                        data.data = await nr(m)(data);
-                                    }
-                                    else{
-                                        data.data = await m(data);
-                                    }                                    
-                                }else{
-                                    let response: {done?: boolean, value: any};
-                                    if(dontReentrate){
-                                        response = await nr((data: Data)=>m.next(data))(data);
-                                    }else{
-                                        response = await m.next(data);
-                                    }
-                                    data.data = response.value;
-                                    if(dev) path.push(response.value);
-                                    if(response.done && quit) quit(false, response.value);                                                            
-                                }
-                            }else{
-                                const f = _t(t);
-                                if(f !== null){
-                                    data.data = await f(data);
-                                }
+                throws = false;
+                question = false;
+                dontReentrate = false;
+                if(typeof t === 'function'){
+                    data.data = await t(data);
+                }
+                else if(typeof t === 'string'){
+                    if(t !== 'throws' && t !== '?'){
+                        if(!t.includes("|") && !t.includes("[")){
+                            if(t.charAt(t.length-1) === "!"){
+                                throws = true;
+                                t = t.substring(0, t.length-1);
                             }
-                        }                    
-                    }
-                    else if(Array.isArray(t)){
-                        await serial(t, data.ctx);
-                    }
-                    else{
-                        const x = await t.next(data);
-                        data.data = x.value;
-                        if(dev) path.push(x.value);
-                        if(x.done && quit) quit(false, x.value);                                               
-                    }    
+                            if(t.charAt(t.length-1) === "?"){
+                                question = true;
+                                t = t.substring(0, t.length-1);
+                            }
+                            if(t.charAt(0) === '^'){
+                                t = t.substring(1);
+                                dontReentrate = true;
+                            }
+                            const m = namespace[t];
+                            if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
+                            if(typeof m === 'function'){
+                                if(dontReentrate){
+                                    data.data = await nr(m)(data);
+                                }
+                                else{
+                                    data.data = await m(data);
+                                }                                    
+                            }else{
+                                let response: {done?: boolean, value: any};
+                                if(dontReentrate){
+                                    response = await nr((data: Data)=>m.next(data))(data);
+                                }else{
+                                    response = await m.next(data);
+                                }
+                                data.data = response.value;
+                                if(dev) path.push(response.value);
+                                if(response.done && quit) quit(false, response.value);                                                            
+                            }
+                        }else{
+                            const f = _t(t);
+                            if(f !== null){
+                                data.data = await f(data);
+                            }
+                        }
+                    }                    
                 }
-                catch(err){
-                    if(DEBUG.v)
-                        // eslint-disable-next-line no-console
-                        console.log(err);
-                    if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
-                    if(dev && err instanceof Error && err.message !== "no log") 
-                        path.push(err instanceof Error? err.message: "unknown error");
-                    if(tasks.at(-1) === '?') return false;
-                    else if(!question){
-                        if(quit) quit(true);
-                        if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!")))
-                            throw new Error('no log');
-                        else    
-                            throw err;
-                    } 
-                    return false;
+                else if(Array.isArray(t)){
+                    await serial(t, data.ctx);
                 }
+                else{
+                    const x = await t.next(data);
+                    data.data = x.value;
+                    if(dev) path.push(x.value);
+                    if(x.done && quit) quit(false, x.value);                                               
+                }    
+                
             }
             return true;
         }catch(err){
+            if(DEBUG.v)
+                // eslint-disable-next-line no-console
+                console.log(err);
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
-            if(quit) quit(true);
+            if(dev && err instanceof Error && err.message !== "no log") 
+                path.push(err instanceof Error? err.message: "unknown error");
+            if(tasks.at(-1) === '?') return false;
+            else if(!question){
+                if(quit) quit(true);
+                if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!")))
+                    throw new Error('no log');
+                else    
+                    throw err;
+            } 
             if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
                 throw err;
             }
-            else{
-                if(DEBUG.v)
-                    // eslint-disable-next-line no-console
-                    console.log(err);
-            }
-            throw err;
+            return false;
         }
     };
     
