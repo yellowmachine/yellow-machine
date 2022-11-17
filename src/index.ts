@@ -23,7 +23,7 @@ export type Serial = (tasks: Tpipe|C, ctx: Ctx) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
-type FD = ()=>(Promise<any>);
+export type FD = (data?: Data)=>(Promise<any>);
 export type SingleOrMultiple = {single: FD, multiple: FD[]};
 type SETUP = (arg: SingleOrMultiple) => Promise<any>|((data: Data)=>Promise<any>);
 type TON = {setup: SETUP, close?: Quit};
@@ -304,7 +304,7 @@ export function context(namespace: Namespace={},
     plugs.p = p;
 
     const nr = (pipe: F|Tpipe|string) => (data?: Data) => {
-        return on(_nr)(pipe)(data?data:emptyCtx);
+        return on(_nr())(pipe)(data?data:emptyCtx);
     };
 
     plugs.nr = nr;
