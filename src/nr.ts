@@ -6,54 +6,44 @@ export default (mode: MODE = "nobuffer", bfunc: BFUNC = null) => (setup: SETUP):
 
     const pipe = setup["single"];
 
-    console.log('pipe dentro de nr', pipe);
-
     let exited = true;
     let buffer: Data[] = [];
     
-    let resolve: (null|((arg0: (any)) => void)) = null;
-    let reject: (null|(() => void)) = null;
-
-    let p: Promise<any> = new Promise((_resolve, _reject) => {
-        resolve = _resolve;
-        reject = _reject;
-    });
-
-    return (data: Data) => {
+    const g = (data: Data) => {
         if(!exited){
             console.log('not exited');
             if(mode === "buffer"){
-                console.log('buffering', data.data);
+                console.log('buffer push');
                 buffer.push(data);
             }
             else if(mode === "custom"){
                 if(bfunc) buffer = bfunc(buffer);
             }
-            return p;
+            if(data.ctx.promise) return data.ctx.promise;
+            else return Promise.resolve(false);
         }else{
-            console.log('before do');
-            do{
-                console.log('buffer.length', buffer.length);
-                if(buffer.length > 0) data = buffer.pop() as Data;
-                console.log('procesamos data', data);
-                try{
-                    exited = false;
-                    p = pipe(data);
-                    console.log('after await nr');
-                    //return ret;
-                }catch(err){
-                    console.log(err);
-                    // eslint-disable-next-line no-console
-                    console.log(err);
-                    //exited = true;
-                    throw(err);
-                }finally{
-                    console.log('finally');
-                    exited = true;      
-                }
-            }while(buffer.length > 0);
-            if(resolve) resolve(true);
-            return p;
+            console.log('exited');
+            if(data.ctx.promise){
+                console.log('dentro de if', data.ctx.promise);
+                const p = data.ctx.promise;
+                p.then(()=>{
+                    console.log("**************************************");
+                    exited=true;
+                    if(buffer.length > 0){
+                        console.log('pop');
+                        data = buffer.pop() as Data;
+                        g(data);
+                    }
+                }).catch(err=>console.log(err));
+                exited = false;
+                pipe(data);
+                return p;
+            }else{
+                console.log('resolve a false');
+                return Promise.resolve(false);
+            }
         }
     };
+
+    return g;
 };

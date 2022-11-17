@@ -73,7 +73,12 @@ export function parse(t: string, plugins: string[]){
                         t2 = t2.substring(1);
                         pending.push({t: "*nr", c: parse(t2, plugins).parsed});    
                     }else{
-                        pending.push({t: "[", c: parse(t2, plugins).parsed});
+                        if(t2.includes("|.")){
+                            t2 = t2.replace("|.", "|");
+                            pending.push({t: "|.", c: parse(t2, plugins).parsed});
+                        }else{
+                            pending.push({t: "[", c: parse(t2, plugins).parsed});
+                        }
                     }        
                 }
             }else{
@@ -81,7 +86,12 @@ export function parse(t: string, plugins: string[]){
                     t = t.substring(1);
                     pending.push({t: "*nr", c: parse(t, plugins).parsed});    
                 }else{
-                    pending.push(t);
+                    if(t.includes("|.")){
+                        t = t.replace("|.", "|");
+                        pending.push({t: "|.", c: [t]});
+                    }
+                    else
+                        pending.push(t);
                 }
             }
         }

@@ -34,7 +34,7 @@ export type NR = (f: F) => (data?: Data) => Promise<any>;
 type Plugin = {[key: string]: (arg: SETUP) => FD};
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 export type Quit = (err?: boolean, data?: any)=>boolean;
-export type Ctx = {quit: Quit};
+export type Ctx = {quit: Quit, promise?: Promise<any>};
 
 export function i(data=null){
     return {data, ctx: {quit: ()=>true}};
@@ -50,8 +50,6 @@ export function context(namespace: Namespace={},
 
     function buildSingleMultiple(pipe: F|Tpipe|string){
         let built: F|Tpipe;
-
-        console.log('build single multiple', pipe);
     
         if(typeof pipe === 'string') 
             built = build([pipe]);
@@ -75,7 +73,6 @@ export function context(namespace: Namespace={},
     }
 
     function build(parsed: (string|Parsed)[]): Tpipe{
-        console.log('nos piden build de', parsed);
         let ret: Tpipe = [];
         
         if(parsed.length === 0) return [];
@@ -114,7 +111,12 @@ export function context(namespace: Namespace={},
                 else if(chunk.t === '['){
                     const func = s(build(chunk.c));
                     ret = [...ret, func];
-                }else if(chunk.t.startsWith("*")){ 
+                }else if(chunk.t === '|.'){
+                    const built = build(chunk.c);
+                    const func = async (data: Data) => await serial(built, data.ctx, "block");
+                    ret = [...ret, func];
+                }
+                else if(chunk.t.startsWith("*")){ 
                     const built = build(chunk.c);
                     if(chunk.t === '*p'){
                         const func = nr(built);
@@ -145,24 +147,53 @@ export function context(namespace: Namespace={},
         }
         else
             built = x;
-        return async (data: Data) => await serial(built, data.ctx);
+        return async (data: Data) => await serial(built, data.ctx, "async");
     };
 
     const serialv2: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
         if(typeof tasks === 'string'){
             const {parsed} = parse(tasks, ['nr', 'p', ...Object.keys(plugins)]);
             const b = build(parsed);
-            return serial(b, ctx);
+            return serial(b, ctx, "block");
         }
     };
 
-    const serial: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
+    const serial: (tasks: Tpipe|C, ctx: Ctx, mode: "block"|"async") => Promise<any> = 
+        async(tasks: Tpipe|C, ctx: Ctx, mode: "block"|"async") => {
+            if(mode === 'block'){
+                let resolve: (null|((arg0: (any)) => void)) = null;
+                let reject: (null|(() => void)) = null;
+        
+                const p: Promise<any> = new Promise((_resolve, _reject) => {
+                    resolve = _resolve;
+                    reject = _reject;
+                });
+
+                const myresolve = (v: boolean) => {
+                    if(resolve) resolve(v);
+                };
+
+                const myreject = () => {
+                    if(reject) reject;
+                };
+
+                try{
+                    await _serial(tasks, ctx);
+                    myresolve(true);
+                }catch{
+                    myreject();
+                }
+            }else{
+                return _serial(tasks, ctx);
+            }
+    };
+
+    const _serial: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
+
         const data = {
             data: null,
-            ctx: ctx
+            ctx: {...ctx}
         };
-
-        console.log('******************* tasks', tasks);
 
         let quit;
         if(ctx) quit = ctx.quit;
@@ -179,10 +210,13 @@ export function context(namespace: Namespace={},
                 question = false;
                 dontReentrate = false;
                 if(typeof t === 'function'){
+                    console.log('entro a function, tasks', tasks);
                     data.data = await t(data);
+                    console.log('salgo de function', tasks);
                 }
                 else if(typeof t === 'string'){
                     if(t !== 'throws' && t !== '?'){
+                        console.log('entro a function string', t);
                         if(!t.includes("|") && !t.includes("[")){
                             if(t.charAt(t.length-1) === "!"){
                                 throws = true;
@@ -201,7 +235,6 @@ export function context(namespace: Namespace={},
                             if(typeof m === 'function'){
                                 if(dontReentrate){
                                     await nr(m)(data);
-                                    //data.data = await nr(m)(data);
                                 }
                                 else{
                                     data.data = await m(data);
@@ -226,7 +259,7 @@ export function context(namespace: Namespace={},
                     }                    
                 }
                 else if(Array.isArray(t)){
-                    await serial(t, data.ctx);
+                    await serial(t, data.ctx, "block");
                 }
                 else{
                     const x = await t.next(data);
@@ -258,13 +291,6 @@ export function context(namespace: Namespace={},
             return false;
         }
     };
-    
-    /*function _t(t: string){
-        const {parsed} = parse(t, ['nr', 'p', ...Object.keys(plugins)]);
-        const b = build(parsed);
-        if(b) return (data: Data)=>serial(b, data.ctx);
-        else return null;
-    }*/
 
     const emptyCtx = {ctx: {quit: ()=>false}};
 
@@ -289,7 +315,7 @@ export function context(namespace: Namespace={},
 
     plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
         try{
-            return await serial(pipe, data?data.ctx:emptyCtx.ctx);
+            return await serial(pipe, data?data.ctx:emptyCtx.ctx, "block");
         }catch(err){
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             return false;
