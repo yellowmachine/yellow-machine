@@ -217,15 +217,15 @@ test("plugin parallel", async ()=>{
 test.only("plugin repeat", async ()=>{
     const path: string[] = [];
     const a = g(["a1", "a2", "a3"]);
-    const b = g(["b", "b!"]);
+    const b = g(["b1", "b2", "a3"]);
 
-    const {serial} = dev(path)({a, b}, {r3: repeat(3), buffer: notReentrant("buffer")});
+    const {serialv2} = dev(path)({a, b}, {r2: repeat(2), buffer: notReentrant("buffer")});
 
-    await serial("r3[buffer[a|b")(i());
+    await serialv2("r2[buffer[a|b")(i());
 
     console.log(path);
 
-    expect(path).toEqual(["a1", "b", "a2", "b!"]);
+    expect(path).toEqual(["a1", "b1", "a2", "b2"]);
 });
 
 
