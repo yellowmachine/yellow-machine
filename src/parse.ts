@@ -73,14 +73,13 @@ export function parse(t: string, plugins: string[]){
                         t2 = t2.substring(1);
                         pending.push({t: "*nr", c: parse(t2, plugins).parsed});    
                     }else{
-                        //const xx = parse(t2, plugins).parsed;
                         pending.push({t: "[", c: parse(t2, plugins).parsed});
                     }        
                 }
             }else{
                 if(t.startsWith("^")){
                     t = t.substring(1);
-                    pending.push({t: "*nr", c: [t]});    
+                    pending.push({t: "*nr", c: parse(t, plugins).parsed});    
                 }else{
                     pending.push(t);
                 }

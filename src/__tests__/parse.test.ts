@@ -37,6 +37,14 @@ test("next token basic pipeline with ^ v2", ()=>{
     expect(nextToken("^[a", plugins)).toEqual({remaining: "a", token: "^["});
 });
 
+test("next token with |^", ()=>{
+    expect(nextToken("|^b", plugins)).toEqual({remaining: "", token: "|^b"});
+});
+
+test("next token with ^b", ()=>{
+    expect(nextToken("^b", plugins)).toEqual({remaining: "", token: "^b"});
+});
+
 test("parse empty", ()=>{
     const {remaining, parsed} = parse("", plugins);
     expect(parsed).toEqual([]);
@@ -109,5 +117,59 @@ test("parse most simple with q[] q is not plugin", ()=>{
 test("parse ]?", ()=>{
     const {remaining, parsed} = parse("a[b!|c]?x", plugins);
     expect(parsed).toEqual(["a",{t: "[", c: ["b!|c"]}, "x", "?"]);
+    expect(remaining).toBe("");
+});
+
+test("parse |^", ()=>{
+    const {remaining, parsed} = parse("|^b", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: ["b"]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse ^b", ()=>{
+    const {remaining, parsed} = parse("^b", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: ["b"]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse ^b|c", ()=>{
+    const {remaining, parsed} = parse("^b|c", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: ["b|c"]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse ^b|c,x", ()=>{
+    const {remaining, parsed} = parse("^b|c,x", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: ["b|c"]}, {t: "[", c: ["x"]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse c,^x", ()=>{
+    const {remaining, parsed} = parse("c,^x", plugins);
+    expect(parsed).toEqual([{t: "[", c: ["c"]}, {t: "*nr", c: ["x"]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse [[", ()=>{
+    const {remaining, parsed} = parse("[[", plugins);
+    expect(parsed).toEqual([{t: "[", c: [{t: "[", c: []}]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse [^[", ()=>{
+    const {remaining, parsed} = parse("[^[", plugins);
+    expect(parsed).toEqual([{t: "[", c: [{t: "^[", c: []}]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse ^^", ()=>{
+    const {remaining, parsed} = parse("^^", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: [{t: "*nr", c: []}]}]);
+    expect(remaining).toBe("");
+});
+
+test("parse ^^b", ()=>{
+    const {remaining, parsed} = parse("^^b", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: [{t: "*nr", c: ["b"]}]}]);
     expect(remaining).toBe("");
 });
