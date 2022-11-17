@@ -105,59 +105,11 @@ export function context(namespace: Namespace={},
                     return true;
                 });
             }
-            const returned = setup({single, multiple});
-            return async (data: Data) => {   
-                return returned(data);
-            };
+            return setup({single, multiple});
         }; 
-        /*
-        return (pipe: F|Tpipe|string) => async (data: Data) => {
-            let built: F|Tpipe;
-
-            const prevClose = data.ctx?data.ctx.quit:undefined;
-
-            const backClose = () => {
-                return concatClose(close, prevClose);
-            };
-            if(typeof pipe === 'string') 
-                built = build([pipe]);
-            else
-                built = pipe;
-            const single = async () => {
-                try{
-                    data = {...data, ctx:{quit: ()=>backClose()}};
-                    await s(built)(data);
-                }catch(err){
-                    backClose();
-                }
-                return true;
-            };
-            let multiple: FD[] = [];
-            if(Array.isArray(built)){
-                multiple = built.map(x => async () => {
-                    try{
-                        data = {...data, ctx:{quit: ()=>backClose()}};
-                        if(Array.isArray(x))
-                            await s(x)(data);
-                        else
-                            await s([x])(data);
-                    }catch(err){
-                        backClose();
-                    }
-                    return true;
-                });
-            }
-            const returned = setup({single, multiple});
-            console.log('llego', pipe, returned);
-            //if(typeof returned === 'function') return returned(data.data);
-            return returned;
-            console.log('salgo');
-        };
-        */
     };
 
     function build(parsed: (string|Parsed)[]): Tpipe{
-        console.log(build);
         let ret: Tpipe = [];
         
         if(parsed.length === 0) return [];
@@ -170,9 +122,12 @@ export function context(namespace: Namespace={},
                         if(x.startsWith('^')){
                             x = x.substring(1);
                             if(x.includes('|')){
-                                return async (data: Data) => await nr(x.split('|').filter(y => y !== ""))(data);
-                            }else
-                                return async (data: Data) => await nr(x)(data);
+                                const func = nr(x.split('|').filter(y => y !== ""));
+                                return func;
+                            }else{
+                                const func = nr(x);
+                                return func;
+                            }
                         }
                         else{
                             if(x.includes('|')) return x.split('|').filter(y => y !== "");
@@ -187,28 +142,30 @@ export function context(namespace: Namespace={},
                 }
             }else{
                 if(chunk.t === '^['){
-                    ret = [...ret, (data: Data)=>nr(build(chunk.c))(data)];
+                    const func = nr(build(chunk.c));
+                    ret = [...ret, func];
                 }
                 else if(chunk.t === '['){
                     ret = [...ret, (data: Data)=>serial(build(chunk.c), data.ctx)];
                 }else if(chunk.t.startsWith("*")){ 
                     const built = build(chunk.c);
                     if(chunk.t === '*p'){
-                        ret = [...ret, async (data: Data) => await p(built)(data)];
+                        const func = nr(built);
+                        ret = [...ret, func];
                     }
                     else if(chunk.t === '*nr'){
-                        ret = [...ret, async (data: Data) => await nr(built)(data)];
+                        const func = nr(built);
+                        ret = [...ret, func];
                     }
                     else if(plugins){
                         const name = chunk.t.substring(1, chunk.t.length);
                         const plugin = plugins[name];
                         if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
-                        console.log(name, "const func = on(plugin)(built);");
                         const func = on(plugin)(built);
-                        ret = [...ret, async (data: Data) => {
-                            console.log('vamos!!!');
-                            await func(data);
-                        }];
+                        //ret = [...ret, async (data: Data) => {
+                        //    await func(data);
+                        //}];
+                        ret = [...ret, func];
                     }
                 }
             }
