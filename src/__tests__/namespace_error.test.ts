@@ -1,4 +1,4 @@
-import { DEBUG, dev, g } from '../index';
+import { DEBUG, dev, g, i } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 
 DEBUG.v = true;
@@ -12,7 +12,7 @@ test("plugin w a not found", async ()=>{
     const {serial, w} = dev(path)({b}, {w: watch(["*.js"])});
     
     await expect(async () =>
-        await serial(["a", w(["b"])])()).rejects.toThrow('Key Error: namespace error: a'
+        await serial(["a", w(["b"])])(i())).rejects.toThrow('Key Error: namespace error: a'
     );
 });
 
@@ -24,6 +24,6 @@ test("plugin w not found", async ()=>{
     const {serial} = dev(path)({a, b}, {});
     
     await expect(async () =>
-        await serial(["a|w[b"])()).rejects.toThrow('Key Error: namespace error: w'
+        await serial(["a|w[b"])(i())).rejects.toThrow('Key Error: namespace error: w'
     );
 });

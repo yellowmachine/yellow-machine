@@ -1,6 +1,5 @@
 import {openSync, close, writeSync, rmSync} from 'fs';
-import { DEBUG, context as C, type Data } from '../index';
-import { parse } from '../parse';
+import { DEBUG, context as C, type Data, i } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 
 DEBUG.v = true;
@@ -30,7 +29,7 @@ test("not reentrant", async() => {
         count += 1;
     }, 200);
 
-    await serial([w(nr(f))])();
+    await serial([w(nr(f))])(i());
     clearInterval(interval);
     rmSync(fileName);
     expect(path).toEqual(['f']);
@@ -55,7 +54,7 @@ test("not reentrant compact mode", async() => {
         count += 1;
     }, 200);
 
-    await serial("w[nr[f")();
+    await serial("w[nr[f")(i());
     clearInterval(interval);
     rmSync(fileName);
     expect(path).toEqual(['f']);
@@ -83,7 +82,7 @@ test("not reentrant ^", async() => {
 
     const {serial} = C({f}, {w: watch([fileName])});
 
-    await serial("w^[f")();
+    await serial("w^[f")(i());
     clearInterval(interval);
     rmSync(fileName);
     expect(path).toEqual(['f']);
@@ -114,7 +113,7 @@ test("not reentrant ^ deep", async() => {
 
     const {serial} = C({a,f}, {w: watch([fileName])});
 
-    await serial("w[a|^f")();
+    await serial("w[a|^f")(i());
     clearInterval(interval);
     rmSync(fileName);
     expect(path).toEqual(['f']);

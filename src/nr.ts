@@ -1,32 +1,20 @@
-import { type SETUP, type Data, type FD } from '.';
+import { Data, FD, type SETUP } from '.';
+export type MODE = "buffer"|"nobuffer"|"custom";
+export type BFUNC = null|((arg: Data[]) => Data[]);
 
-type BFUNC = null|((arg0: Data[])=>Data[]);
-type MODE = "custom"|"buffer"|"nobuffer";
+export default (mode: MODE = "nobuffer", bfunc: BFUNC = null) => (setup: SETUP): FD => {
 
-export default  (mode: MODE = "nobuffer", bfunc: BFUNC = null) => {
-    return {
-        setup: ({single}: SETUP) => {
-            console.log('setup');
-            return nr(single, bfunc, mode);  
-        }
-    };
-};
+    const pipe = setup["single"];
 
-const nr = (f: FD, bfunc: BFUNC, mode: MODE) => {
-    console.log('created nr');
     let exited = true;
     let buffer: Data[] = [];
 
     return async (data: Data) => {
-        console.log('entramos con data', data);
         do{
             try{
-                console.log(exited);
                 if(exited){
                     exited = false;
-                    console.log('exited = false');
-                    const ret = await f(data);
-                    console.log('exit');
+                    const ret = await pipe(data);
                     return ret;
                 }else{
                     if(mode === "buffer")

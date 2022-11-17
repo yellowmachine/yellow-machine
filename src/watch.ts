@@ -1,7 +1,9 @@
+
+
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
-import { type SETUP, type Quit, type Data } from '.';
+import { type SETUP, type Data } from '.';
 
 export const SHOW_QUIT_MESSAGE = {v: false};
 export const DEBUG = {v: false};
@@ -9,19 +11,11 @@ export const DEBUG = {v: false};
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
-export default (files: string[]) => {
-    let _close: Quit;
-    const setClose = (q: Quit) => _close = q;
+export default (files: string[]) => (setup: SETUP) => async (data: Data) => {
 
-    return {
-        setup: ({single}: SETUP) => {
-            return watch(files, single, setClose);
-        },
-        close: () => _close()
-    };
-};
+    const quit = data.ctx.quit;
 
-const watch = (files: string[], f: SETUP["single"], setClose: (arg0: Quit)=>void) => async (data: Data) => {
+    const f = setup["single"];
     try{
         return await main();
     }catch(err){
@@ -48,6 +42,7 @@ const watch = (files: string[], f: SETUP["single"], setClose: (arg0: Quit)=>void
         let exited = false;
         function close(err = false, data: any = null){
             if(!exited){
+                quit();
                 exited = true;
                 process.stdin.pause();
                 process.stdin.removeListener("keypress", h);
@@ -91,7 +86,6 @@ const watch = (files: string[], f: SETUP["single"], setClose: (arg0: Quit)=>void
         }else{
             exitedRun();
         }
-        setClose(close);
         return p;
     }
 };

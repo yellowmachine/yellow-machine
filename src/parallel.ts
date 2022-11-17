@@ -1,29 +1,15 @@
 import { Data, type SETUP } from '.';
 
-export default (mode: "all"|"race"|"allSettled" = "all") => {
-    return {
-        setup: ({multiple}: SETUP) => {
-            return parallel(multiple, mode);  
-        }
-    };
-};
-
-const parallel = (tasks: SETUP["multiple"], mode="all") => async (data: Data) => {
-
+export default (mode: "all"|"race"|"allSettled" = "all") => (setup: SETUP) => async (data: Data) => {
+    const pipes = setup["multiple"];
     const promises: Promise<any>[] = [];   
 
-    for(const t of tasks){
-        promises.push(t());
+    for(const t of pipes){
+        promises.push(t(data));
     }
-    try{
-        if(mode === "all") return await Promise.all(promises);
-        //else if (mode === "any") return await Promise.any(promises);
-        else if (mode === "race") return await Promise.race(promises);
-        else if (mode === "allSettled") return await Promise.allSettled(promises);
-    }catch(err){
-        // eslint-disable-next-line no-console
-        console.log(err);
-        throw err;
-    }
+    if(mode === "all") return await Promise.all(promises);
+    //else if (mode === "any") return await Promise.any(promises);
+    else if (mode === "race") return await Promise.race(promises);
+    else if (mode === "allSettled") return await Promise.allSettled(promises);
     return false;
 };

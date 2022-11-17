@@ -1,4 +1,4 @@
-import { context as C, DEBUG } from '../index';
+import { context as C, DEBUG, i } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 
 DEBUG.v = false;
@@ -14,7 +14,7 @@ test("quiting w with keypress q", async ()=> {
     };
     
     const {serial, w} = C({}, {w: watch(["*.js"])});
-    await serial([a, [w([b]), end]])();
+    await serial([a, [w([b]), end]])(i());
     expect(path).toEqual(['a', 'b', 'end']);
 });
 
@@ -28,6 +28,6 @@ test("quiting w with keypress q compact mode", async ()=> {
     };
     
     const {serial} = C({a, b, end}, {w: watch(["*.js"])});
-    await serial("a|w[b]end")(); 
+    await serial("a|w[b]end")(i()); 
     expect(path).toEqual(['a', 'b', 'end']);
 });
