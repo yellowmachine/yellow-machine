@@ -16,14 +16,14 @@ const parallel = async (tasks: SingleOrMultiple["multiple"], mode="all") =>{
         promises.push(t());
     }
     try{
-        if(mode === "all") await Promise.all(promises);
-        //else if (mode === "any") await Promise.any(promises);
-        else if (mode === "race") await Promise.race(promises);
-        else if (mode === "allSettled") await Promise.allSettled(promises);
+        if(mode === "all") return await Promise.all(promises);
+        //else if (mode === "any") return await Promise.any(promises);
+        else if (mode === "race") return await Promise.race(promises);
+        else if (mode === "allSettled") return await Promise.allSettled(promises);
     }catch(err){
         // eslint-disable-next-line no-console
         console.log(err);
         throw err;
     }
-    return true;
+    return false;
 };

@@ -12,6 +12,6 @@ export default (f: SWF) => () => {
 const select = (tasks: SingleOrMultiple["multiple"], f: SWF) =>{
     return async (data: Data) => {
         const task = tasks[f(data)];
-        return await task();
+        return await task(data);
     };
 };
