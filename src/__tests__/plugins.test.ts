@@ -1,7 +1,6 @@
-import { DEBUG, dev, g } from '../index';
+import { DEBUG, dev, g, parallel, notReentrant } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 import _sw from '../switch';
-import { parse } from '../parse';
 
 DEBUG.v = false;
 wDebug.v = true;
@@ -202,3 +201,27 @@ test("]? without !", async ()=>{
     expect(response).toBe(false);
     expect(path).toEqual(["a", "throws"]);
 });
+
+test("plugin parallel", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "a2"]);
+    const b = g(["b"]);
+
+    const {serial, pall} = dev(path)({a, b}, {pall: parallel("all")});
+    await serial(["a", pall(["a", "b"])])();
+
+    expect(path).toEqual(["a1", "a2", "b"]);
+});
+
+test("plugin nr", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "a2", "a3"]);
+    const b = g(["b", "b!"]);
+
+    const {serial} = dev(path)({a, b}, {w: watch(["*"]), nrBuffer: notReentrant("buffer")});
+    await serial("w[nrBuffer[a|b")();
+
+    expect(path).toEqual(["a1", "b", "a2", "b!"]);
+});
+
+

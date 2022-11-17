@@ -5,6 +5,7 @@ import _sw from './switch';
 
 export {default as watch, SHOW_QUIT_MESSAGE} from './watch';
 export {default as parallel} from './parallel';
+export {default as notReentrant} from './nr';
 
 export function *g(arr: string[]){
     for(const i of arr){
