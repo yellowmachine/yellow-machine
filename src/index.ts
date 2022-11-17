@@ -4,6 +4,7 @@ import _nr from './nr';
 import _sw from './switch';
 
 export {default as watch, SHOW_QUIT_MESSAGE} from './watch';
+export {default as parallel} from './parallel';
 
 export function *g(arr: string[]){
     for(const i of arr){
@@ -172,7 +173,7 @@ export function context(namespace: Namespace={},
     const serial: Serial = async(tasks, ctx) => {
         const data = {
             data: null,
-            ctx: ctx//  || {}
+            ctx: ctx
         };
 
         let quit;
