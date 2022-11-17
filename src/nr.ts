@@ -6,6 +6,8 @@ export default (mode: MODE = "nobuffer", bfunc: BFUNC = null) => (setup: SETUP):
 
     const pipe = setup["single"];
 
+    console.log('pipe dentro de nr', pipe);
+
     let exited = true;
     let buffer: Data[] = [];
     

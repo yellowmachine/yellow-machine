@@ -9,6 +9,7 @@ export {default as notReentrant} from './nr';
 
 export function *g(arr: string[]){
     for(const i of arr){
+        console.log(i);
         if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
         else yield i;
     }
@@ -160,6 +161,8 @@ export function context(namespace: Namespace={},
             data: null,
             ctx: ctx
         };
+
+        console.log('******************* tasks', tasks);
 
         let quit;
         if(ctx) quit = ctx.quit;
