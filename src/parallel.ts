@@ -1,6 +1,6 @@
-import { type SETUP } from '.';
+import { Data, type SETUP } from '.';
 
-export default (mode: "all"|"race"|"allSettled" = "all") => () => {
+export default (mode: "all"|"race"|"allSettled" = "all") => {
     return {
         setup: ({multiple}: SETUP) => {
             return parallel(multiple, mode);  
@@ -8,7 +8,7 @@ export default (mode: "all"|"race"|"allSettled" = "all") => () => {
     };
 };
 
-const parallel = async (tasks: SETUP["multiple"], mode="all") =>{
+const parallel = (tasks: SETUP["multiple"], mode="all") => async (data: Data) => {
 
     const promises: Promise<any>[] = [];   
 

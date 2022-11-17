@@ -1,7 +1,7 @@
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
-import { type SETUP, type Quit } from '.';
+import { type SETUP, type Quit, type Data } from '.';
 
 export const SHOW_QUIT_MESSAGE = {v: false};
 export const DEBUG = {v: false};
@@ -9,81 +9,89 @@ export const DEBUG = {v: false};
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
-export default (files: string[]) => () => {
+export default (files: string[]) => {
     let _close: Quit;
+    const setClose = (q: Quit) => _close = q;
+
     return {
         setup: ({single}: SETUP) => {
-            const {promise, close} = watch(files, single);
-            _close = close;
-            return promise;
+            return watch(files, single, setClose);
         },
         close: () => _close()
     };
 };
 
-const watch = (files: string[], f: SETUP["single"]) => {
-    const q = 'q';
+const watch = (files: string[], f: SETUP["single"], setClose: (arg0: Quit)=>void) => async (data: Data) => {
+    try{
+        return await main();
+    }catch(err){
+        return false;
+    }
 
-    const h = (ch: string) => {
-        if(ch === q){
-            close();
-        }
-    };
-    process.stdin.on('keypress', h);        
-
-    let resolve: (null|((arg0: (any)) => void)) = null;
-    let reject: (null|(() => void)) = null;
-
-    const p = new Promise((_resolve, _reject) => {
-        resolve = _resolve;
-        reject = _reject;
-    });
-
-    let exited = false;
-    function close(err = false, data: any = null){
-        if(!exited){
-            exited = true;
-            process.stdin.pause();
-            process.stdin.removeListener("keypress", h);
-            if(err){
-                if(reject) reject();
+    function main(){
+        const q = 'q';
+        const h = (ch: string) => {
+            if(ch === q){
+                close();
             }
-            else if(resolve) resolve(data);
-            if(watcher)
-                watcher.close();
-        }
-        return true;
-    }
+        };
+        process.stdin.on('keypress', h);        
 
-    async function exitedRun(){
-        while(!exited){   
-            await run();
-        }
-    }
+        let resolve: (null|((arg0: (any)) => void)) = null;
+        let reject: (null|(() => void)) = null;
 
-    async function run(){
-        try{
-            await f();         
-            if(SHOW_QUIT_MESSAGE.v)
+        const p: Promise<any> = new Promise((_resolve, _reject) => {
+            resolve = _resolve;
+            reject = _reject;
+        });
+
+        let exited = false;
+        function close(err = false, data: any = null){
+            if(!exited){
+                exited = true;
+                process.stdin.pause();
+                process.stdin.removeListener("keypress", h);
+                if(err){
+                    if(reject) reject();
+                }
+                else if(resolve) resolve(data);
+                if(watcher)
+                    watcher.close();
+            }
+            return true;
+        }
+
+        async function exitedRun(){
+            while(!exited){   
+                await run();
+            }
+        }
+
+        async function run(){
+            try{
+                await f(data);         
+                if(SHOW_QUIT_MESSAGE.v)
+                    // eslint-disable-next-line no-console
+                    console.log("Press " + q + " to quit!");
+            }catch(err){
                 // eslint-disable-next-line no-console
-                console.log("Press " + q + " to quit!");
-        }catch(err){
-            // eslint-disable-next-line no-console
-            console.log(err);
+                console.log(err);
+            }
         }
-    }
 
-    let watcher: null | ReturnType<typeof chwatch> = null;
-    if(!DEBUG.v){
-        watcher = chwatch(files, {ignoreInitial: true}).
-            on('all', (event, path) => {
-                // eslint-disable-next-line no-console
-                //console.log(event, path);
-                run();
-            });
-        run();
-    }else{
-        exitedRun();
+        let watcher: null | ReturnType<typeof chwatch> = null;
+        if(!DEBUG.v){
+            watcher = chwatch(files, {ignoreInitial: true}).
+                on('all', (event, path) => {
+                    // eslint-disable-next-line no-console
+                    //console.log(event, path);
+                    run();
+                });
+            run();
+        }else{
+            exitedRun();
+        }
+        setClose(close);
+        return p;
     }
-    return {promise: p, close};
 };

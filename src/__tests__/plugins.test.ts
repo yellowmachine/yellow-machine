@@ -1,6 +1,7 @@
 import { DEBUG, dev, g, parallel, notReentrant } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 import _sw from '../switch';
+import repeat from '../repeat';
 
 DEBUG.v = false;
 wDebug.v = true;
@@ -213,13 +214,15 @@ test("plugin parallel", async ()=>{
     expect(path).toEqual(["a1", "a2", "b"]);
 });
 
-test("plugin nr", async ()=>{
+test.only("plugin repeat", async ()=>{
     const path: string[] = [];
     const a = g(["a1", "a2", "a3"]);
     const b = g(["b", "b!"]);
 
-    const {serial} = dev(path)({a, b}, {w: watch(["*"]), nrBuffer: notReentrant("buffer")});
-    await serial("w[nrBuffer[a|b")();
+    const {serial} = dev(path)({a, b}, {r3: repeat(3), buffer: notReentrant("buffer")});
+    await serial("r3[buffer[a|b")();
+
+    console.log(path);
 
     expect(path).toEqual(["a1", "b", "a2", "b!"]);
 });

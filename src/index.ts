@@ -24,15 +24,17 @@ export type Serial = (tasks: Tpipe|C, ctx: Ctx) => Promise<any>;
 export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
 
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
-export type FD = (data?: Data)=>(Promise<any>);
+//export type FD = (data?: Data)=>(Promise<any>);
+export type FD = (data: Data)=>Promise<boolean>;
 export type SETUP = {single: FD, multiple: FD[]};
-type _SETUP = (arg: SETUP) => Promise<any>|((data: Data)=>Promise<any>);
+type _SETUP = (arg: SETUP) =>((data: Data) => Promise<any>); //((data: Data)=>DP);
 type TON = {setup: _SETUP, close?: Quit};
 export type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type P = (pipe: Tpipe) => (data?: Data) => Promise<any>;
 export type NR = (f: F) => (data?: Data) => Promise<any>;
 
-type FTON = () => TON;
+//type FTON = () => TON;
+type FTON = TON;
 type Plugin = {[key: string]: FTON};
 
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
@@ -62,8 +64,53 @@ export function context(namespace: Namespace={},
                     ){
 
     const on = (f: FTON): ((pipe: F|Tpipe|string) => (data: Data) => Promise<any>) => {
-        const {setup, close} = f();
+        const {setup, close} = f;
 
+        return (pipe: F|Tpipe|string) => {
+            let built: F|Tpipe;
+    
+            if(typeof pipe === 'string') 
+                built = build([pipe]);
+            else
+                built = pipe;
+            const single = async (data: Data) => {
+                const prevClose = data.ctx?data.ctx.quit:undefined;
+                const backClose = () => {
+                    return concatClose(close, prevClose);
+                };
+                try{
+                    data = {...data, ctx:{quit: ()=>backClose()}};
+                    await s(built)(data);
+                }catch(err){
+                    backClose();
+                }
+                return true;
+            };
+            let multiple: FD[] = [];
+            if(Array.isArray(built)){
+                multiple = built.map(x => async (data: Data) => {
+                    const prevClose = data.ctx?data.ctx.quit:undefined;
+                    const backClose = () => {
+                        return concatClose(close, prevClose);
+                    };
+                    try{
+                        data = {...data, ctx:{quit: ()=>backClose()}};
+                        if(Array.isArray(x))
+                            await s(x)(data);
+                        else
+                            await s([x])(data);
+                    }catch(err){
+                        backClose();
+                    }
+                    return true;
+                });
+            }
+            const returned = setup({single, multiple});
+            return async (data: Data) => {   
+                return returned(data);
+            };
+        }; 
+        /*
         return (pipe: F|Tpipe|string) => async (data: Data) => {
             let built: F|Tpipe;
 
@@ -101,12 +148,16 @@ export function context(namespace: Namespace={},
                 });
             }
             const returned = setup({single, multiple});
-            if(typeof returned === 'function') await returned(data.data);
-            await returned;
+            console.log('llego', pipe, returned);
+            //if(typeof returned === 'function') return returned(data.data);
+            return returned;
+            console.log('salgo');
         };
+        */
     };
 
     function build(parsed: (string|Parsed)[]): Tpipe{
+        console.log(build);
         let ret: Tpipe = [];
         
         if(parsed.length === 0) return [];
@@ -152,8 +203,11 @@ export function context(namespace: Namespace={},
                         const name = chunk.t.substring(1, chunk.t.length);
                         const plugin = plugins[name];
                         if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
+                        console.log(name, "const func = on(plugin)(built);");
+                        const func = on(plugin)(built);
                         ret = [...ret, async (data: Data) => {
-                            await on(plugin)(built)(data);
+                            console.log('vamos!!!');
+                            await func(data);
                         }];
                     }
                 }
@@ -290,7 +344,8 @@ export function context(namespace: Namespace={},
     }
 
     const p = (pipe: F|Tpipe|string) => (data?: Data) => {
-        return on(parallel())(pipe)(data?data:emptyCtx);
+        const x = on(parallel());
+        return x(pipe)(data?data:emptyCtx);
     };
 
     plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
