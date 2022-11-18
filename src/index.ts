@@ -182,61 +182,71 @@ export function context(namespace: Namespace={},
                 throws = false;
                 question = false;
                 dontReentrate = false;
-
-                if(typeof t === 'function'){
-                    data.data = await t(data);
-                }else if(Array.isArray(t)){
-                    await serial(t, data.ctx);
-                }
-                else if(typeof t === 'string'){
-                    if(t !== 'throws' && t !== '?'){
-                        if(t.charAt(t.length-1) === "!"){
-                            throws = true;
-                            t = t.substring(0, t.length-1);
-                        }
-                        if(t.charAt(t.length-1) === "?"){
-                            question = true;
-                            t = t.substring(0, t.length-1);
-                        }
-                        if(t.charAt(0) === '^'){
-                            t = t.substring(1);
-                            dontReentrate = true;
-                        }
-                        const m = namespace[t];
-                        if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
-                        if(typeof m === 'function'){
-                            if(dontReentrate){
-                                data.data = await nr(m)(data);
+                try{
+                    if(typeof t === 'function'){
+                        data.data = await t(data);
+                    }else if(Array.isArray(t)){
+                        await serial(t, data.ctx);
+                    }
+                    else if(typeof t === 'string'){
+                        if(t !== 'throws' && t !== '?'){
+                            if(t.charAt(t.length-1) === "!"){
+                                throws = true;
+                                t = t.substring(0, t.length-1);
                             }
-                            else{
-                                data.data = await m(data);
-                            }                                    
-                        }else{
-                            const response = await m.next(data);
-                            data.data = response.value;
-                            if(dev) path.push(response.value);
-                            if(response.done && quit) quit(false, response.value);                                                            
-                        }
-                    }                    
+                            if(t.charAt(t.length-1) === "?"){
+                                question = true;
+                                t = t.substring(0, t.length-1);
+                            }
+                            if(t.charAt(0) === '^'){
+                                t = t.substring(1);
+                                dontReentrate = true;
+                            }
+                            const m = namespace[t];
+                            if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
+                            if(typeof m === 'function'){
+                                if(dontReentrate){
+                                    data.data = await nr(m)(data);
+                                }
+                                else{
+                                    data.data = await m(data);
+                                }                                    
+                            }else{
+                                const response = await m.next(data);
+                                data.data = response.value;
+                                if(dev) path.push(response.value);
+                                if(response.done && quit) quit(false, response.value);                                                            
+                            }
+                        }                    
+                    }
+                    else{
+                        const response = await t.next(data);
+                        data.data = response.value;
+                        if(dev) path.push(response.value);
+                        if(response.done && quit) quit(false, response.value);                                               
+                    }
+                }catch(err){
+                    if(err instanceof Error && !err.message.startsWith("?")) throw err;
+                    continue;
                 }
-                else{
-                    const response = await t.next(data);
-                    data.data = response.value;
-                    if(dev) path.push(response.value);
-                    if(response.done && quit) quit(false, response.value);                                               
-                }    
-                
             }
             return data.data;
         }catch(err){
             if(DEBUG.v)
                 // eslint-disable-next-line no-console
                 console.log(err);
+            if(quit) quit(true);
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             if(dev && err instanceof Error && !err.message.startsWith("no log")){
                 path.push(err instanceof Error? err.message: "unknown error");
             } 
-            if(tasks.at(-1) === '?') return null;
+            if(tasks.at(-1) === '?' || question) throw new Error('?');
+            if(tasks.at(-1) === 'throws' || throws){
+                if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!"))){
+                    throw new Error('no log:' + err.message);
+                }
+            } //throw err;
+            /*
             else if(!question){
                 if(quit) quit(true);
                 if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!"))){
@@ -245,11 +255,13 @@ export function context(namespace: Namespace={},
                 else{
                     throw err;
                 }
+                return true;
             } 
-            if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
-                throw err;
-            }
-            return null;
+            */
+            //if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
+            //    throw err;
+            //}
+            return true;
         }
     };
 

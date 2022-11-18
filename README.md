@@ -5,7 +5,7 @@ Example of use:
 ```ts
 // C will create a context given producer/consumers and plugins
 // watch is a plugin
-const {context: C, watch, g} = require("yellow-machine")
+const {context: C, watch, g, i} = require("yellow-machine")
 const npm = require('npm-commands')
 const {docker} = require('./docker')  
 const {dgraph} = require('./dgraph')  
@@ -34,7 +34,7 @@ async function main() {
     await serial(`up[  
                       w[ dql? | test ]
                       down`
-    )();
+    )(i()); //i() generates a default initial value for the pipe
     // if up is ok, then enters into next scope. w watchs for file changes and
     // dispatch the pipe: if dql is ok then test is executed
     // if dql fails, if it were just "dql" then would throw an exception that stops watch
@@ -49,34 +49,34 @@ Things you can do:
 
 ```ts
 // argument to serial can be a string or an array. Every element of the array can be the same
-await serial([f1, f2, "f3"])(); // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
+await serial([f1, f2, "f3"])(i()); // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
 
 // with initial data
-await serial([f1, f2, "f3"])({data: "someinitial data", ctx: {quit: ()=>true}}); // it will be changed in next version so it will be no necessary to pass ctx
+await serial([f1, f2, "f3"])({...i(), data: "some initial data"}); // it will be changed in next version so it will be no necessary to pass ctx
 
 // we use the plugin w. You pass w: watch(["./te... in the plugins sections and 
 // you get in const {serial, w} = C({
 const {serial, w, p} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-await serial(["up", w([k1, "k"]), "down"])();
+await serial(["up", w([k1, "k"]), "down"])(i());
 
 // p is shorthand for parallel
-await serial("up", p([a, b, c]), "end")();
+await serial("up", p([a, b, c]), "end")(i());
 
 // or
-await serial("up|p[a,b,c]|end")();
+await serial("up|p[a,b,c]|end")(i());
 // end will execute when p finishes. Now the mode of p is all: await Promise.all(promises);
 
 // throwing
-await serial([a, b, 'throws'])(); //if f1, for example, throws, then f2 is not executed and the exception is raised
+await serial([a, b, 'throws'])(i()); //if f1, for example, throws, then f2 is not executed and the exception is raised
 
 // or
-await serial('[a|b]!')();
+await serial('[a|b]!')(i());
 
 // you can use ! the next way
-await serial('a|b!|c!|d')(); // if b or c throws then the whole pipe throws
+await serial('a|b!|c!|d')(i()); // if b or c throws then the whole pipe throws
 
 // default nested to serial
-await serial([f1, f2, [f3, f4], f5])();
+await serial([f1, f2, [f3, f4], f5])(i());
 
 // soon: more expressions
 "w[^a|b,c" // a is non reentrant
@@ -91,18 +91,17 @@ await serial([f1, f2, [f3, f4], f5])();
 "p[a,b"
 
 // if b throw, c is not executed and exception should be out, but ? catch it
-"a[b!|c]?x" // x should not be executed but at the moment this isn't what it does
+"a[b!|c]?x" // x is not execute because previous pipe was not success
 
 //note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
 test("plugin w and !", async ()=>{
     const path: string[] = [];
     const a = g(["a"]); // g is useful to create generators. You pass an array of strings
-    const b = g(["b!"]); // if a string starts with "trhow" or ends with ! the exception is trhown
+    const b = g(["b!"]); // if a string starts with "trhow" or ends with ! the exception is thrown
     const c = g(["c"]);
 
-    const {serial, w} = dev(path)({a, b, c}, {w: watch(["*.js"])});
-    await serial(["a", w("b"), "c"])();
-    // or await serial("a|w[b]c])();
+    const {serial} = dev(path)({a, b, c}, {w: watch(["*.js"])});
+    await serial("a|w[b]c]")(i());
 
     expect(path).toEqual(["a", "b!", "c"]);
 ```
@@ -152,7 +151,7 @@ function decide(data: any): number{
     }
 
 const {serial} = dev(path)({a, b, c}, {sw: _sw(decide)});
-await serial("a|sw[b,c]")(); // a ... b
+await serial("a|sw[b,c]")(i()); // a ... b
 ```
 
 Example of a producer / consumer:

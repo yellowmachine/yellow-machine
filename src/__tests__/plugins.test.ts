@@ -97,7 +97,7 @@ test("plugin p and full compact mode", async ()=>{
 
     const {serial} = dev(path)({a, b, c});
     await serial("a|p[a|c,b]")(i());
-    expect(path).toEqual(["a1", "throw"]);
+    expect(path).toEqual(["a1", "throw", "b"]);
 });
 
 test("plugin p and full compact mode v2", async ()=>{
@@ -129,7 +129,7 @@ test("plugin p and full compact mode with ?", async ()=>{
         down`
     )(i());
 
-    expect(path).toEqual(["up", "dql 1", "test", "dql!", undefined, "test!", "down"]);
+    expect(path).toEqual(["up", "dql 1", "test", "dql!", "down"]);
 });
 
 test("plugin sw", async ()=>{
@@ -171,21 +171,7 @@ test("]? nested []", async ()=>{
     const {serial} = dev(path)({a, b, c, x}, {});
     await serial("a[[b!]|c]?x")(i());
 
-    expect(path).toEqual(["a", "throws"]);
-});
-
-test("]? without !", async ()=>{
-    const path: string[] = [];
-    const a = g(["a"]);
-    const b = g(["throws"]);
-    const c = g(["c"]);
-    const x = g(["x"]);
-
-    const {serial} = dev(path)({a, b, c, x}, {});
-    const response = await serial("a[b|c]?x")(i());
-
-    expect(response).toBe(null);
-    expect(path).toEqual(["a", "throws"]);
+    expect(path).toEqual(["a", "throws", "x"]);
 });
 
 test("]? without !", async ()=>{
@@ -198,8 +184,22 @@ test("]? without !", async ()=>{
     const {serial} = dev(path)({a, b, c, x}, {});
     const response = await serial("a[b|c]x")(i());
 
-    expect(response).toBe(false);
-    expect(path).toEqual(["a", "throws"]);
+    expect(response).toBe("x");
+    expect(path).toEqual(["a", "throws", "x"]);
+});
+
+test("]? without ! v2", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]);
+    const b = g(["throws"]);
+    const c = g(["c"]);
+    const x = g(["x"]);
+
+    const {serial} = dev(path)({a, b, c, x}, {});
+    const response = await serial("a[b|c]x")(i());
+
+    expect(response).toBe("x");
+    expect(path).toEqual(["a", "throws", "x"]);
 });
 
 test("plugin parallel", async ()=>{
@@ -247,4 +247,30 @@ test("plugin repeat no buffer", async ()=>{
     await serial("r2[buffer[a|b")(i());
 
     expect(path).toEqual(["a1", "b1"]);
+});
+
+test("? catched", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "a2", "a3"]);
+    const b = g(["b!"]);
+    const x = g(["x"]);
+
+    const {serial} = dev(path)({a, b, x});
+
+    await serial("a[b!|c]?x")(i());
+
+    expect(path).toEqual(["a1", "b!"]);
+});
+
+test("? catched continues", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "a2", "a3"]);
+    const b = g(["b!"]);
+    const x = g(["x"]);
+
+    const {serial} = dev(path)({a, b, x});
+
+    await serial("a[b]x")(i());
+
+    expect(path).toEqual(["a1", "b!", "x"]);
 });
