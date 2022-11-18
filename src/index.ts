@@ -39,8 +39,8 @@ export function *g(arr: string[]){
     }
 }
 
-export function i(data=null){
-    return {data, ctx: {quit: ()=>{
+export function i(data: any=null){
+    return {data: data, ctx: {quit: ()=>{
         return true;
     }}};
 }
@@ -227,6 +227,7 @@ export function context(namespace: Namespace={},
                     }
                 }catch(err){
                     if(err instanceof Error && !err.message.startsWith("?")) throw err;
+                    data.data = null;
                     continue;
                 }
             }
@@ -245,23 +246,8 @@ export function context(namespace: Namespace={},
                 if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!"))){
                     throw new Error('no log:' + err.message);
                 }
-            } //throw err;
-            /*
-            else if(!question){
-                if(quit) quit(true);
-                if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!"))){
-                    throw new Error('no log:' + err.message);
-                }
-                else{
-                    throw err;
-                }
-                return true;
-            } 
-            */
-            //if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
-            //    throw err;
-            //}
-            return true;
+            }
+            return null;
         }
     };
 

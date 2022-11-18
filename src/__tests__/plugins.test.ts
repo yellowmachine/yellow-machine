@@ -1,4 +1,4 @@
-import { DEBUG, dev, g, parallel, notReentrant, i } from '../index';
+import { DEBUG, dev, g, parallel, notReentrant, i, Data } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 import _sw from '../switch';
 import repeat from '../repeat';
@@ -274,3 +274,16 @@ test("? catched continues", async ()=>{
 
     expect(path).toEqual(["a1", "b!", "x"]);
 });
+
+test("some processing", async ()=>{
+    const path: string[] = [];
+    const a = (t: Data) => t.data + 'a';
+    const b = (t: Data) => t.data + 'b';
+
+    const {serial} = dev(path)({a, b});
+
+    const response = await serial("a|b")(i("x"));
+
+    expect(response).toBe('xab');
+});
+

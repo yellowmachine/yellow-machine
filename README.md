@@ -91,19 +91,22 @@ await serial([f1, f2, [f3, f4], f5])(i());
 "p[a,b"
 
 // if b throw, c is not executed and exception should be out, but ? catch it
-"a[b!|c]?x" // x is not execute because previous pipe was not success
+"a[b!|c]?x" // x is not executed because previous pipe was not success
 
 //note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
-test("plugin w and !", async ()=>{
+test("]? without !", async ()=>{
     const path: string[] = [];
-    const a = g(["a"]); // g is useful to create generators. You pass an array of strings
-    const b = g(["b!"]); // if a string starts with "trhow" or ends with ! the exception is thrown
+    const a = g(["a"]);
+    const b = g(["throws"]);
     const c = g(["c"]);
+    const x = g(["x"]);
 
-    const {serial} = dev(path)({a, b, c}, {w: watch(["*.js"])});
-    await serial("a|w[b]c]")(i());
+    const {serial} = dev(path)({a, b, c, x}, {});
+    const response = await serial("a[b|c]x")(i());
 
-    expect(path).toEqual(["a", "b!", "c"]);
+    expect(response).toBe("x");
+    expect(path).toEqual(["a", "throws", "x"]);
+});
 ```
 
 To test paths I think this is the way:
@@ -130,6 +133,7 @@ function someProducerConsumer({ctx}){
     ctx.quit(); // call quit programatically
     return //some data
 }
+
 ```
 Plugins:
 
