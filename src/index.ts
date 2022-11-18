@@ -90,10 +90,10 @@ export function context(namespace: Namespace={},
                         if(x.startsWith('^')){
                             x = x.substring(1);
                             if(x.includes('|')){
-                                const func = nr(splitAndFilter(x));
+                                const func = plugs.nr(splitAndFilter(x));
                                 return func;
                             }else{
-                                const func = nr(x);
+                                const func = plugs.nr(x);
                                 return func;
                             }
                         }
@@ -111,7 +111,7 @@ export function context(namespace: Namespace={},
             }else{
                 if(chunk.t === '^[' || chunk.t === '|.'){
                     const built = build(chunk.c);
-                    const func = nr(s(built));
+                    const func = plugs.nr(s(built));
                     ret = [...ret, func];
                 }
                 else if(chunk.t === '['){
@@ -121,11 +121,11 @@ export function context(namespace: Namespace={},
                 else if(chunk.t.startsWith("*")){ 
                     const built = build(chunk.c);
                     if(chunk.t === '*p'){
-                        const func = nr(built);
+                        const func = plugs.p(built); // ;)
                         ret = [...ret, func];
                     }
                     else if(chunk.t === '*nr'){
-                        const func = nr(built);
+                        const func = plugs.nr(built);
                         ret = [...ret, func];
                     }
                     else if(plugins){
@@ -207,7 +207,7 @@ export function context(namespace: Namespace={},
                             if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
                             if(typeof m === 'function'){
                                 if(dontReentrate){
-                                    data.data = await nr(m)(data);
+                                    data.data = await plugs.nr(m)(data);
                                 }
                                 else{
                                     data.data = await m(data);
@@ -253,16 +253,6 @@ export function context(namespace: Namespace={},
     };
 
     const plugs: CompiledPlugin = {};
-    
-    for(const key of Object.keys(plugins)){
-        const plugin = plugins[key];
-        plugs[key] = (pipe: F|Tpipe|string) => {
-            const {single, multiple} = buildSingleMultiple(pipe);
-            return (data: Data) => {
-                return plugin({single, multiple})(data);
-            };        
-        };
-    }
 
     const p = (pipe: F|Tpipe|string) => {
         const {single, multiple} = buildSingleMultiple(pipe);
@@ -289,6 +279,16 @@ export function context(namespace: Namespace={},
     };
 
     plugs.nr = nr;
+
+    for(const key of Object.keys(plugins)){
+        const plugin = plugins[key];
+        plugs[key] = (pipe: F|Tpipe|string) => {
+            const {single, multiple} = buildSingleMultiple(pipe);
+            return (data: Data) => {
+                return plugin({single, multiple})(data);
+            };        
+        };
+    }
 
     return plugs;
 }

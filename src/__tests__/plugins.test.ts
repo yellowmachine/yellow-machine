@@ -40,7 +40,7 @@ test("plugin w with p", async ()=>{
                        p[
                          b,c`
     )(i());
-    expect(path).toEqual(["a", "b", "c1", "throws"]);
+    expect(path).toEqual(["a", "b", "c1", "throws", "c2"]);
 });
 
 test("plugin w and !", async ()=>{
