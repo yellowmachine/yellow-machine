@@ -26,7 +26,7 @@ function createResolve(){
     return {resolve, reject, promise: p};
 }
 
-export default (mode: MODE = "nobuffer", bfunc: BFUNC = null) => (setup: SETUP): FD => {
+export default (mode: MODE = "buffer", size: number|null = null) => (setup: SETUP): FD => {
 
     const pipe = setup["single"];
 
@@ -35,7 +35,7 @@ export default (mode: MODE = "nobuffer", bfunc: BFUNC = null) => (setup: SETUP):
     
     const g = async (data: Data) => {
         if(!exited){
-            if(mode === "buffer"){
+            if(mode === "buffer" && (size === null || buffer.length < size)){
                 const x = createResolve();
                 buffer.push({...x, data});
                 try{

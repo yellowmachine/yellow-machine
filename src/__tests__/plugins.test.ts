@@ -225,4 +225,15 @@ test("plugin repeat", async ()=>{
     expect(path).toEqual(["a1", "b1", "a2", "b2"]);
 });
 
+test("plugin repeat default not reentrant", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "a2", "a3"]);
+    const b = g(["b1", "b2", "a3"]);
+
+    const {serial} = dev(path)({a, b}, {r2: repeat(2)});
+
+    await serial("r2[^[a|b")(i());
+
+    expect(path).toEqual(["a1", "b1", "a2", "b2"]);
+});
 

@@ -110,7 +110,7 @@ export function context(namespace: Namespace={},
                 }
             }else{
                 if(chunk.t === '^['){
-                    const func = nr(build(chunk.c));
+                    const func = nr(s(build(chunk.c)));
                     ret = [...ret, func];
                 }
                 else if(chunk.t === '['){
@@ -288,9 +288,7 @@ export function context(namespace: Namespace={},
 
     const nr = (pipe: F|Tpipe|string) => {
         const {single, multiple} = buildSingleMultiple(pipe);
-        return (data: Data) => {
-            return _nr()({single, multiple})(data);
-        };
+        return _nr()({single, multiple});
     };
 
     plugs.nr = nr;
