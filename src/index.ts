@@ -131,13 +131,7 @@ export function context(namespace: Namespace={},
         return ret;
     }
 
-    const s = (x: F|Tpipe|string) => {
-        let built: Tpipe|F;
-        if(typeof x === 'string'){
-            built = build([x]);
-        }
-        else
-            built = x;
+    const s = (built: F|Tpipe) => {
         return async (data: Data) => await _serial(built, data);
     };
 
