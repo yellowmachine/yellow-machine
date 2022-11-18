@@ -20,7 +20,7 @@ export type SETUP = {single: FD, multiple: FD[]};
 export type FSETUP = (arg: SETUP) => FP;
 export type FP = (pipe: Tpipe|F) => (data?: Data) => Promise<any>;
 
-type Serial = (tasks: Tpipe|C, ctx: Ctx) => Promise<any>;
+type Serial = (tasks: Tpipe|C, data: Data) => Promise<any>;
 
 export type NR = (f: F) => (data?: Data) => Promise<any>;
 type Plugin = {[key: string]: (arg: SETUP) => FD};
@@ -149,27 +149,28 @@ export function context(namespace: Namespace={},
         }
         else
             built = x;
-        return async (data: Data) => await serial(built, data.ctx);
+        return async (data: Data) => await serial(built, data);
     };
 
-    const serial: Serial = async(tasks, ctx) => {
+    const serial: Serial = async(tasks, data) => {
         if(typeof tasks === 'string'){
             const {parsed} = parse(tasks, [...builtinPlugins, ...Object.keys(plugins)]);
             const b = build(parsed);
-            return _serial(b, ctx);
+            return _serial(b, data);
         }else{
-            return _serial(tasks, ctx);
+            return _serial(tasks, data);
         }
     };
 
-    const _serial: Serial = async(tasks, ctx) => {
+    const _serial: Serial = async(tasks, data) => {
+        /*
         const data = {
             data: null,
             ctx: {...ctx}
-        };
+        };*/
 
         let quit;
-        if(ctx) quit = ctx.quit;
+        if(data.ctx) quit = data.ctx.quit;
 
         if(!Array.isArray(tasks)){
             tasks = [tasks, 'throws'];
@@ -186,7 +187,7 @@ export function context(namespace: Namespace={},
                     if(typeof t === 'function'){
                         data.data = await t(data);
                     }else if(Array.isArray(t)){
-                        await serial(t, data.ctx);
+                        await serial(t, data);
                     }
                     else if(typeof t === 'string'){
                         if(t !== 'throws' && t !== '?'){
@@ -272,8 +273,8 @@ export function context(namespace: Namespace={},
 
     plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
         try{
-            return await 
-            return await serial(pipe, data?data.ctx: i().ctx);
+            if(!data) data = i();
+            return await serial(pipe, data);
         }catch(err){
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             return false;
