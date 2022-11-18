@@ -74,6 +74,7 @@ export default (files: string[]) => (setup: SETUP) => async (data: Data) => {
                 if(DEBUG.v && err instanceof Error && !err.message.startsWith("no log"))
                     // eslint-disable-next-line no-console
                     console.log(err);
+                //throw err;
             }
         }
 

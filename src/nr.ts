@@ -35,17 +35,13 @@ export default (mode: MODE = "nobuffer", bfunc: BFUNC = null) => (setup: SETUP):
     
     const g = async (data: Data) => {
         if(!exited){
-            console.log('not exited');
             if(mode === "buffer"){
-                console.log('buffer push');
                 const x = createResolve();
                 buffer.push({...x, data});
                 try{
                     await x.promise; 
                 }catch(err){
-                    console.log(err);
                     if(buffer.length > 0){
-                        console.log('pop reject cascade');
                         const {reject} = buffer.pop() as BufferData;
                         if(reject) reject();
                     }
@@ -57,20 +53,16 @@ export default (mode: MODE = "nobuffer", bfunc: BFUNC = null) => (setup: SETUP):
             }
         }
         try{
-            console.log('exited');
             exited = false;
             await pipe(data);
             exited = true;
             if(buffer.length > 0){
-                console.log('pop resolve');
                 const {resolve} = buffer.pop() as BufferData;
                 if(resolve) resolve(true);
             }
             return true;
         }catch(err){
-            console.log(err);
             if(buffer.length > 0){
-                console.log('pop reject');
                 const {reject} = buffer.pop() as BufferData;
                 if(reject) reject();
             }

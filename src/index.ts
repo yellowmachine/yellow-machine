@@ -76,7 +76,7 @@ export function context(namespace: Namespace={},
     function build(parsed: (string|Parsed)[]): Tpipe{
         let ret: Tpipe = [];
         
-        if(parsed.length === 0) return [];
+        //if(parsed.length === 0) return [];
         
         for(const chunk of parsed){
             if(typeof chunk === 'string'){
@@ -199,7 +199,6 @@ export function context(namespace: Namespace={},
                                 t = t.substring(1);
                                 dontReentrate = true;
                             }
-                            //if(t === 'b') throw new Error("exit");
                             const m = namespace[t];
                             if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
                             if(typeof m === 'function'){

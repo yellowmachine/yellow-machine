@@ -24,6 +24,6 @@ test("plugin w not found", async ()=>{
     const {serial} = dev(path)({a, b}, {});
     
     await expect(async () =>
-        await serial(["a|w[b"])(i())).rejects.toThrow('Key Error: namespace error: w'
+        await serial("a|w[b")(i())).rejects.toThrow('Key Error: namespace error: w'
     );
 });
