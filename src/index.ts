@@ -168,10 +168,12 @@ export function context(namespace: Namespace={},
                 question = false;
                 dontReentrate = false;
                 try{
+
+                    
                     if(typeof t === 'function'){
                         data.data = await t(data);
                     }else if(Array.isArray(t)){
-                        await serial(t, data);
+                        await _serial(t, data);
                     }
                     else if(typeof t === 'string'){
                         if(t !== 'throws' && t !== '?'){
