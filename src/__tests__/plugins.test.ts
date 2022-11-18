@@ -6,13 +6,13 @@ import repeat from '../repeat';
 DEBUG.v = false;
 wDebug.v = true;
 
-test("plugin w", async ()=>{
+test.only("plugin w", async ()=>{
     const path: string[] = [];
     const a = g(["a"]);
     const b = g(["b", "throws"]);
 
     const {serial, w} = dev(path)({a, b}, {w: watch(["*.js"])});
-    await serial(["a", w("b")])({data: "someinitial data", ctx: {quit: ()=>true}});
+    await serial(["a", w("b")])(i());
 
     expect(path).toEqual(["a", "b", "throws"]);
 });
@@ -214,16 +214,14 @@ test("plugin parallel", async ()=>{
     expect(path).toEqual(["a1", "a2", "b"]);
 });
 
-test.only("plugin repeat", async ()=>{
+test("plugin repeat", async ()=>{
     const path: string[] = [];
     const a = g(["a1", "a2", "a3"]);
     const b = g(["b1", "b2", "a3"]);
 
-    const {serialv2} = dev(path)({a, b}, {r2: repeat(2), buffer: notReentrant("buffer")});
+    const {serial} = dev(path)({a, b}, {r2: repeat(2), buffer: notReentrant("buffer")});
 
-    await serialv2("r2[buffer[a|b")(i());
-
-    console.log(path);
+    await serial("r2[buffer[a|b")(i());
 
     expect(path).toEqual(["a1", "b1", "a2", "b2"]);
 });

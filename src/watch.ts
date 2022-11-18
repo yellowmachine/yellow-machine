@@ -64,13 +64,16 @@ export default (files: string[]) => (setup: SETUP) => async (data: Data) => {
 
         async function run(){
             try{
+                data = {data: data.data, ctx: {quit: close}};
                 await f(data);         
                 if(SHOW_QUIT_MESSAGE.v)
                     // eslint-disable-next-line no-console
                     console.log("Press " + q + " to quit!");
             }catch(err){
-                // eslint-disable-next-line no-console
-                console.log(err);
+                //if(err instanceof Error && err.message.startsWith("exit")) throw err;
+                if(DEBUG.v && err instanceof Error && !err.message.startsWith("no log"))
+                    // eslint-disable-next-line no-console
+                    console.log(err);
             }
         }
 

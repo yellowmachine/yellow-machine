@@ -9,7 +9,6 @@ export {default as notReentrant} from './nr';
 
 export function *g(arr: string[]){
     for(const i of arr){
-        console.log(i);
         if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
         else yield i;
     }
@@ -37,7 +36,9 @@ export type Quit = (err?: boolean, data?: any)=>boolean;
 export type Ctx = {quit: Quit, promise?: Promise<any>};
 
 export function i(data=null){
-    return {data, ctx: {quit: ()=>true}};
+    return {data, ctx: {quit: ()=>{
+        return true;
+    }}};
 }
 
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
@@ -150,16 +151,17 @@ export function context(namespace: Namespace={},
         return async (data: Data) => await serial(built, data.ctx);
     };
 
-    const serialv2: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
+    const serial: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
         if(typeof tasks === 'string'){
             const {parsed} = parse(tasks, ['nr', 'p', ...Object.keys(plugins)]);
             const b = build(parsed);
-            return serial(b, ctx);
+            return _serial(b, ctx);
+        }else{
+            return _serial(tasks, ctx);
         }
     };
 
-    const serial: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
-
+    const _serial: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
         const data = {
             data: null,
             ctx: {...ctx}
@@ -180,13 +182,10 @@ export function context(namespace: Namespace={},
                 question = false;
                 dontReentrate = false;
                 if(typeof t === 'function'){
-                    console.log('entro a function, tasks', tasks);
                     data.data = await t(data);
-                    console.log('salgo de function', tasks);
                 }
                 else if(typeof t === 'string'){
                     if(t !== 'throws' && t !== '?'){
-                        console.log('entro a function string', t);
                         if(!t.includes("|") && !t.includes("[")){
                             if(t.charAt(t.length-1) === "!"){
                                 throws = true;
@@ -200,6 +199,7 @@ export function context(namespace: Namespace={},
                                 t = t.substring(1);
                                 dontReentrate = true;
                             }
+                            //if(t === 'b') throw new Error("exit");
                             const m = namespace[t];
                             if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
                             if(typeof m === 'function'){
@@ -245,15 +245,19 @@ export function context(namespace: Namespace={},
                 // eslint-disable-next-line no-console
                 console.log(err);
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
-            if(dev && err instanceof Error && err.message !== "no log") 
+            if(dev && err instanceof Error && err.message !== "no log"){
                 path.push(err instanceof Error? err.message: "unknown error");
+                //throw err;
+            } 
             if(tasks.at(-1) === '?') return false;
             else if(!question){
                 if(quit) quit(true);
-                if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!")))
+                if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!"))){
                     throw new Error('no log');
-                else    
+                }
+                else{
                     throw err;
+                }
             } 
             if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
                 throw err;
@@ -262,7 +266,9 @@ export function context(namespace: Namespace={},
         }
     };
 
-    const emptyCtx = {ctx: {quit: ()=>false}};
+    const emptyCtx = {ctx: {quit: ()=>{
+        return false;
+    }}};
 
     const plugs: {[key: string]: (arg0: F|Tpipe|string) => (data: Data)=> Promise<any>} = {};
     
@@ -283,18 +289,19 @@ export function context(namespace: Namespace={},
         };
     };
 
-    plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
+    /*
+    plugs._serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
         try{
             return await serial(pipe, data?data.ctx:emptyCtx.ctx);
         }catch(err){
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             return false;
         }
-    };
+    };*/
 
-    plugs.serialv2 = (pipe: F|Tpipe|string) => async (data?: Data) => {
+    plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
         try{
-            return await serialv2(pipe, data?data.ctx:emptyCtx.ctx);
+            return await serial(pipe, data?data.ctx:emptyCtx.ctx);
         }catch(err){
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             return false;
