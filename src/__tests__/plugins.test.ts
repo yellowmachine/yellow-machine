@@ -237,3 +237,14 @@ test("plugin repeat default not reentrant", async ()=>{
     expect(path).toEqual(["a1", "b1", "a2", "b2"]);
 });
 
+test("plugin repeat no buffer", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "a2", "a3"]);
+    const b = g(["b1", "b2", "a3"]);
+
+    const {serial} = dev(path)({a, b}, {r2: repeat(3), buffer: notReentrant("nobuffer")});
+
+    await serial("r2[buffer[a|b")(i());
+
+    expect(path).toEqual(["a1", "b1"]);
+});

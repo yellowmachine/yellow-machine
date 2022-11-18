@@ -109,16 +109,13 @@ export function context(namespace: Namespace={},
                     ret = [...ret, chunk];
                 }
             }else{
-                if(chunk.t === '^['){
-                    const func = nr(s(build(chunk.c)));
+                if(chunk.t === '^[' || chunk.t === '|.'){
+                    const built = build(chunk.c);
+                    const func = nr(s(built));
                     ret = [...ret, func];
                 }
                 else if(chunk.t === '['){
                     const func = s(build(chunk.c));
-                    ret = [...ret, func];
-                }else if(chunk.t === '|.'){
-                    const built = build(chunk.c);
-                    const func = async (data: Data) => await serial(built, data.ctx);
                     ret = [...ret, func];
                 }
                 else if(chunk.t.startsWith("*")){ 
