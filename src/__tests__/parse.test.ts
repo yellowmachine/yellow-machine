@@ -1,9 +1,49 @@
-import { DEBUG, context as C, dev, g } from '../index';
-import { parse } from '../parse';
+import { DEBUG } from '../index';
+import { parse, nextToken } from '../parse';
 
 DEBUG.v = false;
 
 const plugins = ['nr', 'p'];
+
+test("next token empty string", ()=>{
+    expect(nextToken("", plugins)).toBe(null);
+});
+
+test("next token basic pipeline", ()=>{
+    expect(nextToken("a|b,c[", plugins)).toEqual({remaining: "[", token: "a|b,c"});
+});
+
+test("next token basic pipeline with ^", ()=>{
+    expect(nextToken("^a|b,c[", plugins)).toEqual({remaining: "[", token: "^a|b,c"});
+});
+
+test("next token basic pipeline with ^ and ^", ()=>{
+    expect(nextToken("^a|b,^c[", plugins)).toEqual({remaining: "[", token: "^a|b,^c"});
+});
+
+test("next token basic pipeline with p", ()=>{
+    expect(nextToken("a|b|p[", plugins)).toEqual({remaining: "p[", token: "a|b|"});
+});
+
+test("next token basic pipeline with ^ v2", ()=>{
+    expect(nextToken("a|b|p^[", plugins)).toEqual({remaining: "p^[", token: "a|b|"});
+});
+
+test("next token basic pipeline with ^ v3", ()=>{
+    expect(nextToken("p^[", plugins)).toEqual({remaining: "^[", token: "*p"});
+});
+
+test("next token basic pipeline with ^ v2", ()=>{
+    expect(nextToken("^[a", plugins)).toEqual({remaining: "a", token: "^["});
+});
+
+test("next token with |^", ()=>{
+    expect(nextToken("|^b", plugins)).toEqual({remaining: "", token: "|^b"});
+});
+
+test("next token with ^b", ()=>{
+    expect(nextToken("^b", plugins)).toEqual({remaining: "", token: "^b"});
+});
 
 test("parse empty", ()=>{
     const {remaining, parsed} = parse("", plugins);
@@ -19,7 +59,7 @@ test("parse most simple", ()=>{
 
 test("parse most simple with ,", ()=>{
     const {remaining, parsed} = parse("a,b", plugins);
-    expect(parsed).toEqual(['a,b']);
+    expect(parsed).toEqual([{t: "[", c: ["a"]}, {t: "[", c: ["b"]}]);
     expect(remaining).toBe("");
 });
 
@@ -31,7 +71,7 @@ test("parse most simple with |", ()=>{
 
 test("parse most simple with , |", ()=>{
     const {remaining, parsed} = parse("a,x|b|c", plugins);
-    expect(parsed).toEqual(["a,x|b|c"]);
+    expect(parsed).toEqual([{t: "[", c: ["a"]}, {t: "[", c: ["x|b|c"]}]);
     expect(remaining).toBe("");
 });
 
@@ -67,108 +107,69 @@ test("parse most simple with q[] q is not plugin", ()=>{
     expect(remaining).toBe("");
 });
 
-/*
-test("build simple from context with inner parse and implicit parse", async ()=>{
-    const path: string[] = [];
-    
-    const a = g(["a", "a2"]);
-    const b = g(["b"]);
-    const c = g(["c"]);
+test("parse most simple with q[] q is not plugin", ()=>{
+    const {remaining, parsed} = parse("a|p^[b]", plugins);
 
-    const { serial } = dev(path)({"a": a, "b": b, "c": c});
-    await serial(["a", "a|b|c"]);
-    expect(path).toEqual(["a", "a2", "b", "c"]);
+    expect(parsed).toEqual(["a", {t: "*p", c: [{t: "^[", c: ["b"]}]}]);
+    expect(remaining).toBe("");
 });
 
-test("build with p", async ()=>{
-    const path: string[] = [];
-    
-    const a = g(["a"]);
-    const b = g(["b"]);
-    const c = g(["c"]);
-
-    const { serial } = dev(path)({"a": a, "b": b, "c": c});
-    await serial(["a", "p[b|c]"]);
-    expect(path).toEqual(["a", "b", "c"]);
+test("parse ]?", ()=>{
+    const {remaining, parsed} = parse("a[b!|c]?x", plugins);
+    expect(parsed).toEqual(["a",{t: "[", c: ["b!|c"]}, "x", "?"]);
+    expect(remaining).toBe("");
 });
 
-test("build with exception", async ()=>{
-    const path: string[] = [];
-    
-    const a = g(["a"]);
-    const b = g(["throw"]);
-    const c = g(["c"]);
-
-    const { serial } = dev(path)({"a": a, "b": b, "c": c});
-    await serial(["a|b!|c"]);
-    expect(path).toEqual(["a", "throws"]);
+test("parse |^", ()=>{
+    const {remaining, parsed} = parse("|^b", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: ["b"]}]);
+    expect(remaining).toBe("");
 });
 
-test("build with exception catched v0", async ()=>{
-    const path: string[] = [];
-    
-    const a = g(["a"]);
-    const b = g(["throw"]);
-    const c = g(["c"]);
-
-    const { serial } = dev(path)({"a": a, "b": b, "c": c});
-    await serial(["a[b]c"]);
-    expect(path).toEqual(["a", "throws", "c"]);
+test("parse ^b", ()=>{
+    const {remaining, parsed} = parse("^b", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: ["b"]}]);
+    expect(remaining).toBe("");
 });
 
-test("build with exception catched", async ()=>{
-    const path: string[] = [];
-    
-    const a = g(["a"]);
-    const b = g(["throw"]);
-    const c = g(["c"]);
-
-    const { serial } = dev(path)({"a": a, "b": b, "c": c});
-    await serial(["a[b!]c"]);
-    expect(path).toEqual(["a", "throws"]);
+test("parse ^b|c", ()=>{
+    const {remaining, parsed} = parse("^b|c", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: ["b|c"]}]);
+    expect(remaining).toBe("");
 });
 
-test("parallel with compact mode", async ()=>{
-    const path: string[] = [];
-    
-    const a = g(["a", "a2"]);
-    const b = g(["b"]);
-    const c = g(["c"]);
-
-    const { parallel } = dev(path)({"a": a, "b": b, "c": c});
-    await parallel(["a", "a|b|c"]);
-    expect(path).toEqual(["a", "a2", "b", "c"]);
+test("parse ^b|c,x", ()=>{
+    const {remaining, parsed} = parse("^b|c,x", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: ["b|c"]}, {t: "[", c: ["x"]}]);
+    expect(remaining).toBe("");
 });
 
-test("parse simple", ()=>{
-    const {parsed} = parse("a|b|c");
-    expect(parsed).toEqual(["a|b|c"]);
+test("parse c,^x", ()=>{
+    const {remaining, parsed} = parse("c,^x", plugins);
+    expect(parsed).toEqual([{t: "[", c: ["c"]}, {t: "*nr", c: ["x"]}]);
+    expect(remaining).toBe("");
 });
 
-test("parse w", ()=>{
-    const {parsed} = parse("a|w_1[b]|c");
-    expect(parsed).toEqual(["a", {t: "w_1", c: ["b"]}, "c"]);
+test("parse [[", ()=>{
+    const {remaining, parsed} = parse("[[", plugins);
+    expect(parsed).toEqual([{t: "[", c: [{t: "[", c: []}]}]);
+    expect(remaining).toBe("");
 });
 
-test("parse p with ,", ()=>{
-    const {parsed} = parse("a!|p[b,c]|d");
-    expect(parsed).toEqual(["a!", {t: "p[", c: ["b,c"]}, "d"]);
+test("parse [^[", ()=>{
+    const {remaining, parsed} = parse("[^[", plugins);
+    expect(parsed).toEqual([{t: "[", c: [{t: "^[", c: []}]}]);
+    expect(remaining).toBe("");
 });
 
-test("parse p with , | and !", ()=>{
-    const {parsed} = parse("a|p[b|x,c!|y]|d");
-    expect(parsed).toEqual(["a", {t: "p[", c: ["b|x,c!|y"]}, "d"]);
+test("parse ^^", ()=>{
+    const {remaining, parsed} = parse("^^", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: [{t: "*nr", c: []}]}]);
+    expect(remaining).toBe("");
 });
 
-test("execution with p", async ()=>{
-    const path: string[] = [];
-    
-    const a = g(["a"]);
-    const b = g(["b"]);
-    const c = g(["c"]);
-
-    const { run } = dev(path)({"a": a, "b": b, "c": c});
-    await run("a|p[b|c]");
-    expect(path).toEqual(["a", "b", "c"]);
+test("parse ^^b", ()=>{
+    const {remaining, parsed} = parse("^^b", plugins);
+    expect(parsed).toEqual([{t: "*nr", c: [{t: "*nr", c: ["b"]}]}]);
+    expect(remaining).toBe("");
 });
-*/

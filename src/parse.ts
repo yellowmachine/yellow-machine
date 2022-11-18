@@ -1,28 +1,28 @@
 type B = (string|B|P)[]|undefined;
 type P = {p?: B, w?: {files: string[], pipe: B}};
 
-function nextToken(t: string, plugins: string[]){
+export function nextToken(t: string, plugins: string[]){
     if(t === "") return null;
 
     if(t.startsWith("]!"))
         return {token: "]!", remaining: t.substring(2)};
     else if(t.startsWith("]!,"))
         return {token: "]!,", remaining: t.substring(3)};
-    //?
-    else if(t.startsWith("]?"))
-        return {token: "]?", remaining: t.substring(2)};
-    else if(t.startsWith("]?,"))
-        return {token: "]?,", remaining: t.substring(3)};
-    //
+    else if(t.startsWith("?"))
+        return {token: "?", remaining: t.substring(1)};
+    else if(t.startsWith("?,"))
+        return {token: "?,", remaining: t.substring(2)};
     else if(t.startsWith('],'))
         return {token: "],", remaining: t.substring(2)};
+    else if(t.startsWith('^['))
+        return {token: "^[", remaining: t.substring(2)};
     else if(t.charAt(0) === '[')
         return {token: "[", remaining: t.substring(1)};
     else if(t.charAt(0) === ']')
         return {token: "]", remaining: t.substring(1)};
     else{
         for(let i=0; i < t.length; i++){
-            if(["[", "]"].includes(t.charAt(i))){
+            if(["[", "]"].includes(t.charAt(i)) || t.substring(i).startsWith("^[")){
                 const token = t.substring(0, i);
                 for(const plug of plugins){
                     if(token.endsWith("|" + plug)){
@@ -30,11 +30,15 @@ function nextToken(t: string, plugins: string[]){
                         return {token: t.substring(0, i-size), remaining: t.substring(i-size)};
                     }
                 }
-                if(plugins.includes(token)){
-                    return {token: "*"+token, remaining: t.substring(i+1)};
-                }
-                else{
-                    return {token, remaining: t.substring(i)};
+                if(t.charAt(i) === '^'){
+                    return {token: "*"+token, remaining: t.substring(i)};
+                }else{
+                    if(plugins.includes(token)){
+                        return {token: "*"+token, remaining: t.substring(i+1)};
+                    }
+                    else{
+                        return {token, remaining: t.substring(i)};
+                    }
                 }
             }
         }
@@ -49,24 +53,64 @@ const removeWhite = (t: string) => t.replace(/\s/g,'');
 export function parse(t: string, plugins: string[]){
     t = removeWhite(t);
     let remaining = t;
+    let extra: string|null = null;
     
     const pending: (Parsed|string)[] = [];
     for(;;){
         const token = nextToken(remaining, plugins);
+
         if(token === null) break;
         remaining = token.remaining;
-        if(!["]?", "]?,", "]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
+        if(!["^[", "?", "?,", "]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
             let t = token.token;
             if(t.startsWith('|'))
                 t = t.substring(1);
             if(t.charAt(t.length - 1) === "|")
                 t = t.substring(0, t.length-1);
-            pending.push(t);
-        }else if(token.token === "p["){
+            if(t.includes(',')){
+                for(let t2 of t.split(',')){
+                    if(t2.startsWith("^")){
+                        t2 = t2.substring(1);
+                        pending.push({t: "*nr", c: parse(t2, plugins).parsed});    
+                    }else{
+                        if(t2.includes("|.")){
+                            t2 = t2.replace("|.", "|");
+                            pending.push({t: "|.", c: parse(t2, plugins).parsed});
+                        }else{
+                            pending.push({t: "[", c: parse(t2, plugins).parsed});
+                        }
+                    }        
+                }
+            }else{
+                if(t.startsWith("^")){
+                    t = t.substring(1);
+                    pending.push({t: "*nr", c: parse(t, plugins).parsed});    
+                }else{
+                    if(t.includes("|.")){
+                        t = t.replace("|.", "|");
+                        pending.push({t: "|.", c: [t]});
+                    }
+                    else
+                        pending.push(t);
+                }
+            }
+        }
+        else if(token.token === "^["){
             const aux = parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
-        }else if(token.token === '['){
+        }
+        else if(token.token === '^'){
+            if(token.token.includes(',')){
+                const c = remaining.split(',').map(x => parse(x, plugins).parsed);
+                c.forEach(x=>pending.push({t: "[", c: x}));
+            }else{
+                const aux = parse(remaining, plugins);
+                pending.push({t: token.token, c: aux.parsed});
+                remaining = aux.remaining;
+            }
+        }
+        else if(token.token === '['){
             const aux = parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
@@ -74,15 +118,18 @@ export function parse(t: string, plugins: string[]){
             const aux = parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
-        }else if(token.token === "]?" ||token.token === "]?," || 
-                 token.token === "]!" ||token.token === "]!," || 
+        }else if(token.token === "?" || token.token === "?,"){
+            extra = "?";
+            if(token.token.length == 2){
+                break;
+            }
+        }else if(token.token === "]!" || token.token === "]!," || 
                  token.token === "]," || token.token === "]" || remaining === ""){   
             if(token.token.includes("!"))
                 pending.push("throws");
-            if(token.token.includes("?"))
-                pending.push("?");
             break;
         }
     }
+    if(extra) pending.push(extra);
     return {remaining, parsed: pending};
 }

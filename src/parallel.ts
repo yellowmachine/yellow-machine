@@ -1,29 +1,16 @@
-export default () => () => {
-    return {
-        setup: ({multiple}: {multiple: ArrFD}) => {
-            return parallel(multiple);  
-        }
-    };
-};
+import { Data, type SETUP } from '.';
 
-type ArrFD = (()=>Promise<any>)[];
-
-const parallel = async (tasks: ArrFD, mode="all") =>{
-
+export default (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any)|null = null) => (setup: SETUP) => async (data: Data) => {
+    const pipes = setup["multiple"];
     const promises: Promise<any>[] = [];   
 
-    for(const t of tasks){
-        promises.push(t());
+    for(const t of pipes){
+        if(map) data = {ctx: data.ctx, data: map(data.data)};
+        promises.push(t(data));
     }
-    try{
-        if(mode === "all") await Promise.all(promises);
-        //else if (mode === "any") await Promise.any(promises);
-        else if (mode === "race") await Promise.race(promises);
-        else if (mode === "allSettled") await Promise.allSettled(promises);
-    }catch(err){
-        // eslint-disable-next-line no-console
-        console.log(err);
-        throw err;
-    }
-    return true;
+    if(mode === "all") return await Promise.all(promises);
+    //else if (mode === "any") return await Promise.any(promises);
+    else if (mode === "race") return await Promise.race(promises);
+    else if (mode === "allSettled") return await Promise.allSettled(promises);
+    return false;
 };
