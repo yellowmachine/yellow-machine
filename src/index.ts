@@ -20,11 +20,17 @@ export type SETUP = {single: FD, multiple: FD[]};
 export type FSETUP = (arg: SETUP) => FP;
 export type FP = (pipe: Tpipe|F) => (data?: Data) => Promise<any>;
 
+type Serial = (tasks: Tpipe|C, ctx: Ctx) => Promise<any>;
+
 export type NR = (f: F) => (data?: Data) => Promise<any>;
 type Plugin = {[key: string]: (arg: SETUP) => FD};
+type CompiledPlugin = {[key: string]: (arg0: F|Tpipe|string) => FD};
+
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 export type Quit = (err?: boolean, data?: any)=>boolean;
 export type Ctx = {quit: Quit, promise?: Promise<any>};
+
+const builtinPlugins = ['nr', 'p'];
 
 export function *g(arr: string[]){
     for(const i of arr){
@@ -38,6 +44,8 @@ export function i(data=null){
         return true;
     }}};
 }
+
+const splitAndFilter = (t: string, sep='|') => t.split(sep).filter(y => y !== "");
 
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
@@ -77,12 +85,12 @@ export function context(namespace: Namespace={},
         for(const chunk of parsed){
             if(typeof chunk === 'string'){
                 if(chunk.includes(',')){
-                    const aux = chunk.split(",").filter(x => x !== "");
-                    const aux2 = aux.map(x => {
+                    const several =  splitAndFilter(chunk, ',');
+                    const funcs = several.map(x => {
                         if(x.startsWith('^')){
                             x = x.substring(1);
                             if(x.includes('|')){
-                                const func = nr(x.split('|').filter(y => y !== ""));
+                                const func = nr(splitAndFilter(x));
                                 return func;
                             }else{
                                 const func = nr(x);
@@ -90,13 +98,13 @@ export function context(namespace: Namespace={},
                             }
                         }
                         else{
-                            if(x.includes('|')) return x.split('|').filter(y => y !== "");
+                            if(x.includes('|')) return splitAndFilter(x);
                             else return x;
                         }
                     });
-                    ret = [...ret, ...aux2];
+                    ret = [...ret, ...funcs];
                 }else if(chunk.includes('|')){
-                    ret = [...ret, ...chunk.split("|").filter(x => x !== "")];
+                    ret = [...ret, ...splitAndFilter(chunk)];
                 }else{
                     ret = [...ret, chunk];
                 }
@@ -147,9 +155,9 @@ export function context(namespace: Namespace={},
         return async (data: Data) => await serial(built, data.ctx);
     };
 
-    const serial: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
+    const serial: Serial = async(tasks, ctx) => {
         if(typeof tasks === 'string'){
-            const {parsed} = parse(tasks, ['nr', 'p', ...Object.keys(plugins)]);
+            const {parsed} = parse(tasks, [...builtinPlugins, ...Object.keys(plugins)]);
             const b = build(parsed);
             return _serial(b, ctx);
         }else{
@@ -157,7 +165,7 @@ export function context(namespace: Namespace={},
         }
     };
 
-    const _serial: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
+    const _serial: Serial = async(tasks, ctx) => {
         const data = {
             data: null,
             ctx: {...ctx}
@@ -248,7 +256,7 @@ export function context(namespace: Namespace={},
         }
     };
 
-    const plugs: {[key: string]: (arg0: F|Tpipe|string) => (data: Data)=> Promise<any>} = {};
+    const plugs: CompiledPlugin = {};
     
     for(const key of Object.keys(plugins)){
         const plugin = plugins[key];
