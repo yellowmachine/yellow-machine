@@ -1,48 +1,60 @@
 import { Data, FD, type SETUP } from '.';
 export type MODE = "buffer"|"nobuffer"|"custom";
-export type BFUNC = null|((arg: Data[]) => Data[]);
+export type BFUNC = null|((arg: BufferData[]) => BufferData[]);
+
+type Resolve = (null|((arg0: (any)) => void));
+type Reject = (null|(() => void));
+type BufferData = {resolve: Resolve, reject: Reject, data: Data};
+
+function createResolve(){
+    let innerResolve: Resolve = null;
+    let innerReject: Reject = null;
+
+    const p: Promise<any> = new Promise((_resolve, _reject) => {
+        innerResolve = _resolve;
+        innerReject = _reject;
+    });
+
+    function resolve(v: boolean){
+        if(innerResolve) innerResolve(v);
+    }
+
+    function reject(){
+        if(innerReject) innerReject();
+    }
+
+    return {resolve, reject, promise: p};
+}
 
 export default (mode: MODE = "nobuffer", bfunc: BFUNC = null) => (setup: SETUP): FD => {
 
     const pipe = setup["single"];
 
     let exited = true;
-    let buffer: Data[] = [];
+    const buffer: BufferData[] = [];
     
-    const g = (data: Data) => {
+    const g = async (data: Data) => {
         if(!exited){
             console.log('not exited');
             if(mode === "buffer"){
                 console.log('buffer push');
-                buffer.push(data);
-            }
-            else if(mode === "custom"){
-                if(bfunc) buffer = bfunc(buffer);
-            }
-            if(data.ctx.promise) return data.ctx.promise;
-            else return Promise.resolve(false);
-        }else{
-            console.log('exited');
-            if(data.ctx.promise){
-                console.log('dentro de if', data.ctx.promise);
-                const p = data.ctx.promise;
-                p.then(()=>{
-                    console.log("**************************************");
-                    exited=true;
-                    if(buffer.length > 0){
-                        console.log('pop');
-                        data = buffer.pop() as Data;
-                        g(data);
-                    }
-                }).catch(err=>console.log(err));
-                exited = false;
-                pipe(data);
-                return p;
+                const x = createResolve();
+                buffer.push({...x, data});
+                await x.promise; 
             }else{
-                console.log('resolve a false');
-                return Promise.resolve(false);
+                return false;
             }
         }
+        console.log('exited');
+        exited = false;
+        await pipe(data);
+        exited = true;
+        if(buffer.length > 0){
+            console.log('pop');
+            const {resolve} = buffer.pop() as BufferData;
+            if(resolve) resolve(true);
+        }
+        return true;
     };
 
     return g;

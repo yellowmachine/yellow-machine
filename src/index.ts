@@ -113,7 +113,7 @@ export function context(namespace: Namespace={},
                     ret = [...ret, func];
                 }else if(chunk.t === '|.'){
                     const built = build(chunk.c);
-                    const func = async (data: Data) => await serial(built, data.ctx, "block");
+                    const func = async (data: Data) => await serial(built, data.ctx);
                     ret = [...ret, func];
                 }
                 else if(chunk.t.startsWith("*")){ 
@@ -147,48 +147,18 @@ export function context(namespace: Namespace={},
         }
         else
             built = x;
-        return async (data: Data) => await serial(built, data.ctx, "async");
+        return async (data: Data) => await serial(built, data.ctx);
     };
 
     const serialv2: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
         if(typeof tasks === 'string'){
             const {parsed} = parse(tasks, ['nr', 'p', ...Object.keys(plugins)]);
             const b = build(parsed);
-            return serial(b, ctx, "block");
+            return serial(b, ctx);
         }
     };
 
-    const serial: (tasks: Tpipe|C, ctx: Ctx, mode: "block"|"async") => Promise<any> = 
-        async(tasks: Tpipe|C, ctx: Ctx, mode: "block"|"async") => {
-            if(mode === 'block'){
-                let resolve: (null|((arg0: (any)) => void)) = null;
-                let reject: (null|(() => void)) = null;
-        
-                const p: Promise<any> = new Promise((_resolve, _reject) => {
-                    resolve = _resolve;
-                    reject = _reject;
-                });
-
-                const myresolve = (v: boolean) => {
-                    if(resolve) resolve(v);
-                };
-
-                const myreject = () => {
-                    if(reject) reject;
-                };
-
-                try{
-                    await _serial(tasks, ctx);
-                    myresolve(true);
-                }catch{
-                    myreject();
-                }
-            }else{
-                return _serial(tasks, ctx);
-            }
-    };
-
-    const _serial: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
+    const serial: (tasks: Tpipe|C, ctx: Ctx) => Promise<any> = async(tasks, ctx) => {
 
         const data = {
             data: null,
@@ -259,7 +229,7 @@ export function context(namespace: Namespace={},
                     }                    
                 }
                 else if(Array.isArray(t)){
-                    await serial(t, data.ctx, "block");
+                    await serial(t, data.ctx);
                 }
                 else{
                     const x = await t.next(data);
@@ -315,7 +285,7 @@ export function context(namespace: Namespace={},
 
     plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
         try{
-            return await serial(pipe, data?data.ctx:emptyCtx.ctx, "block");
+            return await serial(pipe, data?data.ctx:emptyCtx.ctx);
         }catch(err){
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             return false;
