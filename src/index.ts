@@ -120,22 +120,11 @@ export function context(namespace: Namespace={},
                 }
                 else if(chunk.t.startsWith("*")){ 
                     const built = build(chunk.c);
-                    if(chunk.t === '*p'){
-                        const func = plugs.p(built); // ;)
-                        ret = [...ret, func];
-                    }
-                    else if(chunk.t === '*nr'){
-                        const func = plugs.nr(built);
-                        ret = [...ret, func];
-                    }
-                    else if(plugins){
-                        const name = chunk.t.substring(1, chunk.t.length);
-                        const plugin = plugins[name];
-                        if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
-                        const {single, multiple} = buildSingleMultiple(built);
-                        const func = plugin({single, multiple});
-                        ret = [...ret, func];
-                    }
+                    const name = chunk.t.substring(1, chunk.t.length);
+                    const builtin = plugs[name];
+                    if(builtin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
+                    const func = builtin(built);
+                    ret = [...ret, func];
                 }
             }
         }
@@ -149,7 +138,7 @@ export function context(namespace: Namespace={},
         }
         else
             built = x;
-        return async (data: Data) => await serial(built, data);
+        return async (data: Data) => await _serial(built, data);
     };
 
     const serial: Serial = async(tasks, data) => {
@@ -163,11 +152,6 @@ export function context(namespace: Namespace={},
     };
 
     const _serial: Serial = async(tasks, data) => {
-        /*
-        const data = {
-            data: null,
-            ctx: {...ctx}
-        };*/
 
         let quit;
         if(data.ctx) quit = data.ctx.quit;
@@ -284,9 +268,7 @@ export function context(namespace: Namespace={},
         const plugin = plugins[key];
         plugs[key] = (pipe: F|Tpipe|string) => {
             const {single, multiple} = buildSingleMultiple(pipe);
-            return (data: Data) => {
-                return plugin({single, multiple})(data);
-            };        
+            return plugin({single, multiple});
         };
     }
 
