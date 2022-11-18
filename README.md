@@ -52,19 +52,24 @@ Things you can do:
 await serial([f1, f2, "f3"])(i()); // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
 
 // with initial data
-await serial([f1, f2, "f3"])({...i(), data: "some initial data"}); // it will be changed in next version so it will be no necessary to pass ctx
+const response = await serial("a|b")(i("x"));
+await serial([f1, f2, "f3"])(i("my initial data")); 
 
-// we use the plugin w. You pass w: watch(["./te... in the plugins sections and 
-// you get in const {serial, w} = C({
-const {serial, w, p} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-await serial(["up", w([k1, "k"]), "down"])(i());
+// we use the plugin w. You pass {w: watch(...)} in the plugins sections and 
+// you get w in const {serial, w} = C({
+const {serial, w, p} = C({up, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
+await serial(["up", w([dql, "test"]), "down"])(i());
+
+// or
+const {serial} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
+await serial("up|w[dql|test]down")(i());
 
 // p is shorthand for parallel
 await serial("up", p([a, b, c]), "end")(i());
 
 // or
 await serial("up|p[a,b,c]|end")(i());
-// end will execute when p finishes. Now the mode of p is all: await Promise.all(promises);
+// end will execute when p finishes. Default mode for parallel is "all" (await Promise.all...)
 
 // throwing
 await serial([a, b, 'throws'])(i()); //if f1, for example, throws, then f2 is not executed and the exception is raised
@@ -78,22 +83,30 @@ await serial('a|b!|c!|d')(i()); // if b or c throws then the whole pipe throws
 // default nested to serial
 await serial([f1, f2, [f3, f4], f5])(i());
 
-// soon: more expressions
+// more expressions
 "w[^a|b,c" // a is non reentrant
 
 "w[a|^b,c" // b is non reentrant
 
 "w[a|b,^c" // c is non reentrant
+```
 
-"w^[a,b]"  // [a,b] is non reentrant
+// repeat is a plugin that spawns n pipes
+```ts
+const {serial} = dev(path)({a, b}, {r2: repeat(2)});
+
+await serial("r2[^[a|b")(i()); //--> a1 ... b1 ... a2 ... b2
+```
 
 // you don't need to close with ] at the end of the expression:
 "p[a,b"
 
 // if b throw, c is not executed and exception should be out, but ? catch it
-"a[b!|c]?x" // x is not executed because previous pipe was not success
+"a[b!|c]?x" // x is not executed because previous pipe was not successful
 
 //note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
+
+```ts
 test("]? without !", async ()=>{
     const path: string[] = [];
     const a = g(["a"]);
@@ -113,8 +126,8 @@ To test paths I think this is the way:
 
 ```js
 function create(G, ctx, plugins){
-    const {...} = G(ctx, plugins);
-    return serial(...); 
+    const {serial} = G(ctx, plugins);
+    return serial("..."); 
 }
 
 const p = create(dev(path), ctx_dev, plugins)
@@ -138,8 +151,25 @@ function someProducerConsumer({ctx}){
 Plugins:
 
 `p` to execute an array of pipes in parallel
+
+    ```ts
+    // you can pass a map function that is called to pass a fresh object of Data to each parallel pipe
+    (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any)|null = null)
+    ```
+
 `w` to watch some files
+
+    ```ts
+    (files: string[]) // the array of files to watch
+    ```
 `nr` means not reentrant
+
+    ```ts
+    // MODE "buffer"|"nobuffer"
+    // size: number, size of buffer
+    ({mode, size}: {mode?: MODE, size?: number} = {mode: "buffer"})
+    ```
+
 `sw` switch: is constructed with a function like this
 
 ```ts
@@ -149,8 +179,8 @@ const a = g(["a"]);
 const b = g(["b"]);
 const c = g(["c"]);
 
-function decide(data: any): number{
-        if(data === 'a') return 0;
+function decide(data: Data): number{
+        if(data.data === 'a') return 0;
         else return 1;
     }
 
@@ -159,6 +189,19 @@ await serial("a|sw[b,c]")(i()); // a ... b
 ```
 
 Example of a producer / consumer:
+
+```ts
+function myF(data: Data){ // (data: Data) => any
+    if(data.data === 'a') return 'b';
+    if(data.data === 'x')
+        data.ctx.quit(true); // manually close the closer plugin
+                    // true means quit with error, you can pass false, "some data"
+                    // to close without error and return that data
+    return 'other';
+}
+```
+
+A producer consumer doesn't need to use the data passed in. For example.
 
 ```ts
 exports.docker = function({image, port, name, waitOn=null}){
@@ -200,104 +243,48 @@ exports.docker = function({image, port, name, waitOn=null}){
 }
 ```
 
-An example of a plugin:
+# Plugins
+
+A plugin is a function that returns a setup function, which will return a producer / consumer. The plugin is used for example to get an array of pipes and run them in parallel. So a plugin can receive a pipe or an array of pipes. Here two examples.
 
 ```ts
-// watch
+// parallel
 
-export default (files: string[]) => () => {
-    let _close: Quit;
-    return {
-        setup: ({single}: SETUP) => {
-            const {promise, close} = watch(files, single);
-            _close = close;
-            return promise;
-        },
-        close: () => _close()
-    };
-};
+import { Data, type SETUP } from '.';
 
-const watch = (files: string[], f: SETUP["single"]) => {
-    const q = 'q';
+export default (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any)|null = null) => (setup: SETUP) => async (data: Data) => {
+    const pipes = setup["multiple"];
+    const promises: Promise<any>[] = [];   
 
-    const h = (ch: string) => {
-        if(ch === q){
-            close();
-        }
-    };
-    process.stdin.on('keypress', h);        
-
-    let resolve: (null|((arg0: (any)) => void)) = null;
-    let reject: (null|(() => void)) = null;
-
-    const p = new Promise((_resolve, _reject) => {
-        resolve = _resolve;
-        reject = _reject;
-    });
-
-    let exited = false;
-    function close(err = false, data: any = null){
-        if(!exited){
-            exited = true;
-            process.stdin.pause();
-            process.stdin.removeListener("keypress", h);
-            if(err){
-                if(reject) reject();
-            }
-            else if(resolve) resolve(data);
-            if(watcher)
-                watcher.close();
-        }
-        return true;
+    for(const t of pipes){
+        if(map) data = {ctx: data.ctx, data: map(data.data)};
+        promises.push(t(data));
     }
-
-    async function run(){
-        try{
-            await f();         
-            if(SHOW_QUIT_MESSAGE.v)
-                // eslint-disable-next-line no-console
-                console.log("Press " + q + " to quit!");
-        }catch(err){
-            // eslint-disable-next-line no-console
-            console.log(err);
-        }
-    }
-
-    let watcher: null | ReturnType<typeof chwatch> = null;
-    
-    watcher = chwatch(files, {ignoreInitial: true}).
-        on('all', (event, path) => {
-            // eslint-disable-next-line no-console
-            //console.log(event, path);
-            run();
-        });
-    run();
-    
-    return {promise: p, close};
+    if(mode === "all") return await Promise.all(promises);
+    //else if (mode === "any") return await Promise.any(promises);
+    else if (mode === "race") return await Promise.race(promises);
+    else if (mode === "allSettled") return await Promise.allSettled(promises);
+    return false;
 };
 ```
 
-Other plugin example:
+An example of a plugin that uses single:
 
 ```ts
-// switch
-import {type Data, type SETUP} from '.';
-type SWF = (data: any)=>number;
+import { Data, type SETUP } from '.';
 
-export default (f: SWF) => () => {
-    return {
-        setup: ({multiple}: SETUP) => {
-            return select(multiple, f); // you can return a promise
-                                        // or a function that return a promise
-        }
-    };
-};
-
-const select = (tasks: SETUP["multiple"], f: SWF) =>{
-    return async (data: Data) => {
-        const task = tasks[f(data)];
-        return await task();
-    };
+export default (n: number) => (setup: SETUP) => async (data: Data) => {
+    const promises: Promise<boolean>[] = [];
+    const pipe = setup["single"];
+    while(n--){
+        const p = pipe(data);
+        promises.push(p);
+        p.catch(()=>{
+            return false;
+        });
+    }
+    await Promise.all(promises);
+    return true;
 };
 ```
 

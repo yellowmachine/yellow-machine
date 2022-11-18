@@ -1,10 +1,11 @@
 import { Data, type SETUP } from '.';
 
-export default (mode: "all"|"race"|"allSettled" = "all") => (setup: SETUP) => async (data: Data) => {
+export default (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any)|null = null) => (setup: SETUP) => async (data: Data) => {
     const pipes = setup["multiple"];
     const promises: Promise<any>[] = [];   
 
     for(const t of pipes){
+        if(map) data = {ctx: data.ctx, data: map(data.data)};
         promises.push(t(data));
     }
     if(mode === "all") return await Promise.all(promises);

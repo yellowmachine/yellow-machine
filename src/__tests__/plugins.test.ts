@@ -138,7 +138,7 @@ test("plugin sw", async ()=>{
     const b = g(["b"]);
     const c = g(["c"]);
 
-    function decide(data: any): number{
+    function decide(data: Data): number{
         if(data.data === 'a') return 0;
         else return 1;
     }
@@ -188,20 +188,6 @@ test("]? without !", async ()=>{
     expect(path).toEqual(["a", "throws", "x"]);
 });
 
-test("]? without ! v2", async ()=>{
-    const path: string[] = [];
-    const a = g(["a"]);
-    const b = g(["throws"]);
-    const c = g(["c"]);
-    const x = g(["x"]);
-
-    const {serial} = dev(path)({a, b, c, x}, {});
-    const response = await serial("a[b|c]x")(i());
-
-    expect(response).toBe("x");
-    expect(path).toEqual(["a", "throws", "x"]);
-});
-
 test("plugin parallel", async ()=>{
     const path: string[] = [];
     const a = g(["a1", "a2"]);
@@ -218,7 +204,7 @@ test("plugin repeat", async ()=>{
     const a = g(["a1", "a2", "a3"]);
     const b = g(["b1", "b2", "a3"]);
 
-    const {serial} = dev(path)({a, b}, {r2: repeat(2), buffer: notReentrant("buffer")});
+    const {serial} = dev(path)({a, b}, {r2: repeat(2), buffer: notReentrant({mode: "buffer"})});
 
     await serial("r2[buffer[a|b")(i());
 
@@ -242,7 +228,7 @@ test("plugin repeat no buffer", async ()=>{
     const a = g(["a1", "a2", "a3"]);
     const b = g(["b1", "b2", "a3"]);
 
-    const {serial} = dev(path)({a, b}, {r2: repeat(3), buffer: notReentrant("nobuffer")});
+    const {serial} = dev(path)({a, b}, {r2: repeat(3), buffer: notReentrant({mode: "nobuffer"})});
 
     await serial("r2[buffer[a|b")(i());
 
