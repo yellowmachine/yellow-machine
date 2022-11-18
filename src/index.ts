@@ -7,33 +7,31 @@ export {default as watch, SHOW_QUIT_MESSAGE} from './watch';
 export {default as parallel} from './parallel';
 export {default as notReentrant} from './nr';
 
-export function *g(arr: string[]){
-    for(const i of arr){
-        if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
-        else yield i;
-    }
-}
-
 export const DEBUG = {v: false, w: false};
 
 export type Data = {data?: any, ctx: Ctx};
 export type F = ((arg0: Data) => any);
 type C = Generator|AsyncGenerator|F|string|Tpipe;
 export type Tpipe = C[];
-//export type Serial = (tasks: Tpipe|C, ctx: Ctx) => Promise<any>;
-//export type Parallel = (tasks: Tpipe|C, mode?: "all"|"race"|"allSettled", ctx?: Ctx) => Promise<any>;
+
 export type BUILD = (t: (string|Parsed)[]) => Tpipe;
-export type FD = (data: Data)=>Promise<boolean>;
+export type FD = (data: Data)=>Promise<any>;
 export type SETUP = {single: FD, multiple: FD[]};
 export type FSETUP = (arg: SETUP) => FP;
 export type FP = (pipe: Tpipe|F) => (data?: Data) => Promise<any>;
-//type S = (pipe: Tpipe) => (data?: Data) => Promise<any>;
-//type P = (pipe: Tpipe) => (data?: Data) => Promise<any>;
+
 export type NR = (f: F) => (data?: Data) => Promise<any>;
 type Plugin = {[key: string]: (arg: SETUP) => FD};
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 export type Quit = (err?: boolean, data?: any)=>boolean;
 export type Ctx = {quit: Quit, promise?: Promise<any>};
+
+export function *g(arr: string[]){
+    for(const i of arr){
+        if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
+        else yield i;
+    }
+}
 
 export function i(data=null){
     return {data, ctx: {quit: ()=>{
@@ -75,8 +73,6 @@ export function context(namespace: Namespace={},
 
     function build(parsed: (string|Parsed)[]): Tpipe{
         let ret: Tpipe = [];
-        
-        //if(parsed.length === 0) return [];
         
         for(const chunk of parsed){
             if(typeof chunk === 'string'){
@@ -181,78 +177,65 @@ export function context(namespace: Namespace={},
                 throws = false;
                 question = false;
                 dontReentrate = false;
+
                 if(typeof t === 'function'){
                     data.data = await t(data);
+                }else if(Array.isArray(t)){
+                    await serial(t, data.ctx);
                 }
                 else if(typeof t === 'string'){
                     if(t !== 'throws' && t !== '?'){
-                        if(!t.includes("|") && !t.includes("[")){
-                            if(t.charAt(t.length-1) === "!"){
-                                throws = true;
-                                t = t.substring(0, t.length-1);
+                        if(t.charAt(t.length-1) === "!"){
+                            throws = true;
+                            t = t.substring(0, t.length-1);
+                        }
+                        if(t.charAt(t.length-1) === "?"){
+                            question = true;
+                            t = t.substring(0, t.length-1);
+                        }
+                        if(t.charAt(0) === '^'){
+                            t = t.substring(1);
+                            dontReentrate = true;
+                        }
+                        const m = namespace[t];
+                        if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
+                        if(typeof m === 'function'){
+                            if(dontReentrate){
+                                data.data = await nr(m)(data);
                             }
-                            if(t.charAt(t.length-1) === "?"){
-                                question = true;
-                                t = t.substring(0, t.length-1);
-                            }
-                            if(t.charAt(0) === '^'){
-                                t = t.substring(1);
-                                dontReentrate = true;
-                            }
-                            const m = namespace[t];
-                            if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
-                            if(typeof m === 'function'){
-                                if(dontReentrate){
-                                    await nr(m)(data);
-                                }
-                                else{
-                                    data.data = await m(data);
-                                }                                    
-                            }else{
-                                //let response: {done?: boolean, value: any};
-                                //if(dontReentrate){
-                                //    response = await nr((data: Data)=>m.next(data))(data);
-                                //}else{
-                                const response = await m.next(data);
-                                data.data = response.value;
-                                //}
-                                if(dev) path.push(response.value);
-                                if(response.done && quit) quit(false, response.value);                                                            
-                            }
+                            else{
+                                data.data = await m(data);
+                            }                                    
                         }else{
-                            //const f = _t(t);
-                            //if(f !== null){
-                            //    data.data = await f(data);
-                            //}
+                            const response = await m.next(data);
+                            data.data = response.value;
+                            if(dev) path.push(response.value);
+                            if(response.done && quit) quit(false, response.value);                                                            
                         }
                     }                    
                 }
-                else if(Array.isArray(t)){
-                    await serial(t, data.ctx);
-                }
                 else{
-                    const x = await t.next(data);
-                    data.data = x.value;
-                    if(dev) path.push(x.value);
-                    if(x.done && quit) quit(false, x.value);                                               
+                    const response = await t.next(data);
+                    data.data = response.value;
+                    if(dev) path.push(response.value);
+                    if(response.done && quit) quit(false, response.value);                                               
                 }    
                 
             }
-            return true;
+            return data.data;
         }catch(err){
             if(DEBUG.v)
                 // eslint-disable-next-line no-console
                 console.log(err);
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
-            if(dev && err instanceof Error && err.message !== "no log"){
+            if(dev && err instanceof Error && !err.message.startsWith("no log")){
                 path.push(err instanceof Error? err.message: "unknown error");
-                //throw err;
             } 
-            if(tasks.at(-1) === '?') return false;
+            if(tasks.at(-1) === '?') return null;
             else if(!question){
                 if(quit) quit(true);
                 if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!"))){
-                    throw new Error('no log');
+                    throw new Error('no log:' + err.message);
                 }
                 else{
                     throw err;
@@ -261,13 +244,9 @@ export function context(namespace: Namespace={},
             if(tasks.at(-1) === 'throws' || throws && tasks.at(-1) !== '?'){    
                 throw err;
             }
-            return false;
+            return null;
         }
     };
-
-    const emptyCtx = {ctx: {quit: ()=>{
-        return false;
-    }}};
 
     const plugs: {[key: string]: (arg0: F|Tpipe|string) => (data: Data)=> Promise<any>} = {};
     
@@ -288,19 +267,9 @@ export function context(namespace: Namespace={},
         };
     };
 
-    /*
-    plugs._serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
-        try{
-            return await serial(pipe, data?data.ctx:emptyCtx.ctx);
-        }catch(err){
-            if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
-            return false;
-        }
-    };*/
-
     plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
         try{
-            return await serial(pipe, data?data.ctx:emptyCtx.ctx);
+            return await serial(pipe, data?data.ctx: i().ctx);
         }catch(err){
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             return false;

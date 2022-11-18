@@ -47,18 +47,17 @@ export default (mode: MODE = "nobuffer", bfunc: BFUNC = null) => (setup: SETUP):
                     }
                     throw err;        
                 }
-                
             }else{
                 return false;
             }
         }
         try{
             exited = false;
-            await pipe(data);
+            const response = await pipe(data);
             exited = true;
             if(buffer.length > 0){
                 const {resolve} = buffer.pop() as BufferData;
-                if(resolve) resolve(true);
+                if(resolve) resolve(response);
             }
             return true;
         }catch(err){
