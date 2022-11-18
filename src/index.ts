@@ -272,6 +272,7 @@ export function context(namespace: Namespace={},
 
     plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
         try{
+            return await 
             return await serial(pipe, data?data.ctx: i().ctx);
         }catch(err){
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
