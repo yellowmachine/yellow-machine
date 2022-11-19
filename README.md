@@ -62,7 +62,8 @@ Things you can do:
 
 ```ts
 // argument to run can be a string or an array. Every element of the array can be the same
-await f("p[a|b,c", data); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
+// initial data is optional
+await f("p[a|b,c"); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
 
 // p is shorthand for parallel
 await f("up|p[a,b,c]|end", data);
