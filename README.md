@@ -1,6 +1,6 @@
 # yellow pipeline
 
-V. 2
+V. 2: With the new release you can only run string expression, no more arrays. Please note the run method instead of serial.
 
 Example of use:
 
@@ -84,6 +84,8 @@ await run('a|b!|c!|d'); // if b or c throws then the whole pipe throws
 
 // repeat is a plugin that spawns n pipes
 ```ts
+const {dev, repeat} = require("yellow-machine")
+
 const run = dev(path)({a, b}, {r2: repeat(2)});
 
 await run("r2[^[a|b"); //--> a1 ... b1 ... a2 ... b2
@@ -93,7 +95,7 @@ await run("r2[^[a|b"); //--> a1 ... b1 ... a2 ... b2
 ```"p[a,b"```
 
 // if b throw, c is not executed and exception should be out, but ? catch it
-```"a[b!|c]?x"``` // x is not executed because previous pipe was not successful
+```"[ini|a[b!|c]?x]y"``` // x is not executed because previous pipe was not successful but y will be executed
 
 //note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
 
@@ -113,54 +115,22 @@ test("]? without !", async ()=>{
 });
 ```
 
-To test paths I think this is the way:
-
-```js
-function create(G, ctx, plugins){
-    return = G(ctx, plugins);
-}
-
-const run = create(dev(path), ctx_dev, plugins)
-//or in production
-const run = create(C, ctx_production, plugins)
-```
-
 A producer consumer is passed a type Data:
 
 ```ts
-type Data = {data?: any, ctx: Ctx};
-type Ctx = {quit: Quit};
+type Data = {data: any, ctx: Ctx};
+type Ctx = {quit: Quit, promise?: Promise<any>};
 type Quit = (err?: boolean, data?: any)=>boolean;
 
-function someProducerConsumer({ctx}){
+function someProducerConsumer({data, ctx}){
+    // do something with data and return any data
     ctx.quit(); // call quit programatically
     return //some data
 }
 
 ```
-Plugins:
 
-`p` to execute an array of pipes in parallel
-
-    ```ts
-    // you can pass a map function that is called to pass a fresh object of Data to each parallel pipe
-    (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any)|null = null)
-    ```
-
-`w` to watch some files
-
-    ```ts
-    (files: string[]) // the array of files to watch
-    ```
-`nr` means not reentrant
-
-    ```ts
-    // MODE "buffer"|"nobuffer"
-    // size: number, size of buffer
-    ({mode, size}: {mode?: MODE, size?: number} = {mode: "buffer"})
-    ```
-
-`sw` switch: is constructed with a function like this
+How to use the switch or decide plugin;
 
 ```ts
 import {sw} from 'yellow-machine';
@@ -243,6 +213,33 @@ exports.docker = function({image, port, name, waitOn=null}){
 
 A plugin is a function that returns a setup function, which will return a producer / consumer. The plugin is used for example to get an array of pipes and run them in parallel. So a plugin can receive a pipe or an array of pipes. Here two examples.
 
+
+- `p` to execute an array of pipes in parallel
+
+    ```ts
+    // you can pass a map function that is called to pass a fresh object of Data to each parallel pipe
+    (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any)|null = null)
+    ```
+
+- `w` to watch some files
+
+    ```ts
+    (files: string[]) // the array of files to watch
+    ```
+- `nr` means not reentrant
+
+    ```ts
+    // MODE "buffer"|"nobuffer"
+    // size: number, size of buffer
+    ({mode, size}: {mode?: MODE, size?: number} = {mode: "buffer"})
+    ```
+
+- `sw` switch: is constructed with a function like this
+
+- `repeat` : export default (n: number) spawns n pipes
+
+Some implementations:
+
 ```ts
 // parallel
 
@@ -264,7 +261,7 @@ export default (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any
 };
 ```
 
-An example of a plugin that uses both:
+An example of a plugin that uses both single and multiple:
 
 ```ts
 // switch
@@ -290,6 +287,3 @@ You can see a repo using this library:
 [example testing a dgraph schema](https://github.com/yellowmachine/example-test-your-dgraph)
 
 Tests: `npm run test`
-
-*** Current limitation:
-Cannot be used array notation inside plugins, must be "a|b|c,w[p[...]]..." for example, i.e, an string to be compiled;

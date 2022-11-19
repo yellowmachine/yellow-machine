@@ -6,6 +6,7 @@ export {default as w, SHOW_QUIT_MESSAGE} from './watch';
 export {default as p} from './parallel';
 export {default as sw} from './switch';
 export {default as nr} from './nr';
+export {default as repeat} from './repeat';
 
 export const DEBUG = {v: false, w: false};
 

@@ -276,3 +276,17 @@ test("ini[a|b]!end", async ()=>{
     await run("ini[a|b]!end");
     expect(path).toEqual([ "ini", "a!"]);
 });
+
+test("[ini|a[b!|c]?x]y", async ()=>{
+    const path: string[] = [];
+
+    const a = g(["a"]);
+    const b = g(["b!"]);
+    const c = g(["c"]);
+    const x = g(["x"]);
+    const y = g(["y"]);
+
+    const run = dev(path)({a, b, c, x, y});
+    await run("[a[b!|c]?x]y");
+    expect(path).toEqual([ "a", "b!", "y"]);
+});
