@@ -62,20 +62,17 @@ Things you can do:
 
 ```ts
 // argument to run can be a string or an array. Every element of the array can be the same
-await run("p[a|b,c" data, options); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
-
-// with initial data
-const response = await run("p[a|b,c",...)("initial data"); // response will be the result of the pipe. Data from initial is passed to a and c. Data returned from a is passed to b. Te result is an array
+await f("p[a|b,c", data); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
 
 // p is shorthand for parallel
-await run("up|p[a,b,c]|end", ...)();
+await f("up|p[a,b,c]|end", data);
 // end will execute when p finishes. Default mode for parallel is "all" (await Promise.all...)
 
 // throwing
-await run("ini[a!|b]end", ...)(); //if a, for example, throws, then b is not executed and the exception is raised
+await f("ini[a!|b]end", data); //if a, for example, throws, then b is not executed and the exception is raised
 
 // or
-await run('ini[a|b]!end');
+await f('ini[a|b]!end', data);
 
 // you can use ! the next way
 await run('a|b!|c!|d'); // if b or c throws then the whole pipe throws
@@ -90,11 +87,18 @@ await run('a|b!|c!|d'); // if b or c throws then the whole pipe throws
 
 // repeat is a plugin that spawns n pipes
 ```ts
-const {dev, repeat} = require("yellow-machine")
+const {dev, repeat, compile} = require("yellow-machine")
 
-const run = dev(path)({a, b}, {r2: repeat(2)});
+const options = {
+        namespace: {a, b}, 
+        plugins: {r2: repeat(2)},
+        dev: true,
+        path: []
+    }
+    
+const f = compile("r2[^[a|b", options);
 
-await run("r2[^[a|b"); //--> a1 ... b1 ... a2 ... b2
+await f(null); //--> a1 ... b1 ... a2 ... b2
 ```
 
 // you don't need to close with ] at the end of the expression:
@@ -113,6 +117,7 @@ test("]? without !", async ()=>{
     const c = g(["c"]);
     const x = g(["x"]);
 
+    // you can use the old mode
     const run = dev(path)({a, b, c, x}, {});
     const response = await run("a[b|c]x");
 
@@ -139,7 +144,7 @@ function someProducerConsumer({data, ctx}){
 How to use the switch or decide plugin;
 
 ```ts
-import {sw} from 'yellow-machine';
+import {sw, compile} from 'yellow-machine';
 ...
 const a = g(["a"]);
 const b = g(["b"]);
@@ -153,8 +158,16 @@ function decide(data: Data): number|boolean{
         else return 1;
     }
 
-const run = dev(path)({a, b, c}, {sw: sw(decide)});
-await run("a|sw[b,c]"); // a ... b
+const options = {
+    namespace: {a, b, c},
+    plugins: {sw: sw(decide)},
+    dev: true,
+    path: []
+}
+
+const f = compile("a|sw[b,c]", options);
+
+await f(); // a ... b
 ```
 
 Example of a producer / consumer:
