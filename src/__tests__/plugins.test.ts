@@ -1,4 +1,4 @@
-import { DEBUG, dev, g, parallel, notReentrant, i, Data, sw } from '../index';
+import { DEBUG, dev, g, p, nr, i, Data, sw } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 import _sw from '../switch';
 import repeat from '../repeat';
@@ -193,7 +193,7 @@ test("plugin parallel", async ()=>{
     const a = g(["a1", "a2"]);
     const b = g(["b"]);
 
-    const {serial, pall} = dev(path)({a, b}, {pall: parallel("all")});
+    const {serial, pall} = dev(path)({a, b}, {pall: p("all")});
     await serial(["a", pall(["a", "b"])])(i());
 
     expect(path).toEqual(["a1", "a2", "b"]);
@@ -204,7 +204,7 @@ test("plugin repeat", async ()=>{
     const a = g(["a1", "a2", "a3"]);
     const b = g(["b1", "b2", "a3"]);
 
-    const {serial} = dev(path)({a, b}, {r2: repeat(2), buffer: notReentrant({mode: "buffer"})});
+    const {serial} = dev(path)({a, b}, {r2: repeat(2), buffer: nr({mode: "buffer"})});
 
     await serial("r2[buffer[a|b")(i());
 
@@ -228,7 +228,7 @@ test("plugin repeat no buffer", async ()=>{
     const a = g(["a1", "a2", "a3"]);
     const b = g(["b1", "b2", "a3"]);
 
-    const {serial} = dev(path)({a, b}, {r2: repeat(3), buffer: notReentrant({mode: "nobuffer"})});
+    const {serial} = dev(path)({a, b}, {r2: repeat(3), buffer: nr({mode: "nobuffer"})});
 
     await serial("r2[buffer[a|b")(i());
 
