@@ -49,23 +49,13 @@ export const compile = (raw: string, options?: Options) => {
     
     const p = pipe(opts.namespace, opts.dev, opts.path);
     const compiled = _compile(raw, opts.namespace, opts.plugins, opts.dev, opts.path);
-    return p(compiled);
+    return (data?: Data) => p(compiled)(i(data?data:null));
 };
 
 export const run = async (raw: string, options?: Options, data?: Data) => {
-    const opts = {
-        dev: false,
-        path: [],
-        plugins: {},
-        namespace: {},
-        ...options
-    };
-
     try{
-        const p = pipe(opts.namespace , opts.dev, opts.path);
-        const compiled = _compile(raw, opts.namespace || {}, opts.plugins||{}, opts.dev, opts.path);
-        const v = i(data?data:null);
-        return await p(compiled)(v);
+        const compiled = compile(raw, options);
+        return await compiled(data);
     }catch(err){
         if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
         return false;
