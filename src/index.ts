@@ -1,7 +1,7 @@
 import { parse, type Parsed} from './parse';
-import parallel from './parallel';
-import _nr from './nr';
-import _sw from './switch';
+import p from './parallel';
+import nr from './nr';
+//import _sw from './switch';
 
 export {default as watch, SHOW_QUIT_MESSAGE} from './watch';
 export {default as parallel} from './parallel';
@@ -30,8 +30,6 @@ type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 export type Quit = (err?: boolean, data?: any)=>boolean;
 export type Ctx = {quit: Quit, promise?: Promise<any>};
 
-const builtinPlugins = ['nr', 'p'];
-
 export function *g(arr: string[]){
     for(const i of arr){
         if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
@@ -55,29 +53,7 @@ export function context(namespace: Namespace={},
                         path: string[]=[]
                     ){
 
-    function buildSingleMultiple(pipe: F|Tpipe|string){
-        let built: F|Tpipe;
-    
-        if(typeof pipe === 'string') 
-            built = build([pipe]);
-        else
-            built = pipe;
-        const single = s(built);
-        
-        let multiple: FD[] = [];
-        if(Array.isArray(built)){
-            multiple = built.map(x => {
-                let func;
-                if(Array.isArray(x))
-                    func = s(x);
-                else
-                    func = s([x]);
-                return func;
-                
-            });
-        }
-        return {single, multiple};
-    }
+    plugins = {...plugins, nr: nr(), p: p()};
 
     function build(parsed: (string|Parsed)[]): Tpipe{
         let ret: Tpipe = [];
@@ -137,7 +113,7 @@ export function context(namespace: Namespace={},
 
     const serial: Serial = async(tasks, data) => {
         if(typeof tasks === 'string'){
-            const {parsed} = parse(tasks, [...builtinPlugins, ...Object.keys(plugins)]);
+            const {parsed} = parse(tasks, Object.keys(plugins));
             const b = build(parsed);
             return _serial(b, data);
         }else{
@@ -225,13 +201,6 @@ export function context(namespace: Namespace={},
 
     const plugs: CompiledPlugin = {};
 
-    const p = (pipe: F|Tpipe|string) => {
-        const {single, multiple} = buildSingleMultiple(pipe);
-        return (data: Data) => {
-            return parallel()({single, multiple})(data);
-        };
-    };
-
     plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
         try{
             if(!data) data = i();
@@ -242,19 +211,29 @@ export function context(namespace: Namespace={},
         }
     };
 
-    plugs.p = p;
-
-    const nr = (pipe: F|Tpipe|string) => {
-        const {single, multiple} = buildSingleMultiple(pipe);
-        return _nr()({single, multiple});
-    };
-
-    plugs.nr = nr;
-
     for(const key of Object.keys(plugins)){
         const plugin = plugins[key];
         plugs[key] = (pipe: F|Tpipe|string) => {
-            const {single, multiple} = buildSingleMultiple(pipe);
+            let built: F|Tpipe;
+        
+            if(typeof pipe === 'string') 
+                built = build([pipe]);
+            else
+                built = pipe;
+            const single = s(built);
+            
+            let multiple: FD[] = [];
+            if(Array.isArray(built)){
+                multiple = built.map(x => {
+                    let func;
+                    if(Array.isArray(x))
+                        func = s(x);
+                    else
+                        func = s([x]);
+                    return func;
+                    
+                });
+            }
             return plugin({single, multiple});
         };
     }
