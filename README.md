@@ -173,23 +173,29 @@ Plugins:
 `sw` switch: is constructed with a function like this
 
 ```ts
-import _sw from './switch';
+import {sw} from 'yellow-machine';
 ...
 const a = g(["a"]);
 const b = g(["b"]);
 const c = g(["c"]);
 
-function decide(data: Data): number{
+// if you return true the given pipe will be executed
+// if you return false, then it will continue with the next pipe after sw
+// if you return a number, then it consider given pipes and it will be indexed and executed
+function decide(data: Data): number|boolean{
         if(data.data === 'a') return 0;
         else return 1;
     }
 
-const {serial} = dev(path)({a, b, c}, {sw: _sw(decide)});
+const {serial} = dev(path)({a, b, c}, {sw: sw(decide)});
 await serial("a|sw[b,c]")(i()); // a ... b
 ```
 
 Example of a producer / consumer:
 
+// you can return null, and it means that the current pipe should stop and go out to continue
+// executing outer pipe
+// you can also throw an exception and current pipe will stop and bubble up the exception
 ```ts
 function myF(data: Data){ // (data: Data) => any
     if(data.data === 'a') return 'b';
@@ -268,23 +274,24 @@ export default (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any
 };
 ```
 
-An example of a plugin that uses single:
+An example of a plugin that uses both:
 
 ```ts
+// switch
 import { Data, type SETUP } from '.';
+type SWF = (data: any)=>number|boolean;
 
-export default (n: number) => (setup: SETUP) => async (data: Data) => {
-    const promises: Promise<boolean>[] = [];
+export default (f: SWF) => (setup: SETUP) => async (data: Data) => {
     const pipe = setup["single"];
-    while(n--){
-        const p = pipe(data);
-        promises.push(p);
-        p.catch(()=>{
-            return false;
-        });
+    const pipes = setup["multiple"];
+
+    const v = f(data);
+    if(typeof v === 'boolean'){
+        if(v) return await pipe(data);
+        else return null;
+    }else{
+        return await pipes[v](data); 
     }
-    await Promise.all(promises);
-    return true;
 };
 ```
 

@@ -1,10 +1,10 @@
 import { parse, type Parsed} from './parse';
 import p from './parallel';
 import nr from './nr';
-//import _sw from './switch';
 
 export {default as watch, SHOW_QUIT_MESSAGE} from './watch';
 export {default as parallel} from './parallel';
+export {default as sw} from './switch';
 export {default as notReentrant} from './nr';
 
 export const DEBUG = {v: false, w: false};

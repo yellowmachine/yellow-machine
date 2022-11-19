@@ -1,4 +1,4 @@
-import { DEBUG, dev, g, parallel, notReentrant, i, Data } from '../index';
+import { DEBUG, dev, g, parallel, notReentrant, i, Data, sw } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 import _sw from '../switch';
 import repeat from '../repeat';
@@ -301,7 +301,7 @@ test("plugin sw boolean return false", async ()=>{
         else return true;
     }
 
-    const {serial} = dev(path)({a, b, c, x}, {sw: _sw(decide)});
+    const {serial} = dev(path)({a, b, c, x}, {sw: sw(decide)});
     await serial("a|sw[b|c]|x")(i());
     expect(path).toEqual(["a", "x"]);
 });
