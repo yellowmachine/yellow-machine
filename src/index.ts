@@ -22,8 +22,8 @@ type Serial = (tasks: string, data: Data) => Promise<any>;
 type Plugin = {[key: string]: (arg: SETUP) => FD};
 type CompiledPlugin = {[key: string]: (arg0: F|Tpipe|string) => FD};
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
-type Quit = (err?: boolean, data?: any)=>boolean;
-type Ctx = {quit: Quit, promise?: Promise<any>};
+type Close = (err?: boolean, data?: any)=>boolean;
+type Ctx = {close: Close, promise?: Promise<any>};
 
 export function *g(arr: string[]){
     for(const i of arr){
@@ -33,7 +33,7 @@ export function *g(arr: string[]){
 }
 
 export function i(data: any=null){
-    return {data: data, ctx: {quit: ()=>{
+    return {data: data, ctx: {close: ()=>{
         return true;
     }}};
 }
@@ -110,8 +110,8 @@ export function context(namespace: Namespace={},
 
     const s = (tasks: F|Tpipe) => async (data: Data) => {
 
-        let quit;
-        if(data.ctx) quit = data.ctx.quit;
+        let close;
+        if(data.ctx) close = data.ctx.close;
 
         if(!Array.isArray(tasks)){
             tasks = [tasks, 'throws'];
@@ -147,7 +147,7 @@ export function context(namespace: Namespace={},
                         const response = await m.next(data);
                         data.data = response.value;
                         if(dev) path.push(response.value);
-                        if(response.done && quit) quit(false, response.value);                                                            
+                        if(response.done && close) close(false, response.value);                                                            
                     }
                 }catch(err){
                     if(err instanceof Error && !err.message.startsWith("?")) throw err;
@@ -160,7 +160,7 @@ export function context(namespace: Namespace={},
             if(DEBUG.v)
                 // eslint-disable-next-line no-console
                 console.log(err);
-            if(quit) quit(true);
+            if(close) close(true);
             if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             if(dev && err instanceof Error && !err.message.startsWith("no log")){
                 path.push(err instanceof Error? err.message: "unknown error");

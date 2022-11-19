@@ -4,7 +4,7 @@ import watch, {DEBUG as wDebug} from '../watch';
 DEBUG.v = false;
 wDebug.v = false;
 
-test("quiting w with keypress q compact mode", async ()=> {
+test("closing w with keypress q compact mode", async ()=> {
     const path: string[] = [];
     const a = async() => path.push('a');
     const end = async() => path.push('end');

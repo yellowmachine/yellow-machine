@@ -119,12 +119,12 @@ A producer consumer is passed a type Data:
 
 ```ts
 type Data = {data: any, ctx: Ctx};
-type Ctx = {quit: Quit, promise?: Promise<any>};
-type Quit = (err?: boolean, data?: any)=>boolean;
+type Ctx = {close: Close, promise?: Promise<any>};
+type Close = (err?: boolean, data?: any)=>boolean;
 
 function someProducerConsumer({data, ctx}){
     // do something with data and return any data
-    ctx.quit(); // call quit programatically
+    ctx.close(); // call close programatically
     return //some data
 }
 
@@ -160,8 +160,8 @@ Example of a producer / consumer:
 function myF(data: Data){ // (data: Data) => any
     if(data.data === 'a') return 'b';
     if(data.data === 'x')
-        data.ctx.quit(true); // manually close the closer plugin
-                    // true means quit with error, you can pass false, "some data"
+        data.ctx.close(true); // manually close the closer plugin
+                    // true means close with error, you can pass false, "some data"
                     // to close without error and return that data
     return 'other';
 }
