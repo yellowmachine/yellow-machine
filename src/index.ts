@@ -21,6 +21,7 @@ export type FSETUP = (arg: SETUP) => FP;
 export type FP = (pipe: Tpipe|F) => (data?: Data) => Promise<any>;
 
 type Serial = (tasks: Tpipe|C, data: Data) => Promise<any>;
+type Serialv2 = (tasks: string, data: Data) => Promise<any>;
 
 export type NR = (f: F) => (data?: Data) => Promise<any>;
 type Plugin = {[key: string]: (arg: SETUP) => FD};
@@ -54,18 +55,6 @@ export function context(namespace: Namespace={},
                     ){
 
     plugins = {...plugins, nr: nr(), p: p()};
-
-    function buildArray(arr: Tpipe): Tpipe{
-        return arr.map(x => {
-            if(Array.isArray(x)){
-                return buildArray(x);
-            }else if(typeof x === 'string'){
-                return build([x]);
-            }else{
-                return [x];
-            }
-        });
-    }
 
     function build(parsed: (string|Parsed)[]): Tpipe{
         let ret: Tpipe = [];
@@ -119,21 +108,12 @@ export function context(namespace: Namespace={},
         return ret;
     }
 
-    const s = (built: F|Tpipe) => {
-        return async (data: Data) => await _serial(built, data);
-    };
+    const s = (built: F|Tpipe) => (data: Data) =>_serial(built, data);
 
-    const serial: Serial = async(tasks, data) => {
-        if(typeof tasks === 'string'){
-            const {parsed} = parse(tasks, Object.keys(plugins));
-            const b = build(parsed);
-            return _serial(b, data);
-        }else if(Array.isArray(tasks)){
-            const b = buildArray(tasks);
-            return _serial(b, data);
-        }else{
-            return _serial(tasks, data);
-        }
+    const serial: Serialv2 = async(tasks, data) => {
+        const {parsed} = parse(tasks, Object.keys(plugins));
+        const b = build(parsed);
+        return _serial(b, data);
     };
 
     const _serial: Serial = async(tasks, data) => {
@@ -204,16 +184,6 @@ export function context(namespace: Namespace={},
     };
 
     const plugs: CompiledPlugin = {};
-
-    plugs.serial = (pipe: F|Tpipe|string) => async (data?: Data) => {
-        try{
-            if(!data) data = i();
-            return await serial(pipe, data);
-        }catch(err){
-            if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
-            return false;
-        }
-    };
 
     for(const key of Object.keys(plugins)){
         const plugin = plugins[key];
