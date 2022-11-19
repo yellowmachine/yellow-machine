@@ -5,9 +5,7 @@ V. 2: With the new release you can only run string expression, no more arrays. P
 Example of use:
 
 ```ts
-// C will create a context given producer/consumers and plugins
-// w is a plugin for watching file changes
-const {context: C, w} = require("yellow-machine")
+const {run, w, compile} = require("yellow-machine")
 const npm = require('npm-commands')
 const {docker} = require('./docker')
 const {dgraph} = require('./dgraph')
@@ -25,13 +23,17 @@ const {up, down} = docker({name: "my-container-dgraph-v13",
 const dql = dgraph(config)
 
 async function main() {
-    // C(namespace, plugins)
-    // run is called to start the pipeline of tasks
-    const run = C({up, dql, test, down}, {w: w(["./tests/*.js", "./schema/*.*"])});
-    await run(`up[
+    const exp = `up[
                       w[ dql? | test ]
-                      down`
-    );
+                      down`;
+    const options = {
+        namespace: {up, dql, test, down}, 
+        plugins: {w: w(["./tests/*.js", "./schema/*.*"])}
+    }
+    const f = compile(exp, options);
+    await f('some initial data');
+    // or
+    await run(exp, options, 'some initial data'); 
     // if up is ok, then enters into next scope. w watchs for file changes and
     // dispatch the pipe: if dql is ok then test is executed
     // if dql fails, if it were just "dql" then would throw an exception that stops watch
@@ -42,32 +44,39 @@ async function main() {
 main()
 ```
 
+If you want to use several times the same expression, you should compile first:
+
+```ts
+const {compile} = require("yellow-machine");
+
+const f = compile("a|p[b,c]", options);
+
+//then
+await f("some data");
+await f("other data");
+
+// you still can use context but it is not recommended
+```
+
 Things you can do:
 
 ```ts
 // argument to run can be a string or an array. Every element of the array can be the same
-await run("p[a|b,c"); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
-
-// with initial data
-const response = await run("p[a|b,c", "initial data"); // response will be the result of the pipe. Data from initial is passed to a and c. Data returned from a is passed to b. Te result is an array
-
-// we use the plugin w. You pass {w: watch(...)} in the plugins sections and 
-// you get w in const {run, w} = C({
-const run = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-await run("up|w[dql|test]down");
+// initial data is optional
+await f("p[a|b,c"); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
 
 // p is shorthand for parallel
-await run("up|p[a,b,c]|end");
+await f("up|p[a,b,c]|end", data);
 // end will execute when p finishes. Default mode for parallel is "all" (await Promise.all...)
 
 // throwing
-await run("ini[a!|b]end"); //if a, for example, throws, then b is not executed and the exception is raised
+await f("ini[a!|b]end", data); //if a, for example, throws, then b is not executed and the exception is raised
 
 // or
-await run('ini[a|b]!end');
+await f('ini[a|b]!end', data);
 
 // you can use ! the next way
-await run('a|b!|c!|d'); // if b or c throws then the whole pipe throws
+await f('a|b!|c!|d', data); // if b or c throws then the whole pipe throws
 
 // more expressions
 "w[^a|b,c" // a is non reentrant
@@ -79,11 +88,18 @@ await run('a|b!|c!|d'); // if b or c throws then the whole pipe throws
 
 // repeat is a plugin that spawns n pipes
 ```ts
-const {dev, repeat} = require("yellow-machine")
+const { repeat, compile } = require("yellow-machine")
 
-const run = dev(path)({a, b}, {r2: repeat(2)});
+const options = {
+        namespace: {a, b}, 
+        plugins: {r2: repeat(2)},
+        dev: true,
+        path: []
+    }
+    
+const f = compile("r2[^[a|b", options);
 
-await run("r2[^[a|b"); //--> a1 ... b1 ... a2 ... b2
+await f(); //--> a1 ... b1 ... a2 ... b2
 ```
 
 // you don't need to close with ] at the end of the expression:
@@ -102,6 +118,7 @@ test("]? without !", async ()=>{
     const c = g(["c"]);
     const x = g(["x"]);
 
+    // you can use the old mode
     const run = dev(path)({a, b, c, x}, {});
     const response = await run("a[b|c]x");
 
@@ -128,7 +145,7 @@ function someProducerConsumer({data, ctx}){
 How to use the switch or decide plugin;
 
 ```ts
-import {sw} from 'yellow-machine';
+import {sw, compile} from 'yellow-machine';
 ...
 const a = g(["a"]);
 const b = g(["b"]);
@@ -142,8 +159,16 @@ function decide(data: Data): number|boolean{
         else return 1;
     }
 
-const run = dev(path)({a, b, c}, {sw: sw(decide)});
-await run("a|sw[b,c]"); // a ... b
+const options = {
+    namespace: {a, b, c},
+    plugins: {sw: sw(decide)},
+    dev: true,
+    path: []
+}
+
+const f = compile("a|sw[b,c]", options);
+
+await f(); // a ... b
 ```
 
 Example of a producer / consumer:
