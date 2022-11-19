@@ -13,7 +13,7 @@ process.stdin.setRawMode(true);
 
 export default (files: string[]) => (setup: SETUP) => async (data: Data) => {
 
-    const quit = data.ctx.quit;
+    const quit = data.ctx.close;
 
     const f = setup["single"];
     try{
@@ -64,7 +64,7 @@ export default (files: string[]) => (setup: SETUP) => async (data: Data) => {
 
         async function run(){
             try{
-                data = {data: data.data, ctx: {quit: close}};
+                data = {data: data.data, ctx: {close}};
                 await f(data);         
                 if(SHOW_QUIT_MESSAGE.v)
                     // eslint-disable-next-line no-console
