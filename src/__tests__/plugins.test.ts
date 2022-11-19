@@ -273,3 +273,35 @@ test("some processing", async ()=>{
     expect(response).toBe('xab');
 });
 
+test("plugin sw boolean", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    function decide(data: Data): number|boolean{
+        if(data.data === 'a') return true;
+        else return false;
+    }
+
+    const {serial} = dev(path)({a, b, c}, {sw: _sw(decide)});
+    await serial("a|sw[b|c]")(i());
+    expect(path).toEqual(["a", "b", "c"]);
+});
+
+test("plugin sw boolean return false", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+    const x = g(["x"]);
+
+    function decide(data: Data): number|boolean{
+        if(data.data === 'a') return false;
+        else return true;
+    }
+
+    const {serial} = dev(path)({a, b, c, x}, {sw: _sw(decide)});
+    await serial("a|sw[b|c]|x")(i());
+    expect(path).toEqual(["a", "x"]);
+});
