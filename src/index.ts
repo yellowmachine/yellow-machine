@@ -52,7 +52,7 @@ export const compile = (raw: string, options?: Options) => {
     return p(compiled);
 };
 
-export const run = async (raw: string, data?: Data, options?: Options) => {
+export const run = async (raw: string, options?: Options, data?: Data) => {
     const opts = {
         dev: false,
         path: [],
@@ -78,4 +78,4 @@ export const context = (namespace: Namespace,
                         plugins?: Plugin, 
                         dev=false, 
                         path: string[]=[]
-                    ) => (t: string, data?: any) => run(t, data, {namespace, plugins, dev, path});
+                    ) => (t: string, data?: any) => run(t, {namespace, plugins, dev, path}, data);

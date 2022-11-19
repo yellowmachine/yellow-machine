@@ -31,9 +31,9 @@ async function main() {
         plugins: {w: w(["./tests/*.js", "./schema/*.*"])}
     }
     const f = compile(exp, options);
-    await f();
+    await f('some initial data');
     // or
-    await run(exp, null, options); // null is the initial data, you can pass what you expect in the first consumer
+    await run(exp, options, 'some initial data'); 
     // if up is ok, then enters into next scope. w watchs for file changes and
     // dispatch the pipe: if dql is ok then test is executed
     // if dql fails, if it were just "dql" then would throw an exception that stops watch
@@ -98,7 +98,7 @@ const options = {
     
 const f = compile("r2[^[a|b", options);
 
-await f(null); //--> a1 ... b1 ... a2 ... b2
+await f(); //--> a1 ... b1 ... a2 ... b2
 ```
 
 // you don't need to close with ] at the end of the expression:
