@@ -1,4 +1,6 @@
-# very simple pipeline alternative
+# yellow pipeline
+
+V. 2
 
 Example of use:
 
@@ -29,12 +31,12 @@ const dql = dgraph(config)
 
 async function main() {
     // C(namespace, plugins)
-    // serial is called to start the pipeline of tasks
-    const {serial} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-    await serial(`up[  
+    // run is called to start the pipeline of tasks
+    const run = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
+    await run(`up[  
                       w[ dql? | test ]
-                      down`
-    )(i()); //i() generates a default initial value for the pipe
+                      down`,
+    i("you can pass here initial data"));
     // if up is ok, then enters into next scope. w watchs for file changes and
     // dispatch the pipe: if dql is ok then test is executed
     // if dql fails, if it were just "dql" then would throw an exception that stops watch
@@ -48,40 +50,40 @@ main()
 Things you can do:
 
 ```ts
-// argument to serial can be a string or an array. Every element of the array can be the same
-await serial([f1, f2, "f3"])(i()); // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
+// argument to run can be a string or an array. Every element of the array can be the same
+await run([f1, f2, "f3"]); // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
 
 // with initial data
-const response = await serial("a|b")(i("x"));
-await serial([f1, f2, "f3"])(i("my initial data")); 
+const response = await run("a|b")(i("x"));
+await run([f1, f2, "f3"])(i("my initial data")); 
 
 // we use the plugin w. You pass {w: watch(...)} in the plugins sections and 
-// you get w in const {serial, w} = C({
-const {serial, w, p} = C({up, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-await serial(["up", w([dql, "test"]), "down"])(i());
+// you get w in const {run, w} = C({
+const {run, w, p} = C({up, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
+await run(["up", w([dql, "test"]), "down"]);
 
 // or
-const {serial} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-await serial("up|w[dql|test]down")(i());
+const {run} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
+await run("up|w[dql|test]down");
 
 // p is shorthand for parallel
-await serial("up", p([a, b, c]), "end")(i());
+await run("up", p([a, b, c]), "end");
 
 // or
-await serial("up|p[a,b,c]|end")(i());
+await run("up|p[a,b,c]|end");
 // end will execute when p finishes. Default mode for parallel is "all" (await Promise.all...)
 
 // throwing
-await serial([a, b, 'throws'])(i()); //if f1, for example, throws, then f2 is not executed and the exception is raised
+await run([a, b, 'throws']); //if f1, for example, throws, then f2 is not executed and the exception is raised
 
 // or
-await serial('[a|b]!')(i());
+await run('[a|b]!');
 
 // you can use ! the next way
-await serial('a|b!|c!|d')(i()); // if b or c throws then the whole pipe throws
+await run('a|b!|c!|d'); // if b or c throws then the whole pipe throws
 
-// default nested to serial
-await serial([f1, f2, [f3, f4], f5])(i());
+// default nested to run
+await run([f1, f2, [f3, f4], f5]);
 
 // more expressions
 "w[^a|b,c" // a is non reentrant
@@ -93,9 +95,9 @@ await serial([f1, f2, [f3, f4], f5])(i());
 
 // repeat is a plugin that spawns n pipes
 ```ts
-const {serial} = dev(path)({a, b}, {r2: repeat(2)});
+const run = dev(path)({a, b}, {r2: repeat(2)});
 
-await serial("r2[^[a|b")(i()); //--> a1 ... b1 ... a2 ... b2
+await run("r2[^[a|b"); //--> a1 ... b1 ... a2 ... b2
 ```
 
 // you don't need to close with ] at the end of the expression:
@@ -114,8 +116,8 @@ test("]? without !", async ()=>{
     const c = g(["c"]);
     const x = g(["x"]);
 
-    const {serial} = dev(path)({a, b, c, x}, {});
-    const response = await serial("a[b|c]x")(i());
+    const run = dev(path)({a, b, c, x}, {});
+    const response = await run("a[b|c]x");
 
     expect(response).toBe("x");
     expect(path).toEqual(["a", "throws", "x"]);
@@ -126,8 +128,8 @@ To test paths I think this is the way:
 
 ```js
 function create(G, ctx, plugins){
-    const {serial} = G(ctx, plugins);
-    return serial("..."); 
+    const run = G(ctx, plugins);
+    return run("..."); 
 }
 
 const p = create(dev(path), ctx_dev, plugins)
@@ -187,8 +189,8 @@ function decide(data: Data): number|boolean{
         else return 1;
     }
 
-const {serial} = dev(path)({a, b, c}, {sw: sw(decide)});
-await serial("a|sw[b,c]")(i()); // a ... b
+const run = dev(path)({a, b, c}, {sw: sw(decide)});
+await run("a|sw[b,c]"); // a ... b
 ```
 
 Example of a producer / consumer:

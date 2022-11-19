@@ -242,5 +242,13 @@ export function context(namespace: Namespace={},
         };
     }
 
-    return plugs;
+    return async (t: string, data?: any) => {
+        try{
+            const v = i(data?data:null);
+            return await serial(t, v);
+        }catch(err){
+            if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
+            return false;
+        }
+    };
 }
