@@ -5,8 +5,6 @@ V. 2: With the new release you can only run string expression, no more arrays. P
 Example of use:
 
 ```ts
-// C will create a context given producer/consumers and plugins
-// w is a plugin for watching file changes
 const {run, w, compile} = require("yellow-machine")
 const npm = require('npm-commands')
 const {docker} = require('./docker')
@@ -25,7 +23,6 @@ const {up, down} = docker({name: "my-container-dgraph-v13",
 const dql = dgraph(config)
 
 async function main() {
-    // run is called to start the pipeline of tasks
     const exp = `up[
                       w[ dql? | test ]
                       down`;
@@ -33,7 +30,7 @@ async function main() {
         namespace: {up, dql, test, down}, 
         plugins: {w: w(["./tests/*.js", "./schema/*.*"])}
     }
-    await run(exp, null, options);
+    await run(exp, null, options); // null is the initial data, you can pass what you expect in the first consumer
     // if up is ok, then enters into next scope. w watchs for file changes and
     // dispatch the pipe: if dql is ok then test is executed
     // if dql fails, if it were just "dql" then would throw an exception that stops watch
@@ -75,7 +72,7 @@ await f("ini[a!|b]end", data); //if a, for example, throws, then b is not execut
 await f('ini[a|b]!end', data);
 
 // you can use ! the next way
-await run('a|b!|c!|d'); // if b or c throws then the whole pipe throws
+await f('a|b!|c!|d', data); // if b or c throws then the whole pipe throws
 
 // more expressions
 "w[^a|b,c" // a is non reentrant
@@ -87,7 +84,7 @@ await run('a|b!|c!|d'); // if b or c throws then the whole pipe throws
 
 // repeat is a plugin that spawns n pipes
 ```ts
-const {dev, repeat, compile} = require("yellow-machine")
+const { repeat, compile } = require("yellow-machine")
 
 const options = {
         namespace: {a, b}, 
