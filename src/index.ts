@@ -9,25 +9,20 @@ export {default as nr} from './nr';
 
 export const DEBUG = {v: false, w: false};
 
-export type Data = {data?: any, ctx: Ctx};
+export type Data = {data: any, ctx: Ctx};
 type F = ((arg0: Data) => any);
 type C = Generator|AsyncGenerator|F|string|Tpipe;
 type Tpipe = C[];
 
 export type FD = (data: Data)=>Promise<any>;
 export type SETUP = {single: FD, multiple: FD[]};
-export type FSETUP = (arg: SETUP) => FP;
-export type FP = (pipe: Tpipe|F) => (data?: Data) => Promise<any>;
 
 type Serial = (tasks: string, data: Data) => Promise<any>;
-
-export type NR = (f: F) => (data?: Data) => Promise<any>;
 type Plugin = {[key: string]: (arg: SETUP) => FD};
 type CompiledPlugin = {[key: string]: (arg0: F|Tpipe|string) => FD};
-
 type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
-export type Quit = (err?: boolean, data?: any)=>boolean;
-export type Ctx = {quit: Quit, promise?: Promise<any>};
+type Quit = (err?: boolean, data?: any)=>boolean;
+type Ctx = {quit: Quit, promise?: Promise<any>};
 
 export function *g(arr: string[]){
     for(const i of arr){
