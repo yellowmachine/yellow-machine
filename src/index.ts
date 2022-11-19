@@ -10,18 +10,16 @@ export {default as nr} from './nr';
 export const DEBUG = {v: false, w: false};
 
 export type Data = {data?: any, ctx: Ctx};
-export type F = ((arg0: Data) => any);
+type F = ((arg0: Data) => any);
 type C = Generator|AsyncGenerator|F|string|Tpipe;
-export type Tpipe = C[];
+type Tpipe = C[];
 
-export type BUILD = (t: (string|Parsed)[]) => Tpipe;
 export type FD = (data: Data)=>Promise<any>;
 export type SETUP = {single: FD, multiple: FD[]};
 export type FSETUP = (arg: SETUP) => FP;
 export type FP = (pipe: Tpipe|F) => (data?: Data) => Promise<any>;
 
-type Serial = (tasks: Tpipe|C, data: Data) => Promise<any>;
-type Serialv2 = (tasks: string, data: Data) => Promise<any>;
+type Serial = (tasks: string, data: Data) => Promise<any>;
 
 export type NR = (f: F) => (data?: Data) => Promise<any>;
 type Plugin = {[key: string]: (arg: SETUP) => FD};
@@ -108,15 +106,13 @@ export function context(namespace: Namespace={},
         return ret;
     }
 
-    const s = (built: F|Tpipe) => (data: Data) =>_serial(built, data);
-
-    const serial: Serialv2 = async(tasks, data) => {
+    const serial: Serial = async(tasks, data) => {
         const {parsed} = parse(tasks, Object.keys(plugins));
         const b = build(parsed);
-        return _serial(b, data);
+        return await s(b)(data);
     };
 
-    const _serial: Serial = async(tasks, data) => {
+    const s = (tasks: F|Tpipe) => async (data: Data) => {
 
         let quit;
         if(data.ctx) quit = data.ctx.quit;
@@ -150,7 +146,7 @@ export function context(namespace: Namespace={},
                     if(typeof m === 'function'){
                         data.data = await m(data);
                     }else if(Array.isArray(m)){
-                        await _serial(m, data);
+                        await s(m)(data);
                     }else{
                         const response = await m.next(data);
                         data.data = response.value;
