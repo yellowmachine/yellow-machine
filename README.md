@@ -7,7 +7,7 @@ Example of use:
 ```ts
 // C will create a context given producer/consumers and plugins
 // w is a plugin for watching file changes
-const {context: C, w} = require("yellow-machine")
+const {run, w, compile} = require("yellow-machine")
 const npm = require('npm-commands')
 const {docker} = require('./docker')
 const {dgraph} = require('./dgraph')
@@ -25,13 +25,15 @@ const {up, down} = docker({name: "my-container-dgraph-v13",
 const dql = dgraph(config)
 
 async function main() {
-    // C(namespace, plugins)
     // run is called to start the pipeline of tasks
-    const run = C({up, dql, test, down}, {w: w(["./tests/*.js", "./schema/*.*"])});
-    await run(`up[
+    const exp = `up[
                       w[ dql? | test ]
-                      down`
-    );
+                      down`;
+    const options = {
+        namespace: {up, dql, test, down}, 
+        plugins: {w: w(["./tests/*.js", "./schema/*.*"])}
+    }
+    await run(exp, null, options);
     // if up is ok, then enters into next scope. w watchs for file changes and
     // dispatch the pipe: if dql is ok then test is executed
     // if dql fails, if it were just "dql" then would throw an exception that stops watch
@@ -42,26 +44,35 @@ async function main() {
 main()
 ```
 
+If you want to use several times the same expression, you should compile first:
+
+```ts
+const {compile} = require("yellow-machine");
+
+const f = compile("a|p[b,c]", options);
+
+//then
+await f("some data");
+await f("other data");
+
+// you still can use context but it is not recommended
+```
+
 Things you can do:
 
 ```ts
 // argument to run can be a string or an array. Every element of the array can be the same
-await run("p[a|b,c"); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
+await run("p[a|b,c" data, options); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
 
 // with initial data
-const response = await run("p[a|b,c", "initial data"); // response will be the result of the pipe. Data from initial is passed to a and c. Data returned from a is passed to b. Te result is an array
-
-// we use the plugin w. You pass {w: watch(...)} in the plugins sections and 
-// you get w in const {run, w} = C({
-const run = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-await run("up|w[dql|test]down");
+const response = await run("p[a|b,c",...)("initial data"); // response will be the result of the pipe. Data from initial is passed to a and c. Data returned from a is passed to b. Te result is an array
 
 // p is shorthand for parallel
-await run("up|p[a,b,c]|end");
+await run("up|p[a,b,c]|end", ...)();
 // end will execute when p finishes. Default mode for parallel is "all" (await Promise.all...)
 
 // throwing
-await run("ini[a!|b]end"); //if a, for example, throws, then b is not executed and the exception is raised
+await run("ini[a!|b]end", ...)(); //if a, for example, throws, then b is not executed and the exception is raised
 
 // or
 await run('ini[a|b]!end');

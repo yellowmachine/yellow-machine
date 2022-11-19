@@ -31,16 +31,39 @@ export function i(data: any=null){
     }}};
 }
 
-export const compile = (raw: string, namespace: Namespace, plugins?: Plugin, dev=false, path: string[]=[]) => {
-    const p = pipe(namespace, dev, path);
-    const compiled = _compile(raw, namespace, plugins || {}, dev, path);
+type Options = {
+    namespace: Namespace,
+    plugins?: Plugin,
+    dev?: boolean,
+    path?: string[]
+}
+
+export const compile = (raw: string, options?: Options) => {
+    const opts = {
+        dev: false,
+        path: [],
+        plugins: {},
+        namespace: {},
+        ...options
+    };
+    
+    const p = pipe(opts.namespace, opts.dev, opts.path);
+    const compiled = _compile(raw, opts.namespace, opts.plugins, opts.dev, opts.path);
     return p(compiled);
 };
 
-export const run = (raw: string, namespace: Namespace, plugins?: Plugin, dev=false, path: string[]=[]) => async (data?: Data) =>{
+export const run = async (raw: string, data?: Data, options?: Options) => {
+    const opts = {
+        dev: false,
+        path: [],
+        plugins: {},
+        namespace: {},
+        ...options
+    };
+
     try{
-        const p = pipe(namespace, dev, path);
-        const compiled = _compile(raw, namespace, plugins||{}, dev, path);
+        const p = pipe(opts.namespace , opts.dev, opts.path);
+        const compiled = _compile(raw, opts.namespace || {}, opts.plugins||{}, opts.dev, opts.path);
         const v = i(data?data:null);
         return await p(compiled)(v);
     }catch(err){
@@ -55,4 +78,4 @@ export const context = (namespace: Namespace,
                         plugins?: Plugin, 
                         dev=false, 
                         path: string[]=[]
-                    ) => (t: string, data?: any) => run(t, namespace, plugins, dev, path)(data);
+                    ) => (t: string, data?: any) => run(t, data, {namespace, plugins, dev, path});
