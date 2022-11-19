@@ -305,3 +305,14 @@ test("plugin sw boolean return false", async ()=>{
     await serial("a|sw[b|c]|x")(i());
     expect(path).toEqual(["a", "x"]);
 });
+
+test("nested | in arrays: ['a', 'b|c']", async ()=>{
+    const path: string[] = [];
+    const a = g(["a"]);
+    const b = g(["b"]);
+    const c = g(["c"]);
+
+    const {serial} = dev(path)({a, b, c});
+    await serial(["a", "b|c"])(i());
+    expect(path).toEqual(["a", "b", "c"]);
+});

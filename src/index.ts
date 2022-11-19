@@ -55,6 +55,18 @@ export function context(namespace: Namespace={},
 
     plugins = {...plugins, nr: nr(), p: p()};
 
+    function buildArray(arr: Tpipe): Tpipe{
+        return arr.map(x => {
+            if(Array.isArray(x)){
+                return buildArray(x);
+            }else if(typeof x === 'string'){
+                return build([x]);
+            }else{
+                return [x];
+            }
+        });
+    }
+
     function build(parsed: (string|Parsed)[]): Tpipe{
         let ret: Tpipe = [];
         
@@ -115,6 +127,9 @@ export function context(namespace: Namespace={},
         if(typeof tasks === 'string'){
             const {parsed} = parse(tasks, Object.keys(plugins));
             const b = build(parsed);
+            return _serial(b, data);
+        }else if(Array.isArray(tasks)){
+            const b = buildArray(tasks);
             return _serial(b, data);
         }else{
             return _serial(tasks, data);
