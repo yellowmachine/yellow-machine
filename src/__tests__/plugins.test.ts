@@ -258,3 +258,21 @@ test("plugin sw boolean return false", async ()=>{
     await run("a|sw[b|c]|x");
     expect(path).toEqual(["a", "x"]);
 });
+
+test("ini[a|b]!end", async ()=>{
+    const path: string[] = [];
+
+    const ini = g(["ini"]);
+    const a = g(["a!"]);
+    const b = g(["b"]);
+    const end = g(["end"]);
+
+    function decide(data: Data): number|boolean{
+        if(data.data === 'a') return false;
+        else return true;
+    }
+
+    const run = dev(path)({ini, a, b, end}, {sw: sw(decide)});
+    await run("ini[a|b]!end");
+    expect(path).toEqual([ "ini", "a!"]);
+});

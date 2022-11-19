@@ -51,39 +51,28 @@ Things you can do:
 
 ```ts
 // argument to run can be a string or an array. Every element of the array can be the same
-await run([f1, f2, "f3"]); // f1 is executed, then f2 then f3 unless exception ("f3" is in the context)
+await run("p[a|b,c"); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
 
 // with initial data
-const response = await run("a|b")(i("x"));
-await run([f1, f2, "f3"])(i("my initial data")); 
+const response = await run("p[a|b,c", "initial data"); // response will be the result of the pipe. Data from initial is passed to a and c. Data returned from a is passed to b. Te result is an array
 
 // we use the plugin w. You pass {w: watch(...)} in the plugins sections and 
 // you get w in const {run, w} = C({
-const {run, w, p} = C({up, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-await run(["up", w([dql, "test"]), "down"]);
-
-// or
-const {run} = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
+const run = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
 await run("up|w[dql|test]down");
 
 // p is shorthand for parallel
-await run("up", p([a, b, c]), "end");
-
-// or
 await run("up|p[a,b,c]|end");
 // end will execute when p finishes. Default mode for parallel is "all" (await Promise.all...)
 
 // throwing
-await run([a, b, 'throws']); //if f1, for example, throws, then f2 is not executed and the exception is raised
+await run("ini[a!|b]end"); //if a, for example, throws, then b is not executed and the exception is raised
 
 // or
-await run('[a|b]!');
+await run('ini[a|b]!end');
 
 // you can use ! the next way
 await run('a|b!|c!|d'); // if b or c throws then the whole pipe throws
-
-// default nested to run
-await run([f1, f2, [f3, f4], f5]);
 
 // more expressions
 "w[^a|b,c" // a is non reentrant
@@ -101,10 +90,10 @@ await run("r2[^[a|b"); //--> a1 ... b1 ... a2 ... b2
 ```
 
 // you don't need to close with ] at the end of the expression:
-"p[a,b"
+```"p[a,b"```
 
 // if b throw, c is not executed and exception should be out, but ? catch it
-"a[b!|c]?x" // x is not executed because previous pipe was not successful
+```"a[b!|c]?x"``` // x is not executed because previous pipe was not successful
 
 //note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
 
@@ -128,13 +117,12 @@ To test paths I think this is the way:
 
 ```js
 function create(G, ctx, plugins){
-    const run = G(ctx, plugins);
-    return run("..."); 
+    return = G(ctx, plugins);
 }
 
-const p = create(dev(path), ctx_dev, plugins)
+const run = create(dev(path), ctx_dev, plugins)
 //or in production
-const p = create(C, ctx_production, plugins)
+const run = create(C, ctx_production, plugins)
 ```
 
 A producer consumer is passed a type Data:
