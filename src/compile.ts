@@ -1,4 +1,4 @@
-import { type Namespace, type Data, type Plugin, type FD, type F } from '.';
+import { type Namespace, type Plugin, type FD, type F } from '.';
 import { parse, type Parsed } from './parse';
 import genPipe, { type Tpipe } from './pipe';
 

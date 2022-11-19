@@ -1,6 +1,5 @@
-import { Data, DEBUG, type Namespace } from ".";
+import { Data, DEBUG, type Namespace, type F } from ".";
 
-type F = ((arg0: Data) => any);
 type C = Generator|AsyncGenerator|F|string|Tpipe;
 export type Tpipe = C[];
 export type Pipe = (tasks: F|Tpipe) => (data: Data) => Promise<any>;

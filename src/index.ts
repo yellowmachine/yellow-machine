@@ -10,8 +10,6 @@ export const DEBUG = {v: false, w: false};
 
 export type Data = {data: any, ctx: Ctx};
 export type F = ((arg0: Data) => any);
-type C = Generator|AsyncGenerator|F|string|Tpipe;
-type Tpipe = C[];
 
 export type FD = (data: Data)=>Promise<any>;
 export type SETUP = {single: FD, multiple: FD[]};
@@ -53,8 +51,8 @@ export const run = (raw: string, namespace: Namespace, plugins?: Plugin, dev=fal
 
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
-export const context = (namespace: Namespace={},
-                        plugins: Plugin={}, 
+export const context = (namespace: Namespace,
+                        plugins?: Plugin, 
                         dev=false, 
                         path: string[]=[]
                     ) => (t: string, data?: any) => run(t, namespace, plugins, dev, path)(data);
