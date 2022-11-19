@@ -30,6 +30,9 @@ async function main() {
         namespace: {up, dql, test, down}, 
         plugins: {w: w(["./tests/*.js", "./schema/*.*"])}
     }
+    const f = compile(exp, options);
+    await f();
+    // or
     await run(exp, null, options); // null is the initial data, you can pass what you expect in the first consumer
     // if up is ok, then enters into next scope. w watchs for file changes and
     // dispatch the pipe: if dql is ok then test is executed
