@@ -6,37 +6,32 @@ Example of use:
 
 ```ts
 // C will create a context given producer/consumers and plugins
-// watch is a plugin
-const {context: C, watch, g, i} = require("yellow-machine")
+// w is a plugin for watching file changes
+const {context: C, w} = require("yellow-machine")
 const npm = require('npm-commands')
-const {docker} = require('./docker')  
-const {dgraph} = require('./dgraph')  
+const {docker} = require('./docker')
+const {dgraph} = require('./dgraph')
 const config = require("./config")
-
 
 function test(){
     npm().run('tap');
 }
 
-// up and down are producer / consumers
-// up will start a docker image and down will stop it
 const {up, down} = docker({name: "my-container-dgraph-v13", 
                            image: "dgraph/standalone:master", 
                            port: "8080"
                         })
 
-// dql is a producer / consumer
-// it loads a graphql to a instance of dgraph
 const dql = dgraph(config)
 
 async function main() {
     // C(namespace, plugins)
     // run is called to start the pipeline of tasks
-    const run = C({up, dql, test, down}, {w: watch(["./tests/*.js", "./schema/*.*"])});
-    await run(`up[  
+    const run = C({up, dql, test, down}, {w: w(["./tests/*.js", "./schema/*.*"])});
+    await run(`up[
                       w[ dql? | test ]
-                      down`,
-    i("you can pass here initial data"));
+                      down`
+    );
     // if up is ok, then enters into next scope. w watchs for file changes and
     // dispatch the pipe: if dql is ok then test is executed
     // if dql fails, if it were just "dql" then would throw an exception that stops watch
@@ -123,8 +118,8 @@ type Ctx = {close: Close, promise?: Promise<any>};
 type Close = (err?: boolean, data?: any)=>boolean;
 
 function someProducerConsumer({data, ctx}){
-    // do something with data and return any data
-    ctx.close(); // call close programatically
+    // do something with data
+    ctx.close(); // call close programatically if you want
     return //some data
 }
 
