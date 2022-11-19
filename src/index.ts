@@ -146,12 +146,10 @@ export function context(namespace: Namespace={},
         }
         let throws = false;
         let question = false;
-        let dontReentrate = false;
         try{
             for(let t of tasks){
                 throws = false;
                 question = false;
-                dontReentrate = false;
                 try{
                     let m: C;
                     if(typeof t === 'string'){
@@ -164,22 +162,13 @@ export function context(namespace: Namespace={},
                             question = true;
                             t = t.substring(0, t.length-1);
                         }
-                        if(t.charAt(0) === '^'){
-                            t = t.substring(1);
-                            dontReentrate = true;
-                        }
                         m = namespace[t];
                         if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
                     }else{
                         m = t;
                     }
                     if(typeof m === 'function'){
-                        if(dontReentrate){
-                            data.data = await plugs.nr(m)(data);
-                        }
-                        else{
-                            data.data = await m(data);
-                        }
+                        data.data = await m(data);
                     }else if(Array.isArray(m)){
                         await _serial(m, data);
                     }else{

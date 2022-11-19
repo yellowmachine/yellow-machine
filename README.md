@@ -300,3 +300,6 @@ You can see a repo using this library:
 [example testing a dgraph schema](https://github.com/yellowmachine/example-test-your-dgraph)
 
 Tests: `npm run test`
+
+*** Current limitation:
+Cannot be used array notation inside plugins, must be "a|b|c,w[p[...]]..." for example, i.e, an string to be compiled;
