@@ -13,7 +13,8 @@ export type F = ((arg0: Data) => any);
 
 export type FD = (data: Data)=>Promise<any>;
 export type SETUP = {single: FD, multiple: FD[]};
-export type Plugin = {[key: string]: (arg: SETUP) => FD};
+export type PluginBase = (arg: SETUP) => FD;
+export type Plugin = {[key: string]: PluginBase};
 export type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 type Close = (err?: boolean, data?: any)=>boolean;
 type Ctx = {close: Close, promise?: Promise<any>};

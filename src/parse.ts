@@ -139,7 +139,10 @@ export function parse(t: string, plugins: string[]){
         }else if(/^\]\d+!/.test(token.token)){
             const match = token.token.match(/^(\](\d+)!)/);
             const n = match?match[2]:'1';
-            pending.push('throws'+n);        
+            pending.push('throws');
+            const last = pending.pop();
+            if(last)
+                pending.push({t: "retry"+n, c: [last]});
             break;
         }else if(token.token === "]!" || token.token === "]!," || 
                  token.token === "]," || token.token === "]" || remaining === ""){   
