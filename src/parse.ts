@@ -61,8 +61,9 @@ const isDelimiter = (t: string) => {
     return /^\]\d+!/.test(t);
 };
 
-export function parse(t: string, plugins: string[]){
-    t = removeWhite(t);
+export const parse = (t: string, plugins: string[]) => _parse(removeWhite(t), plugins);
+
+function _parse(t: string, plugins: string[]){
     let remaining = t;
     let extra: string|null = null;
     
@@ -83,20 +84,20 @@ export function parse(t: string, plugins: string[]){
                 for(let t2 of t.split(',')){
                     if(t2.startsWith("^")){
                         t2 = t2.substring(1);
-                        pending.push({t: "*nr", c: parse(t2, plugins).parsed});    
+                        pending.push({t: "*nr", c: _parse(t2, plugins).parsed});    
                     }else{
                         if(t2.includes("|.")){
                             t2 = t2.replace("|.", "|");
-                            pending.push({t: "|.", c: parse(t2, plugins).parsed});
+                            pending.push({t: "|.", c: _parse(t2, plugins).parsed});
                         }else{
-                            pending.push({t: "[", c: parse(t2, plugins).parsed});
+                            pending.push({t: "[", c: _parse(t2, plugins).parsed});
                         }
                     }        
                 }
             }else{
                 if(t.startsWith("^")){
                     t = t.substring(1);
-                    pending.push({t: "*nr", c: parse(t, plugins).parsed});    
+                    pending.push({t: "*nr", c: _parse(t, plugins).parsed});    
                 }else{
                     if(t.includes("|.")){
                         t = t.replace("|.", "|");
@@ -108,26 +109,26 @@ export function parse(t: string, plugins: string[]){
             }
         }
         else if(token.token === "^["){
-            const aux = parse(remaining, plugins);
+            const aux = _parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
         }
         else if(token.token === '^'){
             if(token.token.includes(',')){
-                const c = remaining.split(',').map(x => parse(x, plugins).parsed);
+                const c = remaining.split(',').map(x => _parse(x, plugins).parsed);
                 c.forEach(x=>pending.push({t: "[", c: x}));
             }else{
-                const aux = parse(remaining, plugins);
+                const aux = _parse(remaining, plugins);
                 pending.push({t: token.token, c: aux.parsed});
                 remaining = aux.remaining;
             }
         }
         else if(token.token === '['){
-            const aux = parse(remaining, plugins);
+            const aux = _parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
         }else if(token.token.startsWith("*")){
-            const aux = parse(remaining, plugins);
+            const aux = _parse(remaining, plugins);
             pending.push({t: token.token, c: aux.parsed});
             remaining = aux.remaining;
         }else if(token.token === "?" || token.token === "?,"){
