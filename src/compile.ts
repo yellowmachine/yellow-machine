@@ -1,4 +1,4 @@
-import { type Namespace, type Plugin, type PluginBase, type FD, type F } from '.';
+import { type Namespace, type Plugin, type PluginBase, type FD, type F, Data } from '.';
 import { parse, type Parsed } from './parse';
 import genPipe, { type Tpipe } from './pipe';
 
@@ -92,8 +92,8 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
                     }
                 }else{
                     if(chunk.t.startsWith('retry')){
-                        const match = chunk.t.match(/^retry(\](\d+)!)/);
-                        const n = match?match[2]:'1';
+                        const match = chunk.t.match(/^retry(\d+)/);
+                        const n = match?match[1]:'1';
                         const r = compilePlugin(retry(parseInt(n)));
                         const built = build(chunk.c);
                         const func = r(built);
@@ -101,7 +101,6 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
                     }
                     else if(chunk.t === '^[' || chunk.t === '|.'){
                         const built = build(chunk.c);
-                        //const func = plugs.nr(s(built));
                         const func = plugs.nr(built);
                         ret = [...ret, func];
                     }

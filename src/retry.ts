@@ -1,6 +1,6 @@
 import { Data, type SETUP } from '.';
 
-export default (n: number, map: ((data: Data)=>any)|null = null) => (setup: SETUP) => async (data: Data) => {
+export default (n: number) => (setup: SETUP) => async (data: Data) => {
     const pipe = setup["single"];
 
     for(;;){
@@ -10,5 +10,5 @@ export default (n: number, map: ((data: Data)=>any)|null = null) => (setup: SETU
             n--;
             if(n === 0) throw err;
         }    
-    }
+    } 
 };

@@ -67,7 +67,7 @@ export function parse(t: string, plugins: string[]){
     let remaining = t;
     let extra: string|null = null;
     
-    const pending: (Parsed|string)[] = [];
+    let pending: (Parsed|string)[] = [];
     for(;;){
         const token = nextToken(remaining, plugins);
 
@@ -140,9 +140,7 @@ export function parse(t: string, plugins: string[]){
             const match = token.token.match(/^(\](\d+)!)/);
             const n = match?match[2]:'1';
             pending.push('throws');
-            const last = pending.pop();
-            if(last)
-                pending.push({t: "retry"+n, c: [last]});
+            pending = [{t: "retry"+n, c: pending}];
             break;
         }else if(token.token === "]!" || token.token === "]!," || 
                  token.token === "]," || token.token === "]" || remaining === ""){   
