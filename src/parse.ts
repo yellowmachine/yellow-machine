@@ -4,10 +4,9 @@ type P = {p?: B, w?: {files: string[], pipe: B}};
 export function nextToken(t: string, plugins: string[]){
     if(t === "") return null;
 
-    //if(t.startsWith("]!"))
     if(/^\]\d*!/.test(t)){
         const match = t.match(/^(\]\d*!)/);
-        const token = match ? match[0]:"]!";
+        const token = match ? match[0]:"]1!";
     
         return {token, remaining: t.substring(token.length)};
     }
@@ -55,7 +54,7 @@ export type Parsed = {t: string, c: (Parsed|string)[]};
 
 const removeWhite = (t: string) => t.replace(/\s/g,'');
 
-const delimiters = ["^[", "?", "?,", "]!", "]!,", "],", "[", "]", "p["]; // remove "p["
+const delimiters = ["^[", "?", "?,", "]!,", "],", "[", "]", "p["]; // remove "p["
 
 const isDelimiter = (t: string) => {
     if(delimiters.includes(t)) return true;
@@ -142,7 +141,7 @@ export function parse(t: string, plugins: string[]){
             pending.push('throws');
             pending = [{t: "retry"+n, c: pending}];
             break;
-        }else if(token.token === "]!" || token.token === "]!," || 
+        }else if(token.token === "]!," || 
                  token.token === "]," || token.token === "]" || remaining === ""){   
             if(token.token.includes("!"))
                 pending.push("throws");
