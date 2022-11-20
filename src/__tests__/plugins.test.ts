@@ -1,4 +1,4 @@
-import { DEBUG, dev, g, p, nr, i, Data, sw } from '../index';
+import { DEBUG, dev, g, p, nr, run, compile, Data, sw } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 import _sw from '../switch';
 import repeat from '../repeat';
@@ -296,9 +296,9 @@ test("plugin repeat compact mode", async ()=>{
     const a = g(["a1", "a2", "a3"]);
     const b = g(["b1", "b2", "a3"]);
 
-    const run = dev(path)({a, b}, {buffer: nr({mode: "buffer"})});
+    //const run = dev(path)({a, b}, {buffer: nr({mode: "buffer"})});
 
-    await run("2[buffer[a|b");
+    await run("2[buffer[a|b", {namespace: {a, b}});
 
     expect(path).toEqual(["a1", "b1", "a2", "b2"]);
 });
