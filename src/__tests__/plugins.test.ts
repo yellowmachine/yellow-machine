@@ -290,3 +290,15 @@ test("[ini|a[b!|c]?x]y", async ()=>{
     await run("[a[b!|c]?x]y");
     expect(path).toEqual([ "a", "b!", "y"]);
 });
+
+test("plugin repeat compact mode", async ()=>{
+    const path: string[] = [];
+    const a = g(["a1", "a2", "a3"]);
+    const b = g(["b1", "b2", "a3"]);
+
+    const run = dev(path)({a, b}, {buffer: nr({mode: "buffer"})});
+
+    await run("2[buffer[a|b");
+
+    expect(path).toEqual(["a1", "b1", "a2", "b2"]);
+});

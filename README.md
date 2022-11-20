@@ -86,6 +86,8 @@ await f('a|b!|c!|d', data); // if b or c throws then the whole pipe throws
 "w[a|b,^c" // c is non reentrant
 
 "x[a|b]3!y" //[a|b] will retry 3 times if exception 
+
+"2[buffer[a|b" // spawns two pipes of buffer
 ```
 
 // repeat is a plugin that spawns n pipes

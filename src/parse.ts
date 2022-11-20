@@ -37,7 +37,7 @@ export function nextToken(t: string, plugins: string[]){
                 if(t.charAt(i) === '^'){
                     return {token: "*"+token, remaining: t.substring(i)};
                 }else{
-                    if(plugins.includes(token)){
+                    if(plugins.includes(token) || /^\d+/.test(token)){
                         return {token: "*"+token, remaining: t.substring(i+1)};
                     }
                     else{

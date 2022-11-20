@@ -1,10 +1,11 @@
-import { type Namespace, type Plugin, type PluginBase, type FD, type F, Data } from '.';
+import { type Namespace, type Plugin, type PluginBase, type FD, type F } from '.';
 import { parse, type Parsed } from './parse';
 import genPipe, { type Tpipe } from './pipe';
 
 import p from './parallel';
 import nr from './nr';
 import retry from './retry';
+import repeat from './repeat';
 
 type CompiledPlugin = (arg0: F|Tpipe|string) => FD;
 type CompiledPlugins = {[key: string]: CompiledPlugin};
@@ -110,11 +111,19 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
                     }
                     else if(chunk.t.startsWith("*")){ 
                         const built = build(chunk.c);
-                        const name = chunk.t.substring(1, chunk.t.length);
-                        const builtin = plugs[name];
-                        if(builtin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
-                        const func = builtin(built);
-                        ret = [...ret, func];
+                        if(/^\d+/.test(chunk.t.substring(1))){
+                            const match = chunk.t.substring(1).match(/^(\d+)/);
+                            const n = match?match[1]:'1';
+                            const r = compilePlugin(repeat(parseInt(n)));
+                            const func = r(built);
+                            ret = [...ret, func];
+                        }else{
+                            const name = chunk.t.substring(1, chunk.t.length);
+                            const builtin = plugs[name];
+                            if(builtin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
+                            const func = builtin(built);
+                            ret = [...ret, func];
+                        }
                     }
                 }
             }
