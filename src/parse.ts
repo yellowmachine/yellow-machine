@@ -4,8 +4,13 @@ type P = {p?: B, w?: {files: string[], pipe: B}};
 export function nextToken(t: string, plugins: string[]){
     if(t === "") return null;
 
-    if(t.startsWith("]!"))
-        return {token: "]!", remaining: t.substring(2)};
+    //if(t.startsWith("]!"))
+    if(/^\]\d*!/.test(t)){
+        const match = t.match(/^(\]\d*!)/);
+        const token = match ? match[0]:"]!";
+    
+        return {token, remaining: t.substring(token.length)};
+    }
     else if(t.startsWith("]!,"))
         return {token: "]!,", remaining: t.substring(3)};
     else if(t.startsWith("?"))
@@ -50,6 +55,13 @@ export type Parsed = {t: string, c: (Parsed|string)[]};
 
 const removeWhite = (t: string) => t.replace(/\s/g,'');
 
+const delimiters = ["^[", "?", "?,", "]!", "]!,", "],", "[", "]", "p["]; // remove "p["
+
+const isDelimiter = (t: string) => {
+    if(delimiters.includes(t)) return true;
+    return /^\]\d+!/.test(t);
+};
+
 export function parse(t: string, plugins: string[]){
     t = removeWhite(t);
     let remaining = t;
@@ -61,7 +73,8 @@ export function parse(t: string, plugins: string[]){
 
         if(token === null) break;
         remaining = token.remaining;
-        if(!["^[", "?", "?,", "]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
+
+        if(!isDelimiter(token.token) && !token.token.startsWith("*")){
             let t = token.token;
             if(t.startsWith('|'))
                 t = t.substring(1);
@@ -123,6 +136,11 @@ export function parse(t: string, plugins: string[]){
             if(token.token.length == 2){
                 break;
             }
+        }else if(/^\]\d+!/.test(token.token)){
+            const match = token.token.match(/^(\](\d+)!)/);
+            const n = match?match[2]:'1';
+            pending.push('throws'+n);        
+            break;
         }else if(token.token === "]!" || token.token === "]!," || 
                  token.token === "]," || token.token === "]" || remaining === ""){   
             if(token.token.includes("!"))

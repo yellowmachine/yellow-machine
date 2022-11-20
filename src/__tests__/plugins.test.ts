@@ -259,7 +259,7 @@ test("plugin sw boolean return false", async ()=>{
     expect(path).toEqual(["a", "x"]);
 });
 
-test("ini[a|b]!end", async ()=>{
+test("ini[a|b]3!end", async ()=>{
     const path: string[] = [];
 
     const ini = g(["ini"]);
@@ -273,8 +273,8 @@ test("ini[a|b]!end", async ()=>{
     }
 
     const run = dev(path)({ini, a, b, end}, {sw: sw(decide)});
-    await run("ini[a|b]!end");
-    expect(path).toEqual([ "ini", "a!"]);
+    await run("ini[a|b]3!end");
+    expect(path).toEqual([ "ini", "a!", undefined, 'b', 'end']);
 });
 
 test("[ini|a[b!|c]?x]y", async ()=>{
