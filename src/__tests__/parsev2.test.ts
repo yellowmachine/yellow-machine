@@ -54,7 +54,7 @@ test("parse", ()=>{
     });
 });
 
-test.only("compile and run", async ()=>{
+test("run a|b", async ()=>{
     const path: {v: string} = {v: ""};
     
     const a = g('a');
@@ -66,8 +66,29 @@ test.only("compile and run", async ()=>{
         dev: true,
         path
     });
-    await cmp(0);
+    const result = await cmp();
     expect(path.v).toEqual('a,b');
+    expect(result).toBe('b');
+});
+
+test("run a|b a!", async ()=>{
+    const path: {v: string} = {v: ""};
+    
+    const a = g('a!');
+    const b = g('b');
+
+    const t = "a|b";
+    const cmp = compile(t, {
+        namespace: {a, b},
+        dev: true,
+        path
+    });
+    try{
+        await cmp();
+        expect(false).toBe(true);
+    }catch(err){
+        expect(path.v).toEqual('a!');
+    }
 });
 
 
