@@ -15,6 +15,39 @@ test("next token empty string", ()=>{
     expect(tokens).toEqual([]);
 });
 
+test("next token", ()=>{
+    const t = "a,^b|c[e3";
+    const tokens = consume(t);
+    expect(tokens).toEqual(["a", ",", "^b", "|", "c", "[", "e3"]);
+});
+
+test("next token []", ()=>{
+    const t = "a[b]";
+    const tokens = consume(t);
+    expect(tokens).toEqual(["a", "[", "b", "]"]);
+});
+
+test("next token a|b", ()=>{
+    const t = "a|b";
+    const tokens = consume(t);
+    expect(tokens).toEqual(["a", "|", "b"]);
+});
+
+test("parse", ()=>{
+    const t = "a|b";
+    const p = parse(t, plugins);
+    expect(p).toEqual({c: 
+        [
+            {c: [
+                {name: "a", type: "atom"},
+                {name: "b", type: "atom"}
+            
+                ], 
+            type: "array"}
+        ], type: "array"
+    });
+});
+
 /*
 test("next token basic pipeline", ()=>{
     expect(nextToken("a|b,c[", plugins)).toEqual({remaining: "[", token: "a|b,c"});

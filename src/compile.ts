@@ -19,7 +19,8 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
 
         const buildAtom = (a: string) => {
             const m = namespace[a];
-            if(m === undefined) throw new Error("Key Error: namespace error: " + m + ",(it could be a missing plugin)");
+            if(m === undefined) 
+                throw new Error("Key Error: namespace error: " + m + ",(it could be a missing plugin)");
             return m;
         };
 
@@ -37,9 +38,8 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
             for(const m of arr.c){
                 let f: FD;
 
-                //if(typeof m === 'string'){
-                if(m.atom === 'atom'){
-                    f = s(buildString(m.t));
+                if(m.type === 'atom'){
+                    f = s(buildString(m.name));
                 }else{
                     f = build(m);
                 }

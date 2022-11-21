@@ -5,14 +5,14 @@ const go = (t: string, token: string) => t.substring(token.length);
 
 const isBeginingArray = (r: string) => /^\^?\[/.test(r);
 const matchBeginingArray = (r: string) => {
-    const match = r.match(/^(\^?\[)/);
-    return match ? match[1]:"[";
+    const match = r.match(/^\[/);
+    return match ? match[0]:"[";
 };
 
-const isName = (r: string) => /^[\w\d]+/.test(r);
+const isName = (r: string) => /^[\^]?[\w\d]+/.test(r);
 const matchName = (r: string) => {
-    const match = r.match(/^(\^?\[)/);
-    return match ? match[1]:"[";
+    const match = r.match(/^[\^]?[\w\d]+/);
+    return match ? match[0]:"_";
 };
 
 const isRetryThrow = (r: string) => /^\]\d*!/.test(r);
@@ -43,6 +43,9 @@ export function *nextToken(r: string){
         }else if(r.charAt(0) === '|'){
             r = go(r, '|');
             yield '|';
+        //}else if(r.charAt(0) === '^'){
+        //    r = go(r, '^');
+        //    yield '^';
         }else if(isRetryThrow(r)){
             const token = matchRetryThrow(r);
             r = go(r, token);
@@ -56,21 +59,20 @@ export function *nextToken(r: string){
             r = go(r, token);
             yield token;
         }else if(isName(r)){
-            const token = matchName(r); 
+            const token = matchName(r);
             r = go(r, token);
             yield token;
         }else if(r.charAt(0) === ']'){
             r = go(r, ']');
             yield ']';
         }
-
     }while(r.length > 0);
     return ";";
 }
 
 export type ParsedAtom = {
-    atom: "atom",
-    t: string, 
+    type: "atom",
+    name: string, 
     plugin?: string,
     retry?: number,
     nr?: boolean, 
@@ -78,7 +80,7 @@ export type ParsedAtom = {
 };
 
 export type ParsedArray = {
-    atom: "array",
+    type: "array",
     c: (ParsedAtom|ParsedArray)[],
     //retryCatch?: number,
     //retryThrow?: number,
@@ -99,22 +101,26 @@ export const parse = (t: string, plugins: string[]) => {
 
     function parseAtom(t: string): ParsedAtom{
         if(t.startsWith('^'))
-            return {atom: "atom", nr: true, t: t.substring(1)};
+            return {type: "atom", nr: true, name: t.substring(1)};
         else
-            return {atom: "atom", t};
+            return {type: "atom", name: t};
     }
 
     function parseArray(): ParsedArray{
-        const ret: ParsedArray = {atom: "array", c: []};
-        let sub: ParsedArray = {atom: "array", c: []};
+        const ret: ParsedArray = {type: "array", c: []};
+        let sub: ParsedArray = {type: "array", c: []};
         let name = "";
         
         for(;;){
             const token = g.next().value; 
-            if(token === ','){
+            if(token === ";"){
+                sub.c.push(parseAtom(name)); 
+                ret.c.push(sub);
+                return ret;
+            }else if(token === ','){
                 sub.c.push(parseAtom(name));   
                 ret.c.push(sub);
-                sub = {atom: "array", c: []};
+                sub = {type: "array", c: []};
             }else if(token === '|'){
                 sub.c.push(parseAtom(name));    
             }else if(isBeginingArray(token)){
