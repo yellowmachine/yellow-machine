@@ -61,7 +61,7 @@ export type Parsed = {
 
 const removeWhite = (t: string) => t.replace(/\s/g,'');
 
-const delimiters = ["^[", "?", "?,", "]!,", "],", "[", "]", "p["]; // remove "p["
+const delimiters = ["^[", "?", "?,", "]!,", "],", "[", "]"]; 
 
 const isDelimiter = (t: string) => {
     if(delimiters.includes(t)) return true;
@@ -93,14 +93,26 @@ function _parse(t: string, plugins: string[]){
                 t = t.substring(1);
             if(t.charAt(t.length - 1) === "|")
                 t = t.substring(0, t.length-1);
+            
+            if(t.includes(',')){
+                const splitted = t.split(',').filter(z=>z!==''); 
+                const c = splitted.map(x=>{
+                    if(x.startsWith('^'))
+                        return {t: "[", nr: true, c: _parse(x.substring(1), plugins).parsed};
+                    else
+                        return x;
+                });
+                pending.push({t: "[", c});
+            }else{
                 pending.push(t);
+            }
         }
         else if(token.token === "^["){
             const aux = _parse(remaining, plugins);
             pending.push({t: "[", plug: "nr", c: aux.parsed});
             remaining = aux.remaining;
         }
-        else if(token.token === '^'){
+        /*else if(token.token === '^'){
             if(token.token.includes(',')){
                 const c = remaining.split(',').map(x => _parse(x, plugins).parsed);
                 c.forEach(x=>pending.push({t: "[", plug: "nr", c: x}));
@@ -109,7 +121,7 @@ function _parse(t: string, plugins: string[]){
                 pending.push({t: "[", plug: "nr", c: aux.parsed});
                 remaining = aux.remaining;
             }
-        }
+        }*/
         else if(token.token === '['){
             const aux = _parse(remaining, plugins);
             pending.push({t: "[", plug: "s", c: aux.parsed});

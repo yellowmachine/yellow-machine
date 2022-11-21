@@ -24,24 +24,15 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
         };
 
         const buildString = (t: string) => {
-            return t.split(',').
+            return t.split('|').
                 filter(x=>x !== "").
-                map(x=>{
-                    if(x.startsWith('^')){
-                        x = x.substring(1);
-                        const a = x.split('|').filter(y=>y!=="").map(z=>buildAtom(z));
-                        const b = [s(a)];
-                        return nr()(b);
-                    }else{
-                        return x;
-                    }
-                });
+                map(z => buildAtom(z));
         };
 
         function build(x: Parsed): FD{
             let plugin;
 
-            if(x.plug !== 's')
+            if(x.plug === 's')
                 plugin = s;
             else{
                 plugin = plugins[x.plug || ''];
