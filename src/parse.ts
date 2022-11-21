@@ -1,146 +1,160 @@
 type B = (string|B|P)[]|undefined;
 type P = {p?: B, w?: {files: string[], pipe: B}};
 
-export function nextToken(t: string, plugins: string[]){
-    if(t === "") return null;
+const go = (t: string, token: string) => t.substring(token.length);
 
-    if(/^\]\d*!/.test(t)){
-        const match = t.match(/^(\]\d*!)/);
-        const token = match ? match[0]:"]1!";
-    
-        return {token, remaining: t.substring(token.length)};
-    }
-    else if(t.startsWith("]!,"))
-        return {token: "]!,", remaining: t.substring(3)};
-    else if(t.startsWith("?"))
-        return {token: "?", remaining: t.substring(1)};
-    else if(t.startsWith("?,"))
-        return {token: "?,", remaining: t.substring(2)};
-    else if(t.startsWith('],'))
-        return {token: "],", remaining: t.substring(2)};
-    else if(t.startsWith('^['))
-        return {token: "^[", remaining: t.substring(2)};
-    else if(t.charAt(0) === '[')
-        return {token: "[", remaining: t.substring(1)};
-    else if(t.charAt(0) === ']')
-        return {token: "]", remaining: t.substring(1)};
-    else{
-        for(let i=0; i < t.length; i++){
-            if(["[", "]"].includes(t.charAt(i)) || t.substring(i).startsWith("^[")){
-                const token = t.substring(0, i);
-                for(const plug of plugins){
-                    if(token.endsWith("|" + plug)){
-                        const size = (plug).length;
-                        return {token: t.substring(0, i-size), remaining: t.substring(i-size)};
-                    }
-                }
-                if(t.charAt(i) === '^'){
-                    return {token: "*"+token, remaining: t.substring(i)};
-                }else{
-                    if(plugins.includes(token) || /^\d+/.test(token)){
-                        return {token: "*"+token, remaining: t.substring(i+1)};
-                    }
-                    else{
-                        return {token, remaining: t.substring(i)};
-                    }
-                }
-            }
+const isBeginingArray = (r: string) => /^\^?\[/.test(r);
+const matchBeginingArray = (r: string) => {
+    const match = r.match(/^(\^?\[)/);
+    return match ? match[1]:"[";
+};
+
+const isName = (r: string) => /^[\w\d]+/.test(r);
+const matchName = (r: string) => {
+    const match = r.match(/^(\^?\[)/);
+    return match ? match[1]:"[";
+};
+
+const isRetryThrow = (r: string) => /^\]\d*!/.test(r);
+const matchRetryThrow = (r: string) => {
+    const match = r.match(/^(\]\d*!)/);
+    return match ? match[1]:"]1!";
+};
+
+const isRetryCatch = (r: string) => /^\]\d*\?/.test(r);
+const matchRetryCatch = (r: string) => {
+    const match = r.match(/^(\]\d*\?)/);
+    return match ? match[1]:"]1?";
+};
+const matchRetryCatchNumber = (r: string) => {
+    const match = r.match(/^\]\(d*)\?/);
+    return match ? parseInt(match[1]): 1;
+};
+const matchRetryThrowNumber = (r: string) => {
+    const match = r.match(/^\]\(d*)!/);
+    return match ? parseInt(match[1]): 1;
+};
+
+export function *nextToken(r: string){
+    do{
+        if(r.charAt(0) === ','){
+            r = go(r, ',');
+            yield ',';
+        }else if(r.charAt(0) === '|'){
+            r = go(r, '|');
+            yield '|';
+        }else if(isRetryThrow(r)){
+            const token = matchRetryThrow(r);
+            r = go(r, token);
+            yield token;
+        }else if(isRetryCatch(r)){
+            const token = matchRetryCatch(r);
+            r = go(r, token);
+            yield token;
+        }else if(isBeginingArray(r)){
+            const token = matchBeginingArray(r);
+            r = go(r, token);
+            yield token;
+        }else if(isName(r)){
+            const token = matchName(r); 
+            r = go(r, token);
+            yield token;
+        }else if(r.charAt(0) === ']'){
+            r = go(r, ']');
+            yield ']';
         }
-        return {token: t, remaining: ""};
-    }
+
+    }while(r.length > 0);
+    return ";";
 }
 
-export type Parsed = {
+export type ParsedAtom = {
+    atom: "atom",
     t: string, 
-    plug?: string,
+    plugin?: string,
     retry?: number,
     nr?: boolean, 
-    repeat?: number,
-    c: (Parsed|string)[]
+    repeat?: number
 };
+
+export type ParsedArray = {
+    atom: "array",
+    c: (ParsedAtom|ParsedArray)[],
+    //retryCatch?: number,
+    //retryThrow?: number,
+    retry?: number;
+    nr?: number,
+    repeat?: number,
+    plugin?: string
+};
+
+type C = ParsedAtom|ParsedExpression;
+type ParsedExpression = C[];
 
 const removeWhite = (t: string) => t.replace(/\s/g,'');
 
-const delimiters = ["^[", "?", "?,", "]!,", "],", "[", "]"]; 
+export const parse = (t: string, plugins: string[]) => {
+    
+    const g = nextToken(removeWhite(t));
 
-const isDelimiter = (t: string) => {
+    function parseAtom(t: string): ParsedAtom{
+        if(t.startsWith('^'))
+            return {atom: "atom", nr: true, t: t.substring(1)};
+        else
+            return {atom: "atom", t};
+    }
+
+    function parseArray(): ParsedArray{
+        const ret: ParsedArray = {atom: "array", c: []};
+        let sub: ParsedArray = {atom: "array", c: []};
+        let name = "";
+        
+        for(;;){
+            const token = g.next().value; 
+            if(token === ','){
+                sub.c.push(parseAtom(name));   
+                ret.c.push(sub);
+                sub = {atom: "array", c: []};
+            }else if(token === '|'){
+                sub.c.push(parseAtom(name));    
+            }else if(isBeginingArray(token)){
+                const arr = parseArray();
+                if(plugins.includes(name)){
+                    arr.plugin = name;
+                }else{
+                    if(arr.c.length > 1){
+                        arr.plugin = 'p';
+                    }else{
+                        arr.plugin = 's';
+                    }
+                }
+                sub.c.push(arr);
+                sub.c.push(parseArray());
+            }else if(isRetryCatch(token)){
+                const m = matchRetryCatchNumber(token);
+                ret.retry = m; //Catch = m;
+                return ret;
+            }else if(isRetryThrow(token)){
+                const m = matchRetryThrowNumber(token);
+                ret.retry = m; //Throw = m;
+                return ret;
+            }else if(isName(token)){
+                name = matchName(token);
+            }else if(token === ']'){
+                return ret;
+            }//else{
+            //    return ret;
+            //}
+        }
+        //return {atom: false, c: ret.c};
+    }
+    return parseArray();
+};
+
+//const delimiters = ["^[", "?", "?,", "]!,", "],", "[", "]"]; 
+
+/*const isDelimiter = (t: string) => {
     if(delimiters.includes(t)) return true;
     return /^\]\d+!/.test(t);
 };
-
-export const parse = (t: string, plugins: string[]) => {
-    const parsed = _parse(removeWhite(t), plugins).parsed;
-    return {
-        t: "[",
-        c: parsed
-    };
-};   
-
-function parseAtom(t: string, plugins: string[]){
-    if(t.startsWith('^'))
-        return {t: "f", nr: true, c: _parse(t.substring(1), plugins).parsed};
-    else
-        return t;
-}
-
-function _parse(t: string, plugins: string[]){
-    let remaining = t;
-    let extra: string|null = null;
-    
-    let pending: (Parsed|string)[] = [];
-    let type = "";
-    for(;;){
-        const token = nextToken(remaining, plugins);
-
-        if(token === null) break;
-        remaining = token.remaining;
-
-        if(!isDelimiter(token.token) && !token.token.startsWith("*")){
-            let t = token.token;
-            if(t.startsWith('|'))
-                t = t.substring(1);
-            if(t.charAt(t.length - 1) === "|")
-                t = t.substring(0, t.length-1);
-            
-            if(t.includes(',')){
-                type = ',';
-                const splitted = t.split(',').filter(z=>z!==''); 
-                const c = splitted.map(x=>{
-                    return parseAtom(x, plugins);
-                });
-                pending.push({t: ",", c});
-            }else{
-                type = '|';
-                pending.push(parseAtom(t, plugins));
-            }
-        }
-        else if(token.token === "^["){
-            const aux = _parse(remaining, plugins);
-            pending.push({t: "f", plug: "nr", c: aux.parsed});
-            remaining = aux.remaining;
-        }
-        else if(token.token === '['){
-            const aux = _parse(remaining, plugins);
-            pending.push({t: "[", plug: aux.type, c: aux.parsed});
-            remaining = aux.remaining;
-        }else if(token.token.startsWith("*")){
-            const aux = _parse(remaining, plugins);
-            pending.push({t: "[", plug: token.token.substring(1), c: aux.parsed});
-            remaining = aux.remaining;
-        }else if(token.token === "?" || token.token === "?,"){
-            extra = "?";
-            if(token.token.length == 2){
-                break;
-            }
-        }else if(/^\]\d+!/.test(token.token)){
-            const match = token.token.match(/^(\](\d+)!)/);
-            const n = match?match[2]:'1';
-            pending = [{t: "f", retry: parseInt(n), c: pending}];
-            break;
-        }else if(token.token === "]!," || token.token === "]," || token.token === "]" || remaining === ""){   
-            break;
-        }
-    }
-    if(extra) pending.push(extra);
-    return {remaining, parsed: pending, type};
-}
+*/

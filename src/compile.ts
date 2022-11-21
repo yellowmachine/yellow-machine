@@ -1,5 +1,5 @@
 import { type Namespace, type Plugin, type FD } from '.';
-import { parse, type Parsed } from './parse';
+import { parse, ParsedArray } from './parse';
 import genPipe from './pipe';
 
 import p from './parallel';
@@ -13,7 +13,7 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
 
     const rootParsed = parse(raw, Object.keys(plugins));
     
-    function _compile(parsed: Parsed){
+    function _compile(parsed: ParsedArray){
     
         const s = genPipe(namespace, dev, path);
 
@@ -29,44 +29,40 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
                 map(z => buildAtom(z));
         };
 
-        function build(x: Parsed): FD{
+        function build(arr: ParsedArray): FD{
             let plugin;
             
             const ret: FD[] = [];
-            for(const m of x.c){
+
+            for(const m of arr.c){
                 let f: FD;
 
-                if(typeof m === 'string'){
-                    f = s(buildString(m));
+                //if(typeof m === 'string'){
+                if(m.atom === 'atom'){
+                    f = s(buildString(m.t));
                 }else{
-                    if(m.plug === '_'){
-                        plugin = m.plug;
-                        if(plugin === ',') plugin = p;
-                        else plugin = s;
-                    }else{
-                        plugin = plugins[x.plug || ''];
-                        if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + x.plug);
-                    }
                     f = build(m);
                 }
-                if(x.retry)
-                    f = retry(x.retry)([f]);
-                if(x.nr)
+                if(m.retry)
+                    f = retry(m.retry)([f]);
+                if(m.nr)
                     f = nr()([f]);
-                if(x.repeat)
-                    f = repeat(x.repeat)([f]);
+                if(m.repeat)
+                    f = repeat(m.repeat)([f]);
+                
+                if(m.plugin === 's')
+                    plugin = s;
+                else if(m.plugin === 'p')
+                    plugin = p();
+                else{
+                    plugin = plugins[m.plugin || ''];
+                    if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + m.plugin);
+                }
+
+                f = plugin([f]);
                 ret.push(f);
             }
-
-            if(x.plug === '_')
-                plugin = s;
-                
-            else{
-                plugin = plugins[x.plug || ''];
-                if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + x.plug);
-            }
-
-            return plugin(ret);
+            return s(ret);
         }
         return build(parsed);
     }
