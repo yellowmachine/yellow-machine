@@ -10,10 +10,12 @@ export const DEBUG = {v: false, w: false};
 
 export type Data = {data: any, ctx: Ctx};
 export type F = ((arg0: Data) => any);
-
+export type Callable = Generator|AsyncGenerator|FD|CallableArray;
+export type CallableArray = Callable[];
 export type FD = (data: Data)=>Promise<any>;
 export type SETUP = {single: FD, multiple: FD[]};
-export type PluginBase = (arg: SETUP) => FD;
+export type PluginBase = (pipes: FD[]) => FD;
+//export type PluginBase = (arg: SETUP) => FD;
 export type Plugin = {[key: string]: PluginBase};
 export type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 type Close = (err?: boolean, data?: any)=>boolean;

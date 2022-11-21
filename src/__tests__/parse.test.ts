@@ -59,7 +59,8 @@ test("parse most simple", ()=>{
 
 test("parse most simple with ,", ()=>{
     const {remaining, parsed} = parse("a,b", plugins);
-    expect(parsed).toEqual([{t: "[", c: ["a"]}, {t: "[", c: ["b"]}]);
+
+    expect(parsed).toEqual([{"t":"[[","c":[{"t":"[","c":["a"]},{"t":"[","c":["b"]}]}]);
     expect(remaining).toBe("");
 });
 
@@ -71,7 +72,8 @@ test("parse most simple with |", ()=>{
 
 test("parse most simple with , |", ()=>{
     const {remaining, parsed} = parse("a,x|b|c", plugins);
-    expect(parsed).toEqual([{t: "[", c: ["a"]}, {t: "[", c: ["x|b|c"]}]);
+
+    expect(parsed).toEqual([{"t":"[[","c":[{"t":"[","c":["a"]},{"t":"[","c":["x|b|c"]}]}]);
     expect(remaining).toBe("");
 });
 
@@ -140,13 +142,15 @@ test("parse ^b|c", ()=>{
 
 test("parse ^b|c,x", ()=>{
     const {remaining, parsed} = parse("^b|c,x", plugins);
-    expect(parsed).toEqual([{t: "*nr", c: ["b|c"]}, {t: "[", c: ["x"]}]);
+    expect(parsed).toEqual([{t: "[[", c: [{t: "*nr", c: ["b|c"]},
+                                          {t: "[", c: ["x"]}
+                                        ]}]);
     expect(remaining).toBe("");
 });
 
 test("parse c,^x", ()=>{
     const {remaining, parsed} = parse("c,^x", plugins);
-    expect(parsed).toEqual([{t: "[", c: ["c"]}, {t: "*nr", c: ["x"]}]);
+    expect(parsed).toEqual([{t: "[[", c: [{t: "[", c: ["c"]}, {t: "*nr", c: ["x"]}]}]);
     expect(remaining).toBe("");
 });
 

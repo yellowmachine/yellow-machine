@@ -1,12 +1,15 @@
 import { Data, DEBUG, type Namespace, type F } from ".";
 
-type C = Generator|AsyncGenerator|F|string|Tpipe;
+export type C = Generator|AsyncGenerator|F|string|Tpipe;
 export type Tpipe = C[];
 export type Pipe = (tasks: F|Tpipe) => (data: Data) => Promise<any>;
+export type PipeArray = Tpipe[];
 
 export default (namespace: Namespace, dev: boolean, path: string[]) => {
     
     const pipe = (tasks: F|Tpipe) => async (data: Data) => {
+        if(data.data === null) return null;
+        
         let close;
         if(data.ctx) close = data.ctx.close;
 

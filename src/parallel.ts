@@ -1,7 +1,8 @@
-import { Data, type SETUP } from '.';
+import { Data, FD } from '.';
 
-export default (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any)|null = null) => (setup: SETUP) => async (data: Data) => {
-    const pipes = setup["multiple"];
+export default (mode: "all"|"race"|"allSettled" = "all", 
+                map: ((data: Data)=>any)|null = null) => (pipes: FD[]) => async (data: Data) => {
+    
     const promises: Promise<any>[] = [];   
 
     for(const t of pipes){

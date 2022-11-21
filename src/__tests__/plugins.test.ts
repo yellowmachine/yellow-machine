@@ -53,7 +53,7 @@ test("plugin p and full compact mode", async ()=>{
     expect(path).toEqual(["a1", "throw", "b"]);
 });
 
-test("plugin p and full compact mode v2", async ()=>{
+test.only("plugin p and full compact mode v2", async ()=>{
     const path: string[] = [];
     const up = g(["up"]);
     const dql = g(["dql1", "dql!"]);
@@ -296,9 +296,10 @@ test("plugin repeat compact mode", async ()=>{
     const a = g(["a1", "a2", "a3"]);
     const b = g(["b1", "b2", "a3"]);
 
-    //const run = dev(path)({a, b}, {buffer: nr({mode: "buffer"})});
-
-    await run("2[buffer[a|b", {namespace: {a, b}});
+    await run("2[buffer[a|b", {
+        namespace: {a, b},
+        plugins: {buffer: nr({mode: "buffer"})}
+    });
 
     expect(path).toEqual(["a1", "b1", "a2", "b2"]);
 });

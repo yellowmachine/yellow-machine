@@ -1,10 +1,11 @@
-import { Data, type SETUP } from '.';
+import { Data, FD } from '.';
+import { Pipe } from './pipe';
 
-export default (n: number) => (setup: SETUP) => async (data: Data) => {
+export default (n: number) => (pipes: FD[]) => async (data: Data) => {
     const promises: Promise<boolean>[] = [];
-    const pipe = setup["single"];
+
     while(n--){
-        const p = pipe(data);
+        const p = pipes[0](data);
         promises.push(p);
         p.catch(()=>{
             return false;
