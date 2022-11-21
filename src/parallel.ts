@@ -3,6 +3,7 @@ import { Data, FD } from '.';
 export default (mode: "all"|"race"|"allSettled" = "all", 
                 map: ((data: Data)=>any)|null = null) => (pipes: FD[]) => async (data: Data) => {
     
+    console.log('parallel', mode, pipes);
     const promises: Promise<any>[] = [];   
 
     for(const t of pipes){

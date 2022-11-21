@@ -84,7 +84,7 @@ export type ParsedArray = {
     retry?: number;
     nr?: number,
     repeat?: number,
-    plugin?: string
+    plugin: string
 };
 
 type C = ParsedAtom|ParsedExpression;
@@ -104,22 +104,27 @@ export const parse = (t: string, plugins: string[]) => {
     }
 
     function parseArray(): ParsedArray{
-        const ret: ParsedArray = {type: "array", c: []};
-        let sub: ParsedArray = {type: "array", c: []};
+        const ret: ParsedArray = {type: "array", plugin: 'p', c: []};
+        let sub: ParsedArray = {type: "array", plugin: 'p', c: []};
         let name = "";
         
         for(;;){
             const token = g.next().value; 
             if(token === ";"){
-                sub.c.push(parseAtom(name)); 
+                sub.c.push(parseAtom(name));
                 ret.c.push(sub);
+                if(ret.c.length > 1){
+                    ret.plugin = 'p';
+                }else{
+                    ret.plugin = 's';
+                } 
                 return ret;
             }else if(token === ','){
-                sub.c.push(parseAtom(name));   
+                sub.c.push(parseAtom(name)); 
                 ret.c.push(sub);
-                sub = {type: "array", c: []};
+                sub = {type: "array", plugin: 'p', c: []};
             }else if(token === '|'){
-                sub.c.push(parseAtom(name));    
+                sub.c.push(parseAtom(name));
             }else if(isBeginingArray(token)){
                 const arr = parseArray();
                 if(plugins.includes(name)){
@@ -132,7 +137,7 @@ export const parse = (t: string, plugins: string[]) => {
                     }
                 }
                 sub.c.push(arr);
-                sub.c.push(parseArray());
+                //sub.c.push(parseArray());
             }else if(isRetryCatch(token)){
                 const m = matchRetryCatchNumber(token);
                 ret.retry = m; //Catch = m;

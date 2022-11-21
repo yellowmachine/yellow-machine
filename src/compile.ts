@@ -1,11 +1,12 @@
 import { type Namespace, type Plugin, type FD } from '.';
-import { parse, ParsedArray } from './parse';
+import { parse, ParsedArray, ParsedAtom } from './parse';
 import genPipe from './pipe';
 
 import p from './parallel';
 import nr from './nr';
 import retry from './retry';
 import repeat from './repeat';
+
 
 export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean, path: {v: string}) => {
     
@@ -16,6 +17,33 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
     function _compile(parsed: ParsedArray){
     
         const s = genPipe(dev, path);
+
+        function builtinPlugins(m: ParsedArray, f: FD){
+            if(m.retry)
+                f = retry(m.retry)([f]);
+            if(m.nr)
+                f = nr()([f]);
+            if(m.repeat)
+                f = repeat(m.repeat)([f]);
+            return f;
+        }
+
+        function getPlugin(m: ParsedArray|ParsedAtom){
+            if(m.plugin === 's')
+                return s;
+            else if(m.plugin === 'p'){
+                return p();
+            }
+            else{
+                if(m.plugin){
+                    const plugin = plugins[m.plugin];
+                    if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + m.plugin);
+                    return plugin;
+                }else{
+                    return null;
+                }
+            }
+        }
 
         const buildAtom = (a: string) => {
             const m = namespace[a];
@@ -33,32 +61,19 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
 
                 if(m.type === 'atom'){
                     f = buildAtom(m.name);
+                }else if(Array.isArray(m)){
+                    plugin = getPlugin(arr);
+                    if(plugin) f = plugin(m);
+                    else f = s(m);
+                    f = builtinPlugins(m, f);
                 }else{
                     f = build(m);
-                }
-                if(typeof f === 'function'){
-                    if(m.retry)
-                        f = retry(m.retry)([f]);
-                    if(m.nr)
-                        f = nr()([f]);
-                    if(m.repeat)
-                        f = repeat(m.repeat)([f]);
-                    
-                    if(m.plugin){
-                        if(m.plugin === 's')
-                            plugin = s;
-                        else if(m.plugin === 'p')
-                            plugin = p();
-                        else{
-                            plugin = plugins[m.plugin];
-                            if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + m.plugin);
-                        }
-                        f = plugin([f]);
-                    }
+                    plugin = getPlugin(m);
+                    if(plugin) plugin([f]);
+                    f = builtinPlugins(m, f);
                 }
                 ret.push(f);
             }
-            console.log('ret antes de asignarle s', ret);
             return s(ret);
         }
         return build(parsed);
