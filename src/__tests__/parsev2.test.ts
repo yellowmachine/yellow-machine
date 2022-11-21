@@ -1,4 +1,4 @@
-import { DEBUG } from '../index';
+import { DEBUG, compile, g } from '../index';
 import { parse, nextToken } from '../parse';
 
 DEBUG.v = false;
@@ -19,6 +19,12 @@ test("next token", ()=>{
     const t = "a,^b|c[e3";
     const tokens = consume(t);
     expect(tokens).toEqual(["a", ",", "^b", "|", "c", "[", "e3"]);
+});
+
+test("next token ^[", ()=>{
+    const t = "c^[e";
+    const tokens = consume(t);
+    expect(tokens).toEqual(["c", "^[", "e"]);
 });
 
 test("next token []", ()=>{
@@ -47,6 +53,23 @@ test("parse", ()=>{
         ], type: "array"
     });
 });
+
+test.only("compile and run", async ()=>{
+    const path: {v: string} = {v: ""};
+    
+    const a = g('a');
+    const b = g('b');
+
+    const t = "a|b";
+    const cmp = compile(t, {
+        namespace: {a, b},
+        dev: true,
+        path
+    });
+    await cmp(0);
+    expect(path.v).toEqual('a,b');
+});
+
 
 /*
 test("next token basic pipeline", ()=>{

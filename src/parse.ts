@@ -3,9 +3,9 @@ type P = {p?: B, w?: {files: string[], pipe: B}};
 
 const go = (t: string, token: string) => t.substring(token.length);
 
-const isBeginingArray = (r: string) => /^\^?\[/.test(r);
+const isBeginingArray = (r: string) => /^[\^]?\[/.test(r);
 const matchBeginingArray = (r: string) => {
-    const match = r.match(/^\[/);
+    const match = r.match(/^[\^]?\[/);
     return match ? match[0]:"[";
 };
 
@@ -43,9 +43,6 @@ export function *nextToken(r: string){
         }else if(r.charAt(0) === '|'){
             r = go(r, '|');
             yield '|';
-        //}else if(r.charAt(0) === '^'){
-        //    r = go(r, '^');
-        //    yield '^';
         }else if(isRetryThrow(r)){
             const token = matchRetryThrow(r);
             r = go(r, token);

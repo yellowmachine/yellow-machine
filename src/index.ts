@@ -21,14 +21,15 @@ export type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>an
 type Close = (err?: boolean, data?: any)=>boolean;
 type Ctx = {close: Close, promise?: Promise<any>};
 
-export function *g(arr: string[]){
+export function *g(t: string){
+    const arr = t.split(',');
     for(const i of arr){
         if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
         else yield i;
     }
 }
 
-export function i(data: any=null){
+export function i(data: any){
     return {data: data, ctx: {close: ()=>{
         return true;
     }}};
@@ -38,21 +39,20 @@ type Options = {
     namespace: Namespace,
     plugins?: Plugin,
     dev?: boolean,
-    path?: string[]
+    path?: {v: string}
 }
 
 export const compile = (raw: string, options?: Options) => {
     const opts = {
         dev: false,
-        path: [],
+        path: {v: ""},
         plugins: {},
         namespace: {},
         ...options
     };
     
-    const p = pipe(opts.namespace, opts.dev, opts.path);
     const compiled = _compile(raw, opts.namespace, opts.plugins, opts.dev, opts.path);
-    return (data?: Data) => p(compiled)(i(data?data:null));
+    return (data?: any) => compiled(i(data));
 };
 
 export const run = async (raw: string, options?: Options, data?: Data) => {
@@ -65,6 +65,7 @@ export const run = async (raw: string, options?: Options, data?: Data) => {
     }
 };
 
+/*
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
 export const context = (namespace: Namespace,
@@ -72,3 +73,4 @@ export const context = (namespace: Namespace,
                         dev=false, 
                         path: string[]=[]
                     ) => (t: string, data?: any) => run(t, {namespace, plugins, dev, path}, data);
+*/
