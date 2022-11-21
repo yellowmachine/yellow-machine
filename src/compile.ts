@@ -17,7 +17,11 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
     
         const s = genPipe(namespace, dev, path);
 
-        const buildAtom = (a: string) => namespace[a];
+        const buildAtom = (a: string) => {
+            const m = namespace[a];
+            if(m === undefined) throw new Error("Key Error: namespace error: " + m + ",(it could be a missing plugin)");
+            return m;
+        };
 
         const buildString = (t: string) => {
             return t.split(',').

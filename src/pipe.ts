@@ -14,24 +14,17 @@ export default (namespace: Namespace, dev: boolean, path: string[]) => {
         if(data.ctx) close = data.ctx.close;
 
         if(!Array.isArray(tasks)){
-            tasks = [tasks, 'throws'];
+            tasks = [tasks];
         }
-        let throws = false;
+        const throws = true;
         let question = false;
-        const last = tasks.at(-1);
-        const lastIsThrow = last? (typeof last === 'string' && last.startsWith('throws')): false;
         try{
-            for(let t of tasks){
-                throws = false;
+            for(const t of tasks){
                 question = false;
                 try{
-                    let m: C;
+                    /*let m: C;
                     if(typeof t === 'string'){
-                        if(t.startsWith('throws') || t === '?') continue;
-                        if(t.charAt(t.length-1) === "!"){
-                            throws = true;
-                            t = t.substring(0, t.length-1);
-                        }
+                        if( t === '?') continue;
                         if(t.charAt(t.length-1) === "?"){
                             question = true;
                             t = t.substring(0, t.length-1);
@@ -40,7 +33,11 @@ export default (namespace: Namespace, dev: boolean, path: string[]) => {
                         if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
                     }else{
                         m = t;
+                    }*/
+                    if(typeof t === 'string'){
+                        continue;
                     }
+                    const m = t;
                     if(typeof m === 'function'){
                         data.data = await m(data);
                     }else if(Array.isArray(m)){
@@ -68,7 +65,7 @@ export default (namespace: Namespace, dev: boolean, path: string[]) => {
                 path.push(err instanceof Error? err.message: "unknown error");
             } 
             if(tasks.at(-1) === '?' || question) throw new Error('?');
-            if(lastIsThrow || throws){
+            if(throws){
                 if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!")))
                     throw new Error('no log:' + err.message);
                 else

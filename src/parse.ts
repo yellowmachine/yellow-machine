@@ -94,36 +94,6 @@ function _parse(t: string, plugins: string[]){
             if(t.charAt(t.length - 1) === "|")
                 t = t.substring(0, t.length-1);
                 pending.push(t);
-            /*
-            if(t.includes(',')){
-                const aux = [];
-                for(let t2 of t.split(',')){
-                    if(t2.startsWith("^")){
-                        t2 = t2.substring(1);
-                        aux.push({t: "_[", plug: "nr", c: _parse(t2, plugins).parsed});    
-                    }else{
-                        //if(t2.includes("|.")){
-                        //    t2 = t2.replace("|.", "|");
-                        //    aux.push({t: "|.", c: _parse(t2, plugins).parsed});
-                        //}else{
-                        aux.push({t: "_[", plug: 's', c: _parse(t2, plugins).parsed});
-                        //}
-                    }        
-                }
-                pending.push({t: "_[[", c: aux});
-            }else{
-                if(t.startsWith("^")){
-                    t = t.substring(1);
-                    pending.push({t: "_[", plug: "nr", c: _parse(t, plugins).parsed});    
-                }else{
-                    //if(t.includes("|.")){
-                    //    t = t.replace("|.", "|");
-                    //    pending.push({t: "|.", c: [t]});
-                    //}
-                    //else
-                    pending.push(t);
-                }
-            }*/
         }
         else if(token.token === "^["){
             const aux = _parse(remaining, plugins);
@@ -156,12 +126,9 @@ function _parse(t: string, plugins: string[]){
         }else if(/^\]\d+!/.test(token.token)){
             const match = token.token.match(/^(\](\d+)!)/);
             const n = match?match[2]:'1';
-            //pending.push('throws');
             pending = [{t: "[", retry: parseInt(n), c: pending}];
             break;
         }else if(token.token === "]!," || token.token === "]," || token.token === "]" || remaining === ""){   
-            //if(token.token.includes("!"))
-            //    pending.push("throws");
             break;
         }
     }
