@@ -72,7 +72,7 @@ export const parse = (t: string, plugins: string[]) => {
     const parsed = _parse(removeWhite(t), plugins).parsed;
     return {
         t: "[",
-        c: parsed,
+        c: parsed
     };
 };   
 
@@ -88,6 +88,7 @@ function _parse(t: string, plugins: string[]){
     let extra: string|null = null;
     
     let pending: (Parsed|string)[] = [];
+    let type = "";
     for(;;){
         const token = nextToken(remaining, plugins);
 
@@ -102,23 +103,25 @@ function _parse(t: string, plugins: string[]){
                 t = t.substring(0, t.length-1);
             
             if(t.includes(',')){
+                type = ',';
                 const splitted = t.split(',').filter(z=>z!==''); 
                 const c = splitted.map(x=>{
                     return parseAtom(x, plugins);
                 });
                 pending.push({t: ",", c});
             }else{
+                type = '|';
                 pending.push(parseAtom(t, plugins));
             }
         }
         else if(token.token === "^["){
             const aux = _parse(remaining, plugins);
-            pending.push({t: "[", plug: "nr", c: aux.parsed});
+            pending.push({t: "f", plug: "nr", c: aux.parsed});
             remaining = aux.remaining;
         }
         else if(token.token === '['){
             const aux = _parse(remaining, plugins);
-            pending.push({t: "[", plug: "_", c: aux.parsed});
+            pending.push({t: "[", plug: aux.type, c: aux.parsed});
             remaining = aux.remaining;
         }else if(token.token.startsWith("*")){
             const aux = _parse(remaining, plugins);
@@ -139,5 +142,5 @@ function _parse(t: string, plugins: string[]){
         }
     }
     if(extra) pending.push(extra);
-    return {remaining, parsed: pending};
+    return {remaining, parsed: pending, type};
 }

@@ -31,20 +31,22 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
 
         function build(x: Parsed): FD{
             let plugin;
-
-            if(x.plug === 's')
-                plugin = s;
-            else{
-                plugin = plugins[x.plug || ''];
-                if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + x.plug);
-            }
             
             const ret: FD[] = [];
             for(const m of x.c){
                 let f: FD;
+
                 if(typeof m === 'string'){
                     f = s(buildString(m));
                 }else{
+                    if(m.plug === '_'){
+                        plugin = m.plug;
+                        if(plugin === ',') plugin = p;
+                        else plugin = s;
+                    }else{
+                        plugin = plugins[x.plug || ''];
+                        if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + x.plug);
+                    }
                     f = build(m);
                 }
                 if(x.retry)
@@ -54,6 +56,14 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
                 if(x.repeat)
                     f = repeat(x.repeat)([f]);
                 ret.push(f);
+            }
+
+            if(x.plug === '_')
+                plugin = s;
+                
+            else{
+                plugin = plugins[x.plug || ''];
+                if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + x.plug);
             }
 
             return plugin(ret);

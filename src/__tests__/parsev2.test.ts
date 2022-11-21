@@ -102,10 +102,10 @@ test("parse plugin and |", ()=>{
 
 test("parse retry 3!", ()=>{
     const {c} = parse("[a|b]3!", plugins);
-    expect(c).toEqual([{t: "[", plug: "_", c: [{t: "f", retry: 3, c: ["a|b"]}]}]);
+    expect(c).toEqual([{t: "[", plug: "|", c: [{t: "f", retry: 3, c: ["a|b"]}]}]);
 });
 
 test("parse [,]", ()=>{
     const {c} = parse("[a,b]", plugins);
-    expect(c).toEqual([{t: "[", plug: "_", c: [{t: ",", c: ['a', 'b']}]}]);
+    expect(c).toEqual([{t: "[", plug: ",", c: [{t: ",", c: ['a', 'b']}]}]);
 });
