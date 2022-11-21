@@ -60,7 +60,7 @@ export default (namespace: Namespace, dev: boolean, path: string[]) => {
                 // eslint-disable-next-line no-console
                 console.log(err);
             if(close) close(true);
-            if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
+            //if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             if(dev && err instanceof Error && !err.message.startsWith("no log")){
                 path.push(err instanceof Error? err.message: "unknown error");
             } 

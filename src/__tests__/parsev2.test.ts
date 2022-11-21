@@ -48,5 +48,64 @@ test("next token with ^b", ()=>{
 test("parse empty", ()=>{
     const {c} = parse("", plugins);
     expect(c).toEqual([]);
+});
 
+test("parse base", ()=>{
+    const {c} = parse("a", plugins);
+    expect(c).toEqual(["a"]);
+});
+
+test("parse base ,", ()=>{
+    const {c} = parse("a,b", plugins);
+    expect(c).toEqual([{t: ",", c: ["a", "b"]}]);
+});
+
+test("parse base |", ()=>{
+    const {c} = parse("a|b", plugins);
+    expect(c).toEqual(["a|b"]);
+});
+
+test("parse base mixin | ,", ()=>{
+    const {c} = parse("a|b,c", plugins);
+    expect(c).toEqual([{t: ",", c: ["a|b", "c"]}]);
+});
+
+test("parse base ^", ()=>{
+    const {c} = parse("^a", plugins);
+    expect(c).toEqual([{ t:'f', nr: true, c: ["a"]}]);
+});
+
+test("parse base ^ with ,", ()=>{
+    const {c} = parse("^a,b", plugins);
+    expect(c).toEqual([{t: ",", c: [{t: "f", nr: true, c: ["a"]}, "b"]}]);
+});
+
+test("parse base ^ with |", ()=>{
+    const {c} = parse("^a|b", plugins);
+    expect(c).toEqual([{t: "f", nr: true, c: ["a|b"]}]);
+});
+
+test("parse base ^ with | ,", ()=>{
+    const {c} = parse("^a|b,c", plugins);
+    expect(c).toEqual([{t: ",", c: [{t: "f", nr: true, c: ["a|b"]}, "c"]}]);
+});
+
+test("parse plugin base", ()=>{
+    const {c} = parse("p[a", plugins);
+    expect(c).toEqual([{t: "[", plug: "p", c: ["a"]}]);
+});
+
+test("parse plugin and |", ()=>{
+    const {c} = parse("p[a|b", plugins);
+    expect(c).toEqual([{t: "[", plug: "p", c: ["a|b"]}]);
+});
+
+test("parse retry 3!", ()=>{
+    const {c} = parse("[a|b]3!", plugins);
+    expect(c).toEqual([{t: "[", plug: "_", c: [{t: "f", retry: 3, c: ["a|b"]}]}]);
+});
+
+test("parse [,]", ()=>{
+    const {c} = parse("[a,b]", plugins);
+    expect(c).toEqual([{t: "[", plug: "_", c: [{t: ",", c: ['a', 'b']}]}]);
 });

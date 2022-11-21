@@ -76,6 +76,13 @@ export const parse = (t: string, plugins: string[]) => {
     };
 };   
 
+function parseAtom(t: string, plugins: string[]){
+    if(t.startsWith('^'))
+        return {t: "f", nr: true, c: _parse(t.substring(1), plugins).parsed};
+    else
+        return t;
+}
+
 function _parse(t: string, plugins: string[]){
     let remaining = t;
     let extra: string|null = null;
@@ -97,14 +104,11 @@ function _parse(t: string, plugins: string[]){
             if(t.includes(',')){
                 const splitted = t.split(',').filter(z=>z!==''); 
                 const c = splitted.map(x=>{
-                    if(x.startsWith('^'))
-                        return {t: "[", nr: true, c: _parse(x.substring(1), plugins).parsed};
-                    else
-                        return x;
+                    return parseAtom(x, plugins);
                 });
-                pending.push({t: "[", c});
+                pending.push({t: ",", c});
             }else{
-                pending.push(t);
+                pending.push(parseAtom(t, plugins));
             }
         }
         else if(token.token === "^["){
@@ -112,19 +116,9 @@ function _parse(t: string, plugins: string[]){
             pending.push({t: "[", plug: "nr", c: aux.parsed});
             remaining = aux.remaining;
         }
-        /*else if(token.token === '^'){
-            if(token.token.includes(',')){
-                const c = remaining.split(',').map(x => _parse(x, plugins).parsed);
-                c.forEach(x=>pending.push({t: "[", plug: "nr", c: x}));
-            }else{
-                const aux = _parse(remaining, plugins);
-                pending.push({t: "[", plug: "nr", c: aux.parsed});
-                remaining = aux.remaining;
-            }
-        }*/
         else if(token.token === '['){
             const aux = _parse(remaining, plugins);
-            pending.push({t: "[", plug: "s", c: aux.parsed});
+            pending.push({t: "[", plug: "_", c: aux.parsed});
             remaining = aux.remaining;
         }else if(token.token.startsWith("*")){
             const aux = _parse(remaining, plugins);
@@ -138,7 +132,7 @@ function _parse(t: string, plugins: string[]){
         }else if(/^\]\d+!/.test(token.token)){
             const match = token.token.match(/^(\](\d+)!)/);
             const n = match?match[2]:'1';
-            pending = [{t: "[", retry: parseInt(n), c: pending}];
+            pending = [{t: "f", retry: parseInt(n), c: pending}];
             break;
         }else if(token.token === "]!," || token.token === "]," || token.token === "]" || remaining === ""){   
             break;
