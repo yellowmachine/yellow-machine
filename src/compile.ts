@@ -30,7 +30,7 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
                     if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + m.plugin);
                     return plugin;
                 }else{
-                    return null;
+                    return s;
                 }
             }
         }
@@ -42,41 +42,28 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
             return m;
         };
 
-        function build(arr: ParsedArray|ParsedAtom): FD{
-            //const plugin = getPlugin(arr);            
-            const ret: (FD|Generator|AsyncGenerator)[] = [];
+        const buildArray = (arr: ParsedArray):FD => {
+            const plugin = getPlugin(arr);
 
-            let f: FD|Generator|AsyncGenerator;
-
-            if(arr.type === 'atom'){
-                f = buildAtom(arr.name);
-            }else{
-                if(arr.plugin !== 's'){
-                    const plugin = getPlugin(arr);
-                    const pipes = (arr.c.map(sub=>{
-                        if(sub.type === 'array'){
-                            return s([build(sub)]);
-                        }else{
-                            return s([buildAtom(sub.name)]);
-                        }
-                    }));
-                    if(plugin) f = plugin(pipes);
-                    else f = p()(pipes);
+            const pipes = (arr.c.map(sub=>{
+                if(sub.type === 'array'){
+                    let f = buildArray(sub);
+                    if(arr.retry)
+                        f = retry(arr.retry)([f]);
+                    if(arr.nr)
+                        f = nr()([f]);
+                    if(arr.repeat)
+                        f = repeat(arr.repeat)([f]);  
+                    return f;
                 }else{
-                    f = build(arr);
+                    return s([buildAtom(sub.name)]);
                 }
-            }
-            if(f) ret.push(f);
+            }));
+            return plugin(pipes);
+        };
 
-            /*
-            if(arr.retry)
-                f = retry(m.retry)([f]);
-            if(m.nr)
-                f = nr()([f]);
-            if(m.repeat)
-                f = repeat(m.repeat)([f]);  
-            */
-            return s(ret);
+        function build(arr: ParsedArray): FD{
+            return buildArray(arr);
         }
         return build(parsed);
     }

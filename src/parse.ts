@@ -137,7 +137,6 @@ export const parse = (t: string, plugins: string[]) => {
                     }
                 }
                 sub.c.push(arr);
-                //sub.c.push(parseArray());
             }else if(isRetryCatch(token)){
                 const m = matchRetryCatchNumber(token);
                 ret.retry = m; //Catch = m;
@@ -150,19 +149,9 @@ export const parse = (t: string, plugins: string[]) => {
                 name = matchName(token);
             }else if(token === ']'){
                 return ret;
-            }//else{
-            //    return ret;
-            //}
+            }
         }
-        //return {atom: false, c: ret.c};
     }
     return parseArray();
 };
 
-//const delimiters = ["^[", "?", "?,", "]!,", "],", "[", "]"]; 
-
-/*const isDelimiter = (t: string) => {
-    if(delimiters.includes(t)) return true;
-    return /^\]\d+!/.test(t);
-};
-*/
