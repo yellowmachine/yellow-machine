@@ -9,9 +9,9 @@ const matchBeginingArray = (r: string) => {
     return match ? match[0]:"[";
 };
 
-const isName = (r: string) => /^[\^]?[\w\d]+/.test(r);
+const isName = (r: string) => /^[\^]?\w[\w\d]*[?]?/.test(r);
 const matchName = (r: string) => {
-    const match = r.match(/^[\^]?[\w\d]+/);
+    const match = r.match(/^[\^]?\w[\w\d]*[?]?/);
     return match ? match[0]:"_";
 };
 
@@ -72,6 +72,7 @@ export type ParsedAtom = {
     name: string, 
     plugin?: string,
     retry?: number,
+    catched: boolean,
     nr?: boolean, 
     repeat?: number
 };
@@ -79,9 +80,9 @@ export type ParsedAtom = {
 export type ParsedArray = {
     type: "array",
     c: (ParsedAtom|ParsedArray)[],
-    //retryCatch?: number,
-    //retryThrow?: number,
-    retry?: number;
+    retryCatch?: number,
+    retryThrow?: number,
+    //retry?: number;
     nr?: number,
     repeat?: number,
     plugin: string
@@ -97,10 +98,15 @@ export const parse = (t: string, plugins: string[]) => {
     const g = nextToken(removeWhite(t));
 
     function parseAtom(t: string): ParsedAtom{
+        let catched = false;
+        if(t.endsWith('?')){
+            t = t.substring(0, t.length-1);
+            catched = true;
+        }
         if(t.startsWith('^'))
-            return {type: "atom", nr: true, name: t.substring(1)};
+            return {type: "atom", nr: true, name: t.substring(1), catched};
         else
-            return {type: "atom", name: t};
+            return {type: "atom", name: t, catched};
     }
 
     function parseArray(): ParsedArray{
@@ -140,11 +146,11 @@ export const parse = (t: string, plugins: string[]) => {
                 sub.c.push(arr);
             }else if(isRetryCatch(token)){
                 const m = matchRetryCatchNumber(token);
-                ret.retry = m; //Catch = m;
+                ret.retryCatch = m;
                 return ret;
             }else if(isRetryThrow(token)){
                 const m = matchRetryThrowNumber(token);
-                ret.retry = m; //Throw = m;
+                ret.retryThrow = m;
                 return ret;
             }else if(isName(token)){
                 name = matchName(token);

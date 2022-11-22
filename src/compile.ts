@@ -5,6 +5,7 @@ import {pipe as s} from './pipe';
 import p from './parallel';
 import nr from './nr';
 import retry from './retry';
+import _catch from './catch';
 import repeat from './repeat';
 
 const wrap = (m: FD|AsyncGenerator|Generator) => {
@@ -62,15 +63,19 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
             const pipes = (arr.c.map(sub=>{
                 if(sub.type === 'array'){
                     let f = buildArray(sub);
-                    if(arr.retry)
-                        f = retry(arr.retry)([f]);
+                    if(arr.retryCatch)
+                        f = _catch(arr.retryCatch)([f]);
+                    if(arr.retryThrow)
+                        f = retry(arr.retryThrow)([f]);
                     if(arr.nr)
                         f = nr()([f]);
                     if(arr.repeat)
                         f = repeat(arr.repeat)([f]);  
                     return f;
                 }else{
-                    return wrap(buildAtom(sub.name));
+                    const f = wrap(buildAtom(sub.name));
+                    if(sub.catched) _catch(1)([f]);
+                    return f;
                 }
             }));
             return plugin(pipes);

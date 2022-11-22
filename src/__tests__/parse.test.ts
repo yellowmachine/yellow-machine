@@ -39,6 +39,31 @@ test("next token a|b", ()=>{
     expect(tokens).toEqual(["a", "|", "b"]);
 });
 
+test("parse atom a?", ()=>{
+  const t = "a?";
+    const p = parse(t, plugins);
+    expect(p).toEqual(
+      {
+        plugin: 's',
+        type: 'array',
+        c: [
+          {
+            plugin: 's',
+            type: "array",
+            c: 
+              [
+                {
+                  type: "atom",
+                  name: "a",
+                  catched: true,
+                }
+              ]
+          }
+        ]
+      }
+    );
+});
+
 test("parse", ()=>{
     const t = "a|b";
     const p = parse(t, plugins);
@@ -50,8 +75,8 @@ test("parse", ()=>{
             {
                 plugin: 's',
                 c: [
-                {name: "a", type: "atom"},
-                {name: "b", type: "atom"}
+                {name: "a", type: "atom", catched: false},
+                {name: "b", type: "atom", catched: false}
             
                 ], 
                 type: "array"
@@ -77,7 +102,8 @@ test("parse a|w[b]e", ()=>{
                 "c": [
                   {
                     "type": "atom",
-                    "name": "a"
+                    "name": "a",
+                    catched: false
                   },
                   {
                     "type": "array",
@@ -89,7 +115,8 @@ test("parse a|w[b]e", ()=>{
                         "c": [
                           {
                             "type": "atom",
-                            "name": "b"
+                            "name": "b",
+                            catched: false
                           }
                         ]
                       }
@@ -97,7 +124,8 @@ test("parse a|w[b]e", ()=>{
                   },
                   {
                     "type": "atom",
-                    "name": "e"
+                    "name": "e",
+                    catched: false
                   }
                 ]
               }
