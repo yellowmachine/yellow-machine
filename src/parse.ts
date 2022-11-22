@@ -62,6 +62,8 @@ export function *nextToken(r: string){
         }else if(r.charAt(0) === ']'){
             r = go(r, ']');
             yield ']';
+        }else if(r.length > 0){
+            throw new Error("Syntax error at: " + r + ". No valid token found.");
         }
     }while(r.length > 0);
     return ";";
