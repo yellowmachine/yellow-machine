@@ -62,9 +62,7 @@ test("parse", ()=>{
     );
 });
 
-test.only("run a|b", async ()=>{
-    const path: {v: string} = {v: ""};
-    
+test("run a|b", async ()=>{
     const a = g('a');
     const b = g('b');
 
@@ -78,7 +76,6 @@ test.only("run a|b", async ()=>{
 });
 
 test("run a|b a!", async ()=>{
-    const path: {v: string} = {v: ""};
     
     const a = g('a!');
     const b = g('b');
@@ -88,14 +85,13 @@ test("run a|b a!", async ()=>{
         namespace: {a, b}
     });
 
-    await expect(cmp()).rejects.toThrow();
-    expect(path.v).toEqual('a!');
+    //let result;
+    await expect(async ()=>result = await cmp("")).rejects.toThrow("a!");
+    //expect(result).toEqual('a!');
 
 });
 
 test("run a,c|b a!", async ()=>{
-    const path: {v: string} = {v: ""};
-    
     const a = g('a!');
     const b = g('b');
     const c = g('c');
@@ -105,7 +101,7 @@ test("run a,c|b a!", async ()=>{
         namespace: {a, b, c}
     });
 
-    await expect(cmp()).rejects.toThrow();
-    expect(path.v).toEqual('a!,c,b');
+    await expect(cmp("")).rejects.toThrow();
+    //expect(path.v).toEqual('a!,c,b');
 
 });
