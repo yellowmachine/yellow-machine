@@ -6,14 +6,8 @@ DEBUG.v = false;
 const plugins = ['nr', 'p'];
 
 const consume = (t: string) => {
-    return [...nextToken(t)];
+    return [...nextToken(t)].map(x => x.value);
 };
-
-test("next token empty string", ()=>{
-    const t = "";
-    const tokens = consume(t);
-    expect(tokens).toEqual([]);
-});
 
 test("next token", ()=>{
     const t = "a,^b|c[e3";

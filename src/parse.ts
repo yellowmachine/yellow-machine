@@ -1,72 +1,89 @@
-type B = (string|B|P)[]|undefined;
-type P = {p?: B, w?: {files: string[], pipe: B}};
-
-const go = (t: string, token: string) => t.substring(token.length);
-
-const isBeginingArray = (r: string) => /^[\^]?\[/.test(r);
-const matchBeginingArray = (r: string) => {
-    const match = r.match(/^[\^]?\[/);
-    return match ? match[0]:"[";
+type Token = {
+    test: RegExp,
+    opts?: RegExp[]
 };
 
-const isName = (r: string) => /^[\^]?\w[\w\d]*[?]?/.test(r);
-const matchName = (r: string) => {
-    const match = r.match(/^[\^]?\w[\w\d]*[?]?/);
-    return match ? match[0]:"_";
-};
+type TokenValue = {
+    name: string,
+    value: string,
+    opts: (string|null)[]
+}
 
-const isRetryThrow = (r: string) => /^\]\d*!/.test(r);
-const matchRetryThrow = (r: string) => {
-    const match = r.match(/^(\]\d*!)/);
-    return match ? match[1]:"]1!";
-};
 
-const isRetryCatch = (r: string) => /^\]\d*\?/.test(r);
-const matchRetryCatch = (r: string) => {
-    const match = r.match(/^(\]\d*\?)/);
-    return match ? match[1]:"]1?";
-};
-const matchRetryCatchNumber = (r: string) => {
-    const match = r.match(/^\]\(d*)\?/);
-    return match ? parseInt(match[1]): 1;
-};
-const matchRetryThrowNumber = (r: string) => {
-    const match = r.match(/^\]\(d*)!/);
-    return match ? parseInt(match[1]): 1;
-};
+const COMMA = 'COMMA';
+const PIPE = 'PIPE';
+const THROW = "THROW";
+const CATCH = "CATCH";
+const BEGIN_ARRAY = "BEGIN_ARRAY";
+const END_ARRAY = "END_ARRAY";
+const NAME = "NAME";
 
 export function *nextToken(r: string){
-    do{
-        if(r.charAt(0) === ','){
-            r = go(r, ',');
-            yield ',';
-        }else if(r.charAt(0) === '|'){
-            r = go(r, '|');
-            yield '|';
-        }else if(isRetryThrow(r)){
-            const token = matchRetryThrow(r);
-            r = go(r, token);
-            yield token;
-        }else if(isRetryCatch(r)){
-            const token = matchRetryCatch(r);
-            r = go(r, token);
-            yield token;
-        }else if(isBeginingArray(r)){
-            const token = matchBeginingArray(r);
-            r = go(r, token);
-            yield token;
-        }else if(isName(r)){
-            const token = matchName(r);
-            r = go(r, token);
-            yield token;
-        }else if(r.charAt(0) === ']'){
-            r = go(r, ']');
-            yield ']';
-        }else if(r.length > 0){
-            throw new Error("Syntax error at: " + r + ". No valid token found.");
+
+    const tokens: Record<string, Token> = {
+        COMMA: {
+            test: RegExp("^,")
+        },
+        PIPE: {
+            test: RegExp("^\\|")
+        },
+        THROW: {
+            test: RegExp("^(]\\d*!)"),
+            opts: [RegExp("^](\\d*)!")]
+        },
+        CATCH: {
+            test: RegExp("(]\\d*\\?)"),
+            opts: [RegExp("](\\d*)\\?")]
+        },
+        BEGIN_ARRAY: {
+            test: RegExp("^[\\^]?\\[")
+        },
+        NAME: {
+            test: RegExp("^(\\^?[a-zA-Z][a-zA-Z\\d]*\\??)")
+        },
+        END_ARRAY: {
+            test: RegExp("^]")
         }
+    };
+
+    do{
+        const token: TokenValue =  {
+            name: "",
+            value: "",
+            opts: []
+        };
+        
+        let found = false;
+
+        for(const k of Object.keys(tokens)){
+            token.name = k;
+            const tk = tokens[k]; 
+            if(tk.test.test(r)){
+                let match = r.match(tk.test);
+                if(match) token.value = match[0];
+                if(tk.opts){
+                    for(const sub of tk.opts){
+                        match = r.match(sub);
+                        if(match) token.opts.push(match[1]);
+                        else token.opts.push(null);
+                    }
+                }
+                found = true;
+                break;
+            }
+        }
+        if(found){
+            r = r.substring(token.value.length);
+            yield token;
+        }
+        else throw new Error("Syntax error");
+
     }while(r.length > 0);
-    return ";";
+    return {
+        name: ";",
+        value: ";",
+        opts: []
+    };
 }
 
 export type ParsedAtom = {
@@ -84,7 +101,6 @@ export type ParsedArray = {
     c: (ParsedAtom|ParsedArray)[],
     retryCatch?: number,
     retryThrow?: number,
-    //retry?: number;
     nr?: number,
     repeat?: number,
     plugin: string
@@ -119,7 +135,7 @@ export const parse = (t: string, plugins: string[]) => {
 
         for(;;){
             const token = g.next().value; 
-            if(token === ";" || token === ']'){
+            if(token.name === ";" || token.name === END_ARRAY){
                 sub.c.push(parseAtom(name));
                 ret.c.push(sub);
                 if(ret.c.length > 1){
@@ -128,13 +144,13 @@ export const parse = (t: string, plugins: string[]) => {
                     ret.plugin = 's';
                 }        
                 return ret;
-            }else if(token === ','){
+            }else if(token.name === COMMA){
                 sub.c.push(parseAtom(name)); 
                 ret.c.push(sub);
                 sub = {type: "array", plugin: 's', c: []};
-            }else if(token === '|'){
+            }else if(token.name === PIPE){
                 sub.c.push(parseAtom(name));
-            }else if(isBeginingArray(token)){
+            }else if(token.name === BEGIN_ARRAY){
                 const arr = parseArray();
                 if(plugins.includes(name)){
                     arr.plugin = name;
@@ -146,16 +162,16 @@ export const parse = (t: string, plugins: string[]) => {
                     }
                 }
                 sub.c.push(arr);
-            }else if(isRetryCatch(token)){
-                const m = matchRetryCatchNumber(token);
+            }else if(token.name === CATCH){
+                const m = parseInt(token.opts[0] || '1');
                 ret.retryCatch = m;
                 return ret;
-            }else if(isRetryThrow(token)){
-                const m = matchRetryThrowNumber(token);
+            }else if(token.name === THROW){
+                const m = parseInt(token.opts[0] || '1');
                 ret.retryThrow = m;
                 return ret;
-            }else if(isName(token)){
-                name = matchName(token);
+            }else if(token.name === NAME){
+                name = token.value;
             }
         }
     }
