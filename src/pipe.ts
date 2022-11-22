@@ -26,40 +26,31 @@ export default (dev: boolean, path: {v: string}) => {
         if(data.ctx) close = data.ctx.close;
 
         try{
-            for(const t of tasks){
-                try{
-                    const m = t;
-                    if(typeof m === 'function'){
-                        data.data = await m(data);
-                    }else{
-                        const response = await m.next(data);
-                        data.data = response.value;
-                        if(dev) log(path, response.value); //path.v = path.v + "," + response.value;
-                        if(response.done && close) close(false, response.value);                                                            
-                    }
-                }catch(err){
-                    if(err instanceof Error && !err.message.startsWith("?")) throw err;
-                    data.data = null;
-                    continue;
+            for(const m of tasks){
+                if(typeof m === 'function'){
+                    data.data = await m(data);
+                }else{
+                    const response = await m.next(data);
+                    data.data = response.value;
+                    if(dev) log(path, response.value);
+                    if(response.done && close) close(false, response.value);                                                            
                 }
             }
             return data.data;
         }catch(err){
+            //data.data = null;
             if(DEBUG.v)
                 // eslint-disable-next-line no-console
                 console.log(err);
             if(close) close(true);
-            //if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
             if(dev && err instanceof Error && !err.message.startsWith("no log")){
                 const msg = err instanceof Error? err.message: "unknown error";
                 log(path, msg);
             } 
-            //if(tasks.at(-1) === '?' || question) throw new Error('?');
             if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!")))
                 throw new Error('no log:' + err.message);
             else
                 throw err;
-            //return null;
         }
     };
 
