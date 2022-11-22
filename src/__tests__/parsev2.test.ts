@@ -86,7 +86,7 @@ test("run a|b a!", async ()=>{
     });
 
     //let result;
-    await expect(async ()=>result = await cmp("")).rejects.toThrow("a!");
+    await expect(cmp("")).rejects.toThrow("a!");
     //expect(result).toEqual('a!');
 
 });
