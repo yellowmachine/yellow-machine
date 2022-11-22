@@ -3,9 +3,9 @@ import { Data, FD } from '.';
 export default (mode: "all"|"race"|"allSettled" = "all", 
                 map: ((data: Data)=>any)|null = null) => (pipes: FD[]) => async (data: Data) => {
     
-    console.log('parallel', mode, pipes);
     const promises: Promise<any>[] = [];   
 
+    console.log('parallel');
     for(const t of pipes){
         if(map) data = {ctx: data.ctx, data: map(data.data)};
         promises.push(t(data));

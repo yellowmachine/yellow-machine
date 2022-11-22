@@ -19,6 +19,7 @@ const log = (path: {v: string}, msg: string) => {
 export default (dev: boolean, path: {v: string}) => {
     
     const pipe = (tasks: FD[]) => async (data: Data) => {
+        console.log("****************************** comienza pipe");
         
         if(data.data === null) return null;
         
@@ -28,15 +29,11 @@ export default (dev: boolean, path: {v: string}) => {
         try{
             for(const m of tasks){
                 data.data = await m(data);
-                if(dev) log(path, data.data);
-                if(data.data === null && close) close(false);
-                /*if(typeof m === 'function'){
-                    data.data = await m(data);
-                }else{
-                    const response = await m.next(data);
-                    data.data = response.value;
-                    if(dev) log(path, response.value);
-                    if(response.done && close) close(false, response.value);                                                            
+                console.log('data.data', data.data);
+                /*
+                if(data.data === undefined){
+                    if(close) close(false);
+                    return null;
                 }*/
             }
             return data.data;

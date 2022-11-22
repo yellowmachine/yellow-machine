@@ -7,19 +7,21 @@ import nr from './nr';
 import retry from './retry';
 import repeat from './repeat';
 
-const wrap = (m: FD|AsyncGenerator|Generator) => async (data: Data) => {
+const wrap = (m: FD|AsyncGenerator|Generator) => {
     if(typeof m === 'function'){
-        const response = await m(data);
-        data.data = response;
-        return response;
+        return async (data: Data) => {
+            const response = await m(data);
+            data.data = response;
+            return response;
+        };
     }else{
-        const response = await m.next(data);
-        data.data = response.value;
-        if(response.done) return null;
-        return response.value;
-        //if(dev) log(path, response.value);
-        //if(response.done && close) close(false, response.value);                                                            
+        return async (data: Data) => {
+            const response = await m.next(data);
+            data.data = response.value;
+            return response.value;
+        };                                                      
     }
+
 };
 
 export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean, path: {v: string}) => {
@@ -79,7 +81,7 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
         function build(arr: ParsedArray): FD{
             return buildArray(arr);
         }
-        return build(parsed);
+        return s([build(parsed)]);
     }
     return _compile(rootParsed);
 };

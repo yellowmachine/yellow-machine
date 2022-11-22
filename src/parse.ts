@@ -105,7 +105,7 @@ export const parse = (t: string, plugins: string[]) => {
 
     function parseArray(): ParsedArray{
         const ret: ParsedArray = {type: "array", plugin: 'p', c: []};
-        let sub: ParsedArray = {type: "array", plugin: 'p', c: []};
+        let sub: ParsedArray = {type: "array", plugin: 's', c: []};
         let name = "";
         
         for(;;){
@@ -122,7 +122,7 @@ export const parse = (t: string, plugins: string[]) => {
             }else if(token === ','){
                 sub.c.push(parseAtom(name)); 
                 ret.c.push(sub);
-                sub = {type: "array", plugin: 'p', c: []};
+                sub = {type: "array", plugin: 's', c: []};
             }else if(token === '|'){
                 sub.c.push(parseAtom(name));
             }else if(isBeginingArray(token)){

@@ -42,19 +42,27 @@ test("next token a|b", ()=>{
 test("parse", ()=>{
     const t = "a|b";
     const p = parse(t, plugins);
-    expect(p).toEqual({c: 
+    expect(p).toEqual(
+    {
+        plugin: 's',
+        c: 
         [
-            {c: [
+            {
+                plugin: 's',
+                c: [
                 {name: "a", type: "atom"},
                 {name: "b", type: "atom"}
             
                 ], 
-            type: "array"}
-        ], type: "array"
-    });
+                type: "array"
+            }
+        ], 
+        type: "array"
+    }
+    );
 });
 
-test("run a|b", async ()=>{
+test.only("run a|b", async ()=>{
     const path: {v: string} = {v: ""};
     
     const a = g('a');
@@ -66,9 +74,14 @@ test("run a|b", async ()=>{
         dev: true,
         path
     });
-    const result = await cmp();
-    expect(path.v).toEqual('a,b');
-    expect(result).toBe('b');
+    console.log('hacemos begin next');
+    a.next("");
+    b.next("");
+    //a.next("");
+    //b.next("");
+    console.log('after');
+    const result = await cmp("");
+    expect(result).toBe('a,b');
 });
 
 test("run a|b a!", async ()=>{
@@ -89,7 +102,7 @@ test("run a|b a!", async ()=>{
 
 });
 
-test.only("run a,c|b a!", async ()=>{
+test("run a,c|b a!", async ()=>{
     const path: {v: string} = {v: ""};
     
     const a = g('a!');
@@ -104,6 +117,6 @@ test.only("run a,c|b a!", async ()=>{
     });
 
     await expect(cmp()).rejects.toThrow();
-    expect(path.v).toEqual('a!,b,c');
+    expect(path.v).toEqual('a!,c,b');
 
 });

@@ -21,12 +21,23 @@ export type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>an
 type Close = (err?: boolean, data?: any)=>boolean;
 type Ctx = {close: Close, promise?: Promise<any>};
 
-export function *g(t: string){
-    const arr = t.split(',');
+export function *g(t: string): Generator<string, string|null, Data|string>{
+    const arr = ['', ...t.split(',')];
+    let v = '';
     for(const i of arr){
         if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
-        else yield i;
+        else{
+            if(v === '') v = i;
+            else v = v + ',' + i;
+            
+            const value = yield v;
+            if(typeof value === 'string')
+                v = value;
+            else
+                v = value.data;
+        }
     }
+    return null;
 }
 
 export function i(data: any){
