@@ -5,14 +5,18 @@ export default (mode: "all"|"race"|"allSettled" = "all",
     
     const promises: Promise<any>[] = [];   
 
-    console.log('parallel');
     for(const t of pipes){
         if(map) data = {ctx: data.ctx, data: map(data.data)};
         promises.push(t(data));
     }
-    if(mode === "all") return await Promise.all(promises);
-    //else if (mode === "any") return await Promise.any(promises);
-    else if (mode === "race") return await Promise.race(promises);
-    else if (mode === "allSettled") return await Promise.allSettled(promises);
+    try{
+        if(mode === "all") return await Promise.all(promises);
+        //else if (mode === "any") return await Promise.any(promises);
+        else if (mode === "race") return await Promise.race(promises);
+        else if (mode === "allSettled") return await Promise.allSettled(promises);
+    }catch(err){
+        const msg = err instanceof Error ? err.message: "";
+        throw new Error(data.data + msg);
+    }
     return false;
 };

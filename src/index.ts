@@ -34,7 +34,7 @@ export function *_g(t: string): Generator<string, string|null, Data|string>{
         if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
         else{
             if(v === '') v = i;
-            else v = v + ',' + i;
+            else v = v + i;
             
             const value = yield v;
             if(typeof value === 'string')
