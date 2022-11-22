@@ -1,63 +1,70 @@
-type Token = {
+type TokenExp = {
     test: RegExp,
     opts?: RegExp[]
 };
 
-type TokenValue = {
+type Token = {
+    id: number,
     name: string,
     value: string,
     opts: (string|null)[]
 }
 
-
-const COMMA = 'COMMA';
-const PIPE = 'PIPE';
-const THROW = "THROW";
-const CATCH = "CATCH";
-const BEGIN_ARRAY = "BEGIN_ARRAY";
-const END_ARRAY = "END_ARRAY";
-const NAME = "NAME";
+enum TOKEN {
+    COMMA,
+    PIPE,
+    THROW,
+    CATCH,
+    BEGIN_ARRAY,
+    END_ARRAY,
+    NAME,
+    END
+  }
 
 export function *nextToken(r: string){
 
-    const tokens: Record<string, Token> = {
-        COMMA: {
+    const tokens: {[key in keyof typeof TOKEN]?: TokenExp} = {
+        [TOKEN.COMMA]: {
             test: RegExp("^,")
         },
-        PIPE: {
+        [TOKEN.PIPE]: {
             test: RegExp("^\\|")
         },
-        THROW: {
+        [TOKEN.THROW]: {
             test: RegExp("^(]\\d*!)"),
             opts: [RegExp("^](\\d*)!")]
         },
-        CATCH: {
+        [TOKEN.CATCH]: {
             test: RegExp("(]\\d*\\?)"),
             opts: [RegExp("](\\d*)\\?")]
         },
-        BEGIN_ARRAY: {
+        [TOKEN.BEGIN_ARRAY]: {
             test: RegExp("^[\\^]?\\[")
         },
-        NAME: {
+        [TOKEN.NAME]: {
             test: RegExp("^(\\^?[a-zA-Z][a-zA-Z\\d]*\\??)")
         },
-        END_ARRAY: {
+        [TOKEN.END_ARRAY]: {
             test: RegExp("^]")
         }
     };
 
     do{
-        const token: TokenValue =  {
-            name: "",
-            value: "",
+        const token: Token =  {
+            id: TOKEN.END,
+            name: TOKEN[TOKEN.END],
+            value: ";",
             opts: []
         };
         
         let found = false;
 
-        for(const k of Object.keys(tokens)){
-            token.name = k;
-            const tk = tokens[k]; 
+        for(const k in tokens){
+            token.id = parseInt(k);
+            token.name = TOKEN[k];
+            const x = k as unknown as TOKEN;
+            const tk = tokens[x]; 
+            if(!tk) throw new Error("no vale");
             if(tk.test.test(r)){
                 let match = r.match(tk.test);
                 if(match) token.value = match[0];
@@ -80,7 +87,8 @@ export function *nextToken(r: string){
 
     }while(r.length > 0);
     return {
-        name: ";",
+        id: TOKEN.END,
+        name: TOKEN[TOKEN.END],
         value: ";",
         opts: []
     };
@@ -135,7 +143,7 @@ export const parse = (t: string, plugins: string[]) => {
 
         for(;;){
             const token = g.next().value; 
-            if(token.name === ";" || token.name === END_ARRAY){
+            if(token.id === TOKEN.END || token.id === TOKEN.END_ARRAY){
                 sub.c.push(parseAtom(name));
                 ret.c.push(sub);
                 if(ret.c.length > 1){
@@ -144,13 +152,13 @@ export const parse = (t: string, plugins: string[]) => {
                     ret.plugin = 's';
                 }        
                 return ret;
-            }else if(token.name === COMMA){
+            }else if(token.id === TOKEN.COMMA){
                 sub.c.push(parseAtom(name)); 
                 ret.c.push(sub);
                 sub = {type: "array", plugin: 's', c: []};
-            }else if(token.name === PIPE){
+            }else if(token.id === TOKEN.PIPE){
                 sub.c.push(parseAtom(name));
-            }else if(token.name === BEGIN_ARRAY){
+            }else if(token.id === TOKEN.BEGIN_ARRAY){
                 const arr = parseArray();
                 if(plugins.includes(name)){
                     arr.plugin = name;
@@ -162,16 +170,18 @@ export const parse = (t: string, plugins: string[]) => {
                     }
                 }
                 sub.c.push(arr);
-            }else if(token.name === CATCH){
+            }else if(token.id === TOKEN.CATCH){
                 const m = parseInt(token.opts[0] || '1');
                 ret.retryCatch = m;
                 return ret;
-            }else if(token.name === THROW){
+            }else if(token.id === TOKEN.THROW){
                 const m = parseInt(token.opts[0] || '1');
                 ret.retryThrow = m;
                 return ret;
-            }else if(token.name === NAME){
+            }else if(token.id === TOKEN.NAME){
                 name = token.value;
+            }else{
+                throw new Error("Parse error:" + JSON.stringify(token));
             }
         }
     }
