@@ -18,16 +18,6 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
     
         const s = genPipe(dev, path);
 
-        function builtinPlugins(m: ParsedArray, f: FD){
-            if(m.retry)
-                f = retry(m.retry)([f]);
-            if(m.nr)
-                f = nr()([f]);
-            if(m.repeat)
-                f = repeat(m.repeat)([f]);
-            return f;
-        }
-
         function getPlugin(m: ParsedArray|ParsedAtom){
             if(m.plugin === 's')
                 return s;
@@ -52,28 +42,40 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
             return m;
         };
 
-        function build(arr: ParsedArray): FD{
-            let plugin;            
+        function build(arr: ParsedArray|ParsedAtom): FD{
+            //const plugin = getPlugin(arr);            
             const ret: (FD|Generator|AsyncGenerator)[] = [];
 
-            for(const m of arr.c){
-                let f: FD|Generator|AsyncGenerator;
+            let f: FD|Generator|AsyncGenerator;
 
-                if(m.type === 'atom'){
-                    f = buildAtom(m.name);
-                }else if(Array.isArray(m)){
-                    plugin = getPlugin(arr);
-                    if(plugin) f = plugin(m);
-                    else f = s(m);
-                    f = builtinPlugins(m, f);
+            if(arr.type === 'atom'){
+                f = buildAtom(arr.name);
+            }else{
+                if(arr.plugin !== 's'){
+                    const plugin = getPlugin(arr);
+                    const pipes = (arr.c.map(sub=>{
+                        if(sub.type === 'array'){
+                            return s([build(sub)]);
+                        }else{
+                            return s([buildAtom(sub.name)]);
+                        }
+                    }));
+                    if(plugin) f = plugin(pipes);
+                    else f = p()(pipes);
                 }else{
-                    f = build(m);
-                    plugin = getPlugin(m);
-                    if(plugin) plugin([f]);
-                    f = builtinPlugins(m, f);
+                    f = build(arr);
                 }
-                ret.push(f);
             }
+            if(f) ret.push(f);
+
+            /*
+            if(arr.retry)
+                f = retry(m.retry)([f]);
+            if(m.nr)
+                f = nr()([f]);
+            if(m.repeat)
+                f = repeat(m.repeat)([f]);  
+            */
             return s(ret);
         }
         return build(parsed);
