@@ -1,5 +1,5 @@
 import _compile from './compile';
-import pipe from './pipe';
+import {pipe} from './pipe';
 export {default as w, SHOW_QUIT_MESSAGE} from './watch';
 export {default as p} from './parallel';
 export {default as sw} from './switch';
@@ -54,21 +54,17 @@ export function i(data: any){
 
 type Options = {
     namespace: Namespace,
-    plugins?: Plugin,
-    dev?: boolean,
-    path?: {v: string}
+    plugins?: Plugin
 }
 
 export const compile = (raw: string, options?: Options) => {
     const opts = {
-        dev: false,
-        path: {v: ""},
         plugins: {},
         namespace: {},
         ...options
     };
     
-    const compiled = _compile(raw, opts.namespace, opts.plugins, opts.dev, opts.path);
+    const compiled = _compile(raw, opts.namespace, opts.plugins);
     return (data?: any) => compiled(i(data));
 };
 

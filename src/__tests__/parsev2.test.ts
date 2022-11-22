@@ -70,9 +70,7 @@ test.only("run a|b", async ()=>{
 
     const t = "a|b";
     const cmp = compile(t, {
-        namespace: {a, b},
-        dev: true,
-        path
+        namespace: {a, b}
     });
 
     const result = await cmp("");
@@ -87,9 +85,7 @@ test("run a|b a!", async ()=>{
 
     const t = "a|b";
     const cmp = compile(t, {
-        namespace: {a, b},
-        dev: true,
-        path
+        namespace: {a, b}
     });
 
     await expect(cmp()).rejects.toThrow();
@@ -106,9 +102,7 @@ test("run a,c|b a!", async ()=>{
 
     const t = "a,c|b";
     const cmp = compile(t, {
-        namespace: {a, b, c},
-        dev: true,
-        path
+        namespace: {a, b, c}
     });
 
     await expect(cmp()).rejects.toThrow();

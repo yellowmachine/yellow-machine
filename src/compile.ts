@@ -1,6 +1,6 @@
 import { type Namespace, type Plugin, type FD, type Data } from '.';
 import { parse, ParsedArray, ParsedAtom } from './parse';
-import genPipe from './pipe';
+import {pipe as s} from './pipe';
 
 import p from './parallel';
 import nr from './nr';
@@ -24,15 +24,13 @@ const wrap = (m: FD|AsyncGenerator|Generator) => {
 
 };
 
-export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean, path: {v: string}) => {
+export default (raw: string, namespace: Namespace, plugins: Plugin) => {
     
     plugins = {...plugins, nr: nr(), p: p()};
 
     const rootParsed = parse(raw, Object.keys(plugins));
     
     function _compile(parsed: ParsedArray){
-    
-        const s = genPipe(dev, path);
 
         function getPlugin(m: ParsedArray|ParsedAtom){
             if(m.plugin === 's')
