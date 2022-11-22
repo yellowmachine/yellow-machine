@@ -1,5 +1,4 @@
 import _compile from './compile';
-import {pipe} from './pipe';
 export {default as w, SHOW_QUIT_MESSAGE} from './watch';
 export {default as p} from './parallel';
 export {default as sw} from './switch';
@@ -64,7 +63,7 @@ export const compile = (raw: string, options?: Options) => {
         ...options
     };
     
-    const compiled = _compile(raw, opts.namespace, opts.plugins);
+    const compiled = _compile(raw, opts);
     return (data?: any) => compiled(i(data));
 };
 

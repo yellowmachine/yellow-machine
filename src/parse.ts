@@ -104,20 +104,21 @@ export const parse = (t: string, plugins: string[]) => {
     }
 
     function parseArray(): ParsedArray{
+
         const ret: ParsedArray = {type: "array", plugin: 'p', c: []};
         let sub: ParsedArray = {type: "array", plugin: 's', c: []};
         let name = "";
-        
+
         for(;;){
             const token = g.next().value; 
-            if(token === ";"){
+            if(token === ";" || token === ']'){
                 sub.c.push(parseAtom(name));
                 ret.c.push(sub);
                 if(ret.c.length > 1){
                     ret.plugin = 'p';
                 }else{
                     ret.plugin = 's';
-                } 
+                }        
                 return ret;
             }else if(token === ','){
                 sub.c.push(parseAtom(name)); 
@@ -147,8 +148,6 @@ export const parse = (t: string, plugins: string[]) => {
                 return ret;
             }else if(isName(token)){
                 name = matchName(token);
-            }else if(token === ']'){
-                return ret;
             }
         }
     }

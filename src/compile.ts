@@ -24,9 +24,9 @@ const wrap = (m: FD|AsyncGenerator|Generator) => {
 
 };
 
-export default (raw: string, namespace: Namespace, plugins: Plugin) => {
+export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
     
-    plugins = {...plugins, nr: nr(), p: p()};
+    const plugins = {...opts.plugins, nr: nr(), p: p()};
 
     const rootParsed = parse(raw, Object.keys(plugins));
     
@@ -40,7 +40,7 @@ export default (raw: string, namespace: Namespace, plugins: Plugin) => {
             }
             else{
                 if(m.plugin){
-                    const plugin = plugins[m.plugin];
+                    const plugin = opts.plugins[m.plugin];
                     if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + m.plugin);
                     return plugin;
                 }else{
@@ -50,7 +50,7 @@ export default (raw: string, namespace: Namespace, plugins: Plugin) => {
         }
 
         const buildAtom = (a: string) => {
-            const m = namespace[a];
+            const m = opts.namespace[a];
             if(m === undefined) 
                 throw new Error("Key Error: namespace error: " + m + ",(it could be a missing plugin)");
             return m;

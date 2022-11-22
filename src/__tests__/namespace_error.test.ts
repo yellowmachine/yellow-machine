@@ -1,3 +1,4 @@
+/*
 import { DEBUG, dev, g, i } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
 
@@ -15,3 +16,4 @@ test("plugin w not found", async ()=>{
         await run("a|w[b")).rejects.toThrow('Key Error: namespace error: w'
     );
 });
+*/

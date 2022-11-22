@@ -37,7 +37,7 @@ export default (files: string[]) => (pipes: FD[]) => async (data: Data) => {
         });
 
         let exited = false;
-        function close(err = false, data: any = null){
+        function close(err = false){
             if(!exited){
                 quit();
                 exited = true;
@@ -46,7 +46,7 @@ export default (files: string[]) => (pipes: FD[]) => async (data: Data) => {
                 if(err){
                     if(reject) reject();
                 }
-                else if(resolve) resolve(data);
+                else if(resolve) resolve(data.data);
                 if(watcher)
                     watcher.close();
             }
@@ -62,7 +62,7 @@ export default (files: string[]) => (pipes: FD[]) => async (data: Data) => {
         async function run(){
             try{
                 data = {data: data.data, ctx: {close}};
-                await pipes[0](data);         
+                await pipes[0](data);
                 if(SHOW_QUIT_MESSAGE.v)
                     // eslint-disable-next-line no-console
                     console.log("Press " + q + " to quit!");
