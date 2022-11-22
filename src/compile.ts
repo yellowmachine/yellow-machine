@@ -52,7 +52,7 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
         const buildAtom = (a: string) => {
             const m = opts.namespace[a];
             if(m === undefined) 
-                throw new Error("Key Error: namespace error: " + m + ",(it could be a missing plugin)");
+                throw new Error("Key Error: namespace error: " + a + ",(it could be a missing plugin)");
             return m;
         };
 

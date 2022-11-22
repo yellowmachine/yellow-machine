@@ -13,9 +13,7 @@ export const pipe =  (tasks: FD[]) => async (data: Data) => {
 
     try{
         for(const m of tasks){
-            console.log('before', data);
             data.data = await m(data);
-            console.log('after', data.data);
         }
         return data.data;
     }catch(err){

@@ -1,19 +1,18 @@
-/*
-import { DEBUG, dev, g, i } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
+import { DEBUG, g, compile } from '../index';
 
-DEBUG.v = true;
-wDebug.v = true;
+DEBUG.v = false;
+wDebug.v = false;
 
-test("plugin w not found", async ()=>{
-    const path: string[] = [];
-    const a = g(["a"]);
-    const b = g(["b", "throws"]);
-
-    const run = dev(path)({a, b}, {});
+test("namespace error", async ()=> {
     
-    await expect(async () =>
-        await run("a|w[b")).rejects.toThrow('Key Error: namespace error: w'
-    );
+    const a = g('a');
+    const e = g('e');
+
+    const t = "a|w[e]";
+    const cmp = () => compile(t, {
+        namespace: {a, e}
+    });
+
+    expect(cmp).toThrow(/^Key Error: namespace error: w.*/);
 });
-*/
