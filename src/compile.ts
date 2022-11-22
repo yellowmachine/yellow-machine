@@ -1,4 +1,4 @@
-import { type Namespace, type Plugin, type FD } from '.';
+import { type Namespace, type Plugin, type FD, type Data } from '.';
 import { parse, ParsedArray, ParsedAtom } from './parse';
 import genPipe from './pipe';
 
@@ -7,6 +7,20 @@ import nr from './nr';
 import retry from './retry';
 import repeat from './repeat';
 
+const wrap = (m: FD|AsyncGenerator|Generator) => async (data: Data) => {
+    if(typeof m === 'function'){
+        const response = await m(data);
+        data.data = response;
+        return response;
+    }else{
+        const response = await m.next(data);
+        data.data = response.value;
+        if(response.done) return null;
+        return response.value;
+        //if(dev) log(path, response.value);
+        //if(response.done && close) close(false, response.value);                                                            
+    }
+};
 
 export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean, path: {v: string}) => {
     
@@ -56,7 +70,7 @@ export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean
                         f = repeat(arr.repeat)([f]);  
                     return f;
                 }else{
-                    return s([buildAtom(sub.name)]);
+                    return wrap(buildAtom(sub.name));
                 }
             }));
             return plugin(pipes);
