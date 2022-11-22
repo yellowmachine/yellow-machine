@@ -74,12 +74,7 @@ test.only("run a|b", async ()=>{
         dev: true,
         path
     });
-    console.log('hacemos begin next');
-    a.next("");
-    b.next("");
-    //a.next("");
-    //b.next("");
-    console.log('after');
+
     const result = await cmp("");
     expect(result).toBe('a,b');
 });

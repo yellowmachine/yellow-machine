@@ -21,7 +21,13 @@ export type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>an
 type Close = (err?: boolean, data?: any)=>boolean;
 type Ctx = {close: Close, promise?: Promise<any>};
 
-export function *g(t: string): Generator<string, string|null, Data|string>{
+export function g(t: string){
+    const x = _g(t);
+    x.next("");
+    return x;
+}
+
+export function *_g(t: string): Generator<string, string|null, Data|string>{
     const arr = ['', ...t.split(',')];
     let v = '';
     for(const i of arr){
