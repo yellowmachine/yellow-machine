@@ -27,27 +27,22 @@ const wrap = (m: FD|AsyncGenerator|Generator) => {
 
 export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
     
-    const plugins = {...opts.plugins, nr: nr(), p: p()};
+    //const plugins = {...opts.plugins, nr: nr(), p: p()};
 
     const rootParsed = parse(raw);
     
     function _compile(parsed: ParsedArray){
 
-        function getPlugin(m: ParsedArray|ParsedAtom){
-            if(m.plugin === 's')
-                return s;
-            else if(m.plugin === 'p'){
-                return p();
-            }
-            else{
-                if(m.plugin){
-                    const plugin = opts.plugins[m.plugin];
-                    if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + m.plugin);
-                    return plugin;
-                }else{
-                    return s;
+        function composePlugins(plugins: string[]){
+            if(plugins.length === 0) throw new Error("Internal error: no plugins.");
+            return (f: FD[]) => {
+                for(const name of plugins){
+                    const plugin = opts.plugins[name];
+                    if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
+                        f = [plugin(f)];     
                 }
-            }
+                return f[0];
+            } ;
         }
 
         const buildAtom = (a: string) => {
@@ -58,7 +53,7 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
         };
 
         const buildArray = (arr: ParsedArray):FD => {
-            const plugin = getPlugin(arr);
+            const composed = composePlugins(arr.plugins);
 
             const pipes = (arr.c.map(sub=>{
                 if(sub.type === 'array'){
@@ -70,15 +65,17 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
                     if(arr.nr)
                         f = nr()([f]);
                     if(arr.repeat)
-                        f = repeat(arr.repeat)([f]);  
+                        f = repeat(arr.repeat)([f]);
                     return f;
                 }else{
                     const f = wrap(buildAtom(sub.name));
                     if(sub.catched) _catch(1)([f]);
-                    return f;
+                    const composed = composePlugins(sub.plugins);
+                    return composed([f]);
                 }
             }));
-            return plugin(pipes);
+
+            return composed(pipes);
         };
 
         function build(arr: ParsedArray): FD{
