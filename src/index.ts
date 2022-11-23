@@ -1,5 +1,4 @@
 import _compile from './compile';
-import pipe from './pipe';
 export {default as w, SHOW_QUIT_MESSAGE} from './watch';
 export {default as p} from './parallel';
 export {default as sw} from './switch';
@@ -10,22 +9,43 @@ export const DEBUG = {v: false, w: false};
 
 export type Data = {data: any, ctx: Ctx};
 export type F = ((arg0: Data) => any);
-
+export type Callable = Generator|AsyncGenerator|FD|CallableArray;
+export type CallableArray = Callable[];
 export type FD = (data: Data)=>Promise<any>;
 export type SETUP = {single: FD, multiple: FD[]};
-export type Plugin = {[key: string]: (arg: SETUP) => FD};
+export type PluginBase = (pipes: FD[]) => FD;
+//export type PluginBase = (arg: SETUP) => FD;
+export type Plugin = {[key: string]: PluginBase};
 export type Namespace = Record<string,Generator|AsyncGenerator|((arg0: Data)=>any)>;
 type Close = (err?: boolean, data?: any)=>boolean;
 type Ctx = {close: Close, promise?: Promise<any>};
 
-export function *g(arr: string[]){
-    for(const i of arr){
-        if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
-        else yield i;
-    }
+export function g(t: string){
+    const x = _g(t);
+    x.next("");
+    return x;
 }
 
-export function i(data: any=null){
+export function *_g(t: string): Generator<string, string|null, Data|string>{
+    const arr = ['', ...t.split(',')];
+    let v = '';
+    for(const i of arr){
+        if(i.startsWith('throw') || i.endsWith('!')) throw new Error(i);
+        else{
+            if(v === '') v = i;
+            else v = v + i;
+            
+            const value = yield v;
+            if(typeof value === 'string')
+                v = value;
+            else
+                v = value.data;
+        }
+    }
+    return null;
+}
+
+export function i(data: any){
     return {data: data, ctx: {close: ()=>{
         return true;
     }}};
@@ -33,23 +53,18 @@ export function i(data: any=null){
 
 type Options = {
     namespace: Namespace,
-    plugins?: Plugin,
-    dev?: boolean,
-    path?: string[]
+    plugins?: Plugin
 }
 
 export const compile = (raw: string, options?: Options) => {
     const opts = {
-        dev: false,
-        path: [],
         plugins: {},
         namespace: {},
         ...options
     };
     
-    const p = pipe(opts.namespace, opts.dev, opts.path);
-    const compiled = _compile(raw, opts.namespace, opts.plugins, opts.dev, opts.path);
-    return (data?: Data) => p(compiled)(i(data?data:null));
+    const compiled = _compile(raw, opts);
+    return (data?: any) => compiled(i(data));
 };
 
 export const run = async (raw: string, options?: Options, data?: Data) => {
@@ -62,6 +77,7 @@ export const run = async (raw: string, options?: Options, data?: Data) => {
     }
 };
 
+/*
 export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
 
 export const context = (namespace: Namespace,
@@ -69,3 +85,4 @@ export const context = (namespace: Namespace,
                         dev=false, 
                         path: string[]=[]
                     ) => (t: string, data?: any) => run(t, {namespace, plugins, dev, path}, data);
+*/

@@ -1,112 +1,95 @@
-import { type Namespace, type Plugin, type FD, type F } from '.';
-import { parse, type Parsed } from './parse';
-import genPipe, { type Tpipe } from './pipe';
+import { type Namespace, type Plugin, type FD, type Data } from '.';
+import { parse, ParsedArray } from './parse';
+import {pipe as s} from './pipe';
 
 import p from './parallel';
 import nr from './nr';
+import retry from './retry';
+import _catch from './catch';
+import repeat from './repeat';
 
-type CompiledPlugin = {[key: string]: (arg0: F|Tpipe|string) => FD};
-
-const splitAndFilter = (t: string, sep='|') => t.split(sep).filter(y => y !== "");
-
-export default (raw: string, namespace: Namespace, plugins: Plugin, dev: boolean, path: string[]) => {
-    
-    plugins = {...plugins, nr: nr(), p: p()};
-    const {parsed: rootParsed} = parse(raw, Object.keys(plugins));
-    
-    function _compile(parsed: (string|Parsed)[]): Tpipe{
-    
-        const s = genPipe(namespace, dev, path);
-    
-        function compilePlugins(){
-            const plugs: CompiledPlugin = {};
-        
-            for(const key of Object.keys(plugins)){
-                const plugin = plugins[key];
-                plugs[key] = (pipe: F|Tpipe|string) => {
-                    let built: F|Tpipe;
-                
-                    if(typeof pipe === 'string') 
-                        built = build([pipe]);
-                    else
-                        built = pipe;
-                    const single = s(built);
-                    
-                    let multiple: FD[] = [];
-                    if(Array.isArray(built)){
-                        multiple = built.map(x => {
-                            let func;
-                            if(Array.isArray(x))
-                                func = s(x);
-                            else
-                                func = s([x]);
-                            return func;
-                            
-                        });
-                    }
-                    return plugin({single, multiple});
-                };
-            }
-            return plugs;
-        }
-        
-        const plugs = compilePlugins();
-        
-        function build(parsed: (string|Parsed)[]): Tpipe{
-    
-            let ret: Tpipe = [];
-            
-            for(const chunk of parsed){
-                if(typeof chunk === 'string'){
-                    if(chunk.includes(',')){
-                        const several =  splitAndFilter(chunk, ',');
-                        const funcs = several.map(x => {
-                            if(x.startsWith('^')){
-                                x = x.substring(1);
-                                if(x.includes('|')){
-                                    const func = plugs.nr(splitAndFilter(x));
-                                    return func;
-                                }else{
-                                    const func = plugs.nr(x);
-                                    return func;
-                                }
-                            }
-                            else{
-                                if(x.includes('|')) return splitAndFilter(x);
-                                else return x;
-                            }
-                        });
-                        ret = [...ret, ...funcs];
-                    }else if(chunk.includes('|')){
-                        ret = [...ret, ...splitAndFilter(chunk)];
-                    }else{
-                        ret = [...ret, chunk];
-                    }
-                }else{
-                    if(chunk.t === '^[' || chunk.t === '|.'){
-                        const built = build(chunk.c);
-                        const func = plugs.nr(s(built));
-                        ret = [...ret, func];
-                    }
-                    else if(chunk.t === '['){
-                        const func = s(build(chunk.c));
-                        ret = [...ret, func];
-                    }
-                    else if(chunk.t.startsWith("*")){ 
-                        const built = build(chunk.c);
-                        const name = chunk.t.substring(1, chunk.t.length);
-                        const builtin = plugs[name];
-                        if(builtin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
-                        const func = builtin(built);
-                        ret = [...ret, func];
-                    }
-                }
-            }
-            return ret;
-        }
-        
-        return build(parsed);
+const wrap = (m: FD|AsyncGenerator|Generator) => {
+    if(typeof m === 'function'){
+        return async (data: Data) => {
+            const response = await m(data);
+            data.data = response;
+            return response;
+        };
+    }else{
+        return async (data: Data) => {
+            const response = await m.next(data);
+            data.data = response.value;
+            return response.value;
+        };                                                      
     }
+
+};
+
+export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
+
+    const rootParsed = parse(raw);
     
+    function _compile(parsed: ParsedArray){
+
+        function composePlugins(plugins: string[]){
+            if(plugins.length === 0) throw new Error("Internal Error");
+            return (f: FD[]) => {
+                for(const name of plugins.reverse()){
+                    let plugin;
+                    if(name === 'p') plugin = p();
+                    else if(name === 's') plugin = s;
+                    else if(name === 'nr') plugin = nr();
+                    else if(/^\d+$/.test(name)){
+                        plugin = repeat(parseInt(name));
+                    }
+                    else{
+                        plugin = opts.plugins[name];
+                        if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
+                    }
+                    f = [plugin(f)];     
+                }
+                return f[0];
+            } ;
+        }
+
+        const buildAtom = (a: string) => {
+            const m = opts.namespace[a];
+            if(m === undefined) 
+                throw new Error("Key Error: namespace error: " + a + ",(it could be a missing plugin)");
+            return m;
+        };
+
+        const buildArray = (arr: ParsedArray):FD => {
+            const composed = composePlugins(arr.plugins);
+
+            const pipes = (arr.c.map(sub=>{
+                if(sub.type === 'array'){
+                    let f = buildArray(sub);
+                    if(arr.retryCatch)
+                        f = _catch(arr.retryCatch)([f]);
+                    if(arr.retryThrow)
+                        f = retry(arr.retryThrow)([f]);
+                    if(arr.repeat)
+                        f = repeat(arr.repeat)([f]);
+                    return f;
+                }else{
+                    let f = wrap(buildAtom(sub.name));
+                    if(sub.catched) f = _catch(1)([f]);
+                    if(sub.plugins.length > 0){
+                        const composed = composePlugins(sub.plugins);
+                        f = composed([f]);
+                    }
+                    return f;
+                }
+            }));
+
+            return composed(pipes);
+        };
+
+        function build(arr: ParsedArray): FD{
+            return buildArray(arr);
+        }
+        return s([build(parsed)]);
+    }
     return _compile(rootParsed);
 };

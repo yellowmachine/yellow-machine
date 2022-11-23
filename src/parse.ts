@@ -1,135 +1,186 @@
-type B = (string|B|P)[]|undefined;
-type P = {p?: B, w?: {files: string[], pipe: B}};
-
-export function nextToken(t: string, plugins: string[]){
-    if(t === "") return null;
-
-    if(t.startsWith("]!"))
-        return {token: "]!", remaining: t.substring(2)};
-    else if(t.startsWith("]!,"))
-        return {token: "]!,", remaining: t.substring(3)};
-    else if(t.startsWith("?"))
-        return {token: "?", remaining: t.substring(1)};
-    else if(t.startsWith("?,"))
-        return {token: "?,", remaining: t.substring(2)};
-    else if(t.startsWith('],'))
-        return {token: "],", remaining: t.substring(2)};
-    else if(t.startsWith('^['))
-        return {token: "^[", remaining: t.substring(2)};
-    else if(t.charAt(0) === '[')
-        return {token: "[", remaining: t.substring(1)};
-    else if(t.charAt(0) === ']')
-        return {token: "]", remaining: t.substring(1)};
-    else{
-        for(let i=0; i < t.length; i++){
-            if(["[", "]"].includes(t.charAt(i)) || t.substring(i).startsWith("^[")){
-                const token = t.substring(0, i);
-                for(const plug of plugins){
-                    if(token.endsWith("|" + plug)){
-                        const size = (plug).length;
-                        return {token: t.substring(0, i-size), remaining: t.substring(i-size)};
-                    }
-                }
-                if(t.charAt(i) === '^'){
-                    return {token: "*"+token, remaining: t.substring(i)};
-                }else{
-                    if(plugins.includes(token)){
-                        return {token: "*"+token, remaining: t.substring(i+1)};
-                    }
-                    else{
-                        return {token, remaining: t.substring(i)};
-                    }
-                }
-            }
-        }
-        return {token: t, remaining: ""};
-    }
+type Token = {
+    id: number,
+    name: string,
+    value: string,
+    opts: (string|null)[]
 }
 
-export type Parsed = {t: string, c: (Parsed|string)[]};
+export enum TOKEN {
+    PLUGIN,
+    NAME,
+    THROW,
+    CATCH,
+    BEGIN_ARRAY,
+    END_ARRAY,
+    NR,
+    COMMA,
+    PIPE,
+    END
+  }
+
+export function matchToken(exp: RegExp|undefined, t: string){
+    const token: {value: string, opts: (null|string)[]} =  {
+        value: ";",
+        opts: []
+    };
+
+    if(exp === undefined) return null;
+    
+    if(exp.test(t)){
+        const match = t.match(exp);
+        if(match){
+            token.value = match[0];
+            token.opts = match.slice(1);
+        }
+        return token;
+    }
+    return null;
+}
+
+export const tokens: {[key in keyof typeof TOKEN]?: RegExp} = {
+    [TOKEN.PLUGIN]: RegExp("^([a-zA-Z\\d]+)?'"),
+    [TOKEN.NAME]: RegExp("^([a-zA-Z][a-zA-Z\\d]*)(\\??)"),
+    [TOKEN.THROW]: RegExp("^](\\d*)!"),
+    [TOKEN.CATCH]: RegExp("](\\d*)\\?"),
+    [TOKEN.BEGIN_ARRAY]: RegExp("^\\["),
+    [TOKEN.NR]: RegExp("^\\^"),
+    [TOKEN.COMMA]: RegExp("^,"),
+    [TOKEN.PIPE]: RegExp("^\\|"),
+    [TOKEN.END_ARRAY]: RegExp("^]")
+};
+
+export function *nextToken(r: string){
+
+    do{
+        const token: Token =  {
+            id: TOKEN.END,
+            name: TOKEN[TOKEN.END],
+            value: ";",
+            opts: []
+        };
+        
+        let found = false;
+
+        for(const k in Object.keys(TOKEN)){
+            token.id = parseInt(k);
+            token.name = TOKEN[k];
+            const tk = tokens[k as unknown as TOKEN]; 
+            if(!tk) throw new Error("Error: token undefined");
+            const m = matchToken(tk, r);
+            if(m){
+                found = true;
+                token.value = m.value;
+                token.opts = m.opts;
+                break;
+            }
+        }
+        if(found){
+            r = r.substring(token.value.length);
+            yield token;
+        }
+        else throw new Error("Syntax error");
+
+    }while(r.length > 0);
+    return {
+        id: TOKEN.END,
+        name: TOKEN[TOKEN.END],
+        value: ";",
+        opts: []
+    };
+}
+
+export type ParsedAtom = {
+    type: "atom",
+    name: string, 
+    plugins: string[],
+    retry?: number,
+    catched: boolean, 
+    repeat?: number
+};
+
+export type ParsedArray = {
+    type: "array",
+    c: (ParsedAtom|ParsedArray)[],
+    retryCatch?: number,
+    retryThrow?: number,
+    repeat?: number,
+    plugins: string[]
+};
+
+type C = ParsedAtom|ParsedExpression;
+type ParsedExpression = C[];
 
 const removeWhite = (t: string) => t.replace(/\s/g,'');
 
-export function parse(t: string, plugins: string[]){
-    t = removeWhite(t);
-    let remaining = t;
-    let extra: string|null = null;
+export const parse = (t: string) => {
     
-    const pending: (Parsed|string)[] = [];
-    for(;;){
-        const token = nextToken(remaining, plugins);
+    const g = nextToken(removeWhite(t));
 
-        if(token === null) break;
-        remaining = token.remaining;
-        if(!["^[", "?", "?,", "]!", "]!,", "],", "[", "]", "p["].includes(token.token) && !token.token.startsWith("*")){
-            let t = token.token;
-            if(t.startsWith('|'))
-                t = t.substring(1);
-            if(t.charAt(t.length - 1) === "|")
-                t = t.substring(0, t.length-1);
-            if(t.includes(',')){
-                for(let t2 of t.split(',')){
-                    if(t2.startsWith("^")){
-                        t2 = t2.substring(1);
-                        pending.push({t: "*nr", c: parse(t2, plugins).parsed});    
-                    }else{
-                        if(t2.includes("|.")){
-                            t2 = t2.replace("|.", "|");
-                            pending.push({t: "|.", c: parse(t2, plugins).parsed});
-                        }else{
-                            pending.push({t: "[", c: parse(t2, plugins).parsed});
-                        }
-                    }        
-                }
-            }else{
-                if(t.startsWith("^")){
-                    t = t.substring(1);
-                    pending.push({t: "*nr", c: parse(t, plugins).parsed});    
-                }else{
-                    if(t.includes("|.")){
-                        t = t.replace("|.", "|");
-                        pending.push({t: "|.", c: [t]});
-                    }
-                    else
-                        pending.push(t);
-                }
-            }
+    function parseAtom(t: string): ParsedAtom{
+        let catched = false;
+        if(t.endsWith('?')){
+            t = t.substring(0, t.length-1);
+            catched = true;
         }
-        else if(token.token === "^["){
-            const aux = parse(remaining, plugins);
-            pending.push({t: token.token, c: aux.parsed});
-            remaining = aux.remaining;
-        }
-        else if(token.token === '^'){
-            if(token.token.includes(',')){
-                const c = remaining.split(',').map(x => parse(x, plugins).parsed);
-                c.forEach(x=>pending.push({t: "[", c: x}));
-            }else{
-                const aux = parse(remaining, plugins);
-                pending.push({t: token.token, c: aux.parsed});
-                remaining = aux.remaining;
+        return {type: "atom", name: t, catched, plugins: []};       
+    }
+
+    function parseArray(): ParsedArray{
+
+        const ret: ParsedArray = {type: "array", c: [], plugins: ['s']};
+        let sub: ParsedArray = {type: "array", c: [], plugins: ['s']};
+        let name = "";
+        let plugins: string[] = [];
+
+        for(;;){
+            const token = g.next().value; 
+            if(token.id === TOKEN.END || token.id === TOKEN.END_ARRAY){
+                if(name !== ""){
+                    const atom = parseAtom(name);
+                    atom.plugins = [...plugins];
+                    sub.c.push(atom);
+                }   
+                ret.c.push(sub); 
+                return ret;
+            }else if(token.id === TOKEN.NR){
+                plugins.push("nr");
+            }else if(token.id === TOKEN.COMMA){
+                const atom = parseAtom(name); 
+                atom.plugins = [...plugins];
+                plugins = [];
+                sub.c.push(atom);
+                ret.c.push(sub);
+                sub = {type: "array", c: [], plugins: ['s']};
+            }else if(token.id === TOKEN.PIPE){
+                const atom = parseAtom(name); 
+                atom.plugins = [...plugins];
+                plugins = [];
+                sub.c.push(atom);
+            }else if(token.id === TOKEN.BEGIN_ARRAY){
+                const arr = parseArray();
+                arr.plugins = [...plugins];
+                plugins = [];
+                sub.c.push(arr);
+            }else if(token.id === TOKEN.CATCH){
+                const m = parseInt(token.opts[0] || '1');
+                ret.retryCatch = m;
+                return ret;
+            }else if(token.id === TOKEN.THROW){
+                const m = parseInt(token.opts[0] || '1');
+                ret.retryThrow = m;
+                return ret;
+            }else if(token.id === TOKEN.NAME){
+                name = token.value;
+            }else if(token.id === TOKEN.PLUGIN){
+                let pluginName = token.value.substring(0, token.value.length-1);
+                pluginName = pluginName === "" ? 'p':pluginName;
+                plugins.push(pluginName);
             }
-        }
-        else if(token.token === '['){
-            const aux = parse(remaining, plugins);
-            pending.push({t: token.token, c: aux.parsed});
-            remaining = aux.remaining;
-        }else if(token.token.startsWith("*")){
-            const aux = parse(remaining, plugins);
-            pending.push({t: token.token, c: aux.parsed});
-            remaining = aux.remaining;
-        }else if(token.token === "?" || token.token === "?,"){
-            extra = "?";
-            if(token.token.length == 2){
-                break;
+            else{
+                throw new Error("Parse error:" + JSON.stringify(token));
             }
-        }else if(token.token === "]!" || token.token === "]!," || 
-                 token.token === "]," || token.token === "]" || remaining === ""){   
-            if(token.token.includes("!"))
-                pending.push("throws");
-            break;
         }
     }
-    if(extra) pending.push(extra);
-    return {remaining, parsed: pending};
-}
+    return parseArray();
+};
+

@@ -1,4 +1,4 @@
-import { Data, FD, type SETUP } from '.';
+import { CallableArray, Data, FD } from '.';
 export type MODE = "buffer"|"nobuffer"|"custom";
 export type BFUNC = null|((arg: BufferData[]) => BufferData[]);
 
@@ -26,17 +26,15 @@ function createResolve(){
     return {resolve, reject, promise: p};
 }
 
-export default ({mode, size}: {mode?: MODE, size?: number} =
-    {mode: "buffer"}) => (setup: SETUP): FD => {
-
-    const pipe = setup["single"];
+export default ({mode, size}: {mode?: MODE, size?: number} = {mode: "nobuffer"}) => 
+    (pipes: FD[]): FD => {
 
     let exited = true;
     const buffer: BufferData[] = [];
     
     const g = async (data: Data) => {
         if(!exited){
-            if(mode === "buffer" && (size === undefined || buffer.length < size)){
+            if(mode === "buffer" && (size === undefined || buffer.length < size - 1)){
                 const x = createResolve();
                 buffer.push({...x, data});
                 try{
@@ -49,18 +47,18 @@ export default ({mode, size}: {mode?: MODE, size?: number} =
                     throw err;        
                 }
             }else{
-                return false;
+                return null;
             }
         }
         try{
             exited = false;
-            const response = await pipe(data);
+            const response = await pipes[0](data);
             exited = true;
             if(buffer.length > 0){
                 const {resolve} = buffer.pop() as BufferData;
                 if(resolve) resolve(response);
             }
-            return true;
+            return response;
         }catch(err){
             if(buffer.length > 0){
                 const {reject} = buffer.pop() as BufferData;

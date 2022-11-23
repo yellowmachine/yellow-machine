@@ -1,76 +1,27 @@
-import { Data, DEBUG, type Namespace, type F } from ".";
+import { Data, DEBUG, type F, type FD } from ".";
 
-type C = Generator|AsyncGenerator|F|string|Tpipe;
+export type C = Generator|AsyncGenerator|F|string|Tpipe;
 export type Tpipe = C[];
 export type Pipe = (tasks: F|Tpipe) => (data: Data) => Promise<any>;
+export type PipeArray = Tpipe[];
 
-export default (namespace: Namespace, dev: boolean, path: string[]) => {
+export const pipe =  (tasks: FD[]) => async (data: Data) => {
+    if(data.data === null) return null;
     
-    const pipe = (tasks: F|Tpipe) => async (data: Data) => {
-        let close;
-        if(data.ctx) close = data.ctx.close;
+    let close;
+    if(data.ctx) close = data.ctx.close;
 
-        if(!Array.isArray(tasks)){
-            tasks = [tasks, 'throws'];
+    try{
+        for(const m of tasks){
+            data.data = await m(data);
         }
-        let throws = false;
-        let question = false;
-        try{
-            for(let t of tasks){
-                throws = false;
-                question = false;
-                try{
-                    let m: C;
-                    if(typeof t === 'string'){
-                        if(t === 'throws' || t === '?') continue;
-                        if(t.charAt(t.length-1) === "!"){
-                            throws = true;
-                            t = t.substring(0, t.length-1);
-                        }
-                        if(t.charAt(t.length-1) === "?"){
-                            question = true;
-                            t = t.substring(0, t.length-1);
-                        }
-                        m = namespace[t];
-                        if(m === undefined) throw new Error("Key Error: namespace error: " + t + ",(it could be a missing plugin)");
-                    }else{
-                        m = t;
-                    }
-                    if(typeof m === 'function'){
-                        data.data = await m(data);
-                    }else if(Array.isArray(m)){
-                        await pipe(m)(data);
-                    }else{
-                        const response = await m.next(data);
-                        data.data = response.value;
-                        if(dev) path.push(response.value);
-                        if(response.done && close) close(false, response.value);                                                            
-                    }
-                }catch(err){
-                    if(err instanceof Error && !err.message.startsWith("?")) throw err;
-                    data.data = null;
-                    continue;
-                }
-            }
-            return data.data;
-        }catch(err){
-            if(DEBUG.v)
-                // eslint-disable-next-line no-console
-                console.log(err);
-            if(close) close(true);
-            if(err instanceof Error && err.message.startsWith("Key Error")) throw err;
-            if(dev && err instanceof Error && !err.message.startsWith("no log")){
-                path.push(err instanceof Error? err.message: "unknown error");
-            } 
-            if(tasks.at(-1) === '?' || question) throw new Error('?');
-            if(tasks.at(-1) === 'throws' || throws){
-                if(err instanceof Error && (err.message.startsWith("throw") || err.message.endsWith("!"))){
-                    throw new Error('no log:' + err.message);
-                }
-            }
-            return null;
-        }
-    };
-
-    return pipe;
+        return data.data;
+    }catch(err){
+        //data.data = null;
+        if(DEBUG.v)
+            // eslint-disable-next-line no-console
+            console.log(err);
+        if(close) close(true); 
+        throw err;
+    }
 };
