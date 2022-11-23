@@ -134,12 +134,19 @@ export const parse = (t: string) => {
 
         for(;;){
             const token = g.next().value; 
-            if(token.id === TOKEN.END || token.id === TOKEN.END_ARRAY){
+            if( token.id === TOKEN.END || 
+                token.id === TOKEN.END_ARRAY ||
+                token.id === TOKEN.CATCH ||
+                token.id === TOKEN.THROW   
+            ){
                 if(name !== ""){
                     const atom = parseAtom(name);
                     atom.plugins = [...plugins];
                     sub.c.push(atom);
-                }   
+                }
+                const m = parseInt(token.opts[0] || '1');
+                if(token.id == TOKEN.CATCH) ret.retryCatch = m;
+                if(token.id == TOKEN.THROW) ret.retryThrow = m;
                 ret.c.push(sub); 
                 return ret;
             }else if(token.id === TOKEN.NR){
@@ -161,14 +168,6 @@ export const parse = (t: string) => {
                 arr.plugins = [...plugins];
                 plugins = [];
                 sub.c.push(arr);
-            }else if(token.id === TOKEN.CATCH){
-                const m = parseInt(token.opts[0] || '1');
-                ret.retryCatch = m;
-                return ret;
-            }else if(token.id === TOKEN.THROW){
-                const m = parseInt(token.opts[0] || '1');
-                ret.retryThrow = m;
-                return ret;
             }else if(token.id === TOKEN.NAME){
                 name = token.value;
             }else if(token.id === TOKEN.PLUGIN){

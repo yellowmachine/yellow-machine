@@ -141,3 +141,18 @@ test("run 3'buffer'[a|b]", async ()=>{
     const result = await cmp("");
     expect(result).toEqual(["ab", "aba2b2", null]);
 });
+
+test("run a[b|c]2!x", async ()=>{
+
+    const a = g("a,q,y,z");
+    const b = g("b!");
+    const c = g("c,c2,c3");
+    const x = g("x,k,m");
+
+    const t = "a[b|c]2!x";
+    const cmp = compile(t, {
+        namespace: {a, b, c, x}
+    });
+    const result = await cmp("");
+    expect(result).toEqual("undefinedcx");
+});

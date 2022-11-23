@@ -24,7 +24,7 @@ const dql = dgraph(config)
 
 async function main() {
     const exp = `up[
-                      w[ dql? | test ]
+                      w'[ dql? | test ]
                       down`;
     const options = {
         namespace: {up, dql, test, down}, 
@@ -49,7 +49,7 @@ If you want to use several times the same expression, you should compile first:
 ```ts
 const {compile} = require("yellow-machine");
 
-const f = compile("a|p[b,c]", options);
+const f = compile("a|'[b,c]", options);
 
 //then
 await f("some data");
@@ -58,78 +58,13 @@ await f("other data");
 // you still can use context but it is not recommended
 ```
 
-Things you can do:
+Possible expresssions:
 
 ```ts
-// argument to run can be a string or an array. Every element of the array can be the same
-// initial data is optional
-await f("p[a|b,c"); // in parallel are executed: c and (a|b): a|b means a is executed then b if successful
 
-// p is shorthand for parallel
-await f("up|p[a,b,c]|end", data);
-// end will execute when p finishes. Default mode for parallel is "all" (await Promise.all...)
-
-// throwing
-await f("ini[a!|b]end", data); //if a, for example, throws, then b is not executed and the exception is raised
-
-// or
-await f('ini[a|b]!end', data);
-
-// you can use ! the next way
-await f('a|b!|c!|d', data); // if b or c throws then the whole pipe throws
-
-// more expressions
-"w[^a|b,c" // a is non reentrant
-
-"w[a|^b,c" // b is non reentrant
-
-"w[a|b,^c" // c is non reentrant
-
-"x[a|b]3!y" //[a|b] will retry 3 times if exception 
-
-"2[buffer[a|b" // spawns two pipes of buffer
 ```
 
-// repeat is a plugin that spawns n pipes
-```ts
-const { repeat, compile } = require("yellow-machine")
-
-const options = {
-        namespace: {a, b}, 
-        plugins: {r2: repeat(2)},
-        dev: true,
-        path: []
-    }
-    
-const f = compile("r2[^[a|b", options);
-
-await f(); //--> a1 ... b1 ... a2 ... b2
-```
-
-// you don't need to close with ] at the end of the expression:
-```"p[a,b"```
-
-// if b throw, c is not executed and exception should be out, but ? catch it
-```"[ini|a[b!|c]?x]y"``` // x is not executed because previous pipe was not successful but y will be executed
-
-//note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
-
-```ts
-test("]? without !", async ()=>{
-    const path: string[] = [];
-    const a = g(["a"]);
-    const b = g(["throws"]);
-    const c = g(["c"]);
-    const x = g(["x"]);
-
-    // you can use the old mode
-    const run = dev(path)({a, b, c, x}, {});
-    const response = await run("a[b|c]x");
-
-    expect(response).toBe("x");
-    expect(path).toEqual(["a", "throws", "x"]);
-});
-```
+# Producer / Consumer
 
 A producer consumer is passed a type Data:
 
@@ -146,6 +81,43 @@ function someProducerConsumer({data, ctx}){
 
 ```
 
+# Plugins
+
+// repeat is a plugin that spawns n pipes
+```ts
+const { repeat, compile } = require("yellow-machine")
+
+const options = {
+        namespace: {a, b}, 
+        //plugins: {r2: repeat(2)}
+    }
+    
+const f = compile("2'^[a|b]", options);    
+// or    
+const f = compile("r2'^[a|b]", options);
+
+await f(); //--> a1 ... b1 ... a2 ... b2
+```
+
+//note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
+
+```ts
+test("run a[b|c]2!x", async ()=>{
+
+    const a = g("a,q,y,z");
+    const b = g("b!");
+    const c = g("c,c2,c3");
+    const x = g("x,k,m");
+
+    const t = "a[b|c]2!x";
+    const cmp = compile(t, {
+        namespace: {a, b, c, x}
+    });
+    const result = await cmp("");
+    expect(result).toEqual("undefinedcx"); // ab! is discarded by the retry, then the b generator return undefined
+});
+```
+------
 How to use the switch or decide plugin;
 
 ```ts

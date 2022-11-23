@@ -31,8 +31,8 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
     
     function _compile(parsed: ParsedArray){
 
-        function composePlugins(plugins: string[]){
-            if(plugins.length === 0) throw new Error("Internal Error");
+        function compose(plugins: string[]){
+            if(plugins.length === 0) return s;
             return (f: FD[]) => {
                 for(const name of plugins.reverse()){
                     let plugin;
@@ -60,7 +60,7 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
         };
 
         const buildArray = (arr: ParsedArray):FD => {
-            const composed = composePlugins(arr.plugins);
+            const composed = compose(arr.plugins);
 
             const pipes = (arr.c.map(sub=>{
                 if(sub.type === 'array'){
@@ -76,13 +76,12 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
                     let f = wrap(buildAtom(sub.name));
                     if(sub.catched) f = _catch(1)([f]);
                     if(sub.plugins.length > 0){
-                        const composed = composePlugins(sub.plugins);
+                        const composed = compose(sub.plugins);
                         f = composed([f]);
                     }
                     return f;
                 }
             }));
-
             return composed(pipes);
         };
 
