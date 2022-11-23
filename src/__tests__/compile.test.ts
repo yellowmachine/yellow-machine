@@ -79,9 +79,24 @@ test("run join''[a,b]", async ()=>{
     const t = "join''[a,b]";
     const cmp = compile(t, {
         namespace: {a, b},
-        plugins: {join: join(',')}
+        plugins: {join: join(';')}
     });
 
     const result = await cmp("");
-    expect(result).toBe('a,b');
+    expect(result).toBe('a;b');
+});
+
+test("run join''[a,b]c", async ()=>{
+    const a = g('a');
+    const b = g('b');
+    const c = g('c');
+
+    const t = "join''[a,b]c";
+    const cmp = compile(t, {
+        namespace: {a, b, c},
+        plugins: {join: join(';')}
+    });
+
+    const result = await cmp("");
+    expect(result).toBe('a;bc');
 });
