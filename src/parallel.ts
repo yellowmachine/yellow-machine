@@ -10,7 +10,9 @@ export default (mode: "all"|"race"|"allSettled" = "all",
         promises.push(t(data));
     }
     try{
-        if(mode === "all") return await Promise.all(promises);
+        if(mode === "all"){
+            return await Promise.all(promises);
+        } 
         //else if (mode === "any") return await Promise.any(promises);
         else if (mode === "race") return await Promise.race(promises);
         else if (mode === "allSettled") return await Promise.allSettled(promises);
