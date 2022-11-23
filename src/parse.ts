@@ -41,7 +41,7 @@ export const tokens: {[key in keyof typeof TOKEN]?: RegExp} = {
     [TOKEN.PLUGIN]: RegExp("^([a-zA-Z\\d]+)?'"),
     [TOKEN.NAME]: RegExp("^([a-zA-Z][a-zA-Z\\d]*)(\\??)"),
     [TOKEN.THROW]: RegExp("^](\\d*)!"),
-    [TOKEN.CATCH]: RegExp("](\\d*)\\?"),
+    [TOKEN.CATCH]: RegExp("^](\\d*)\\?"),
     [TOKEN.BEGIN_ARRAY]: RegExp("^\\["),
     [TOKEN.NR]: RegExp("^\\^"),
     [TOKEN.COMMA]: RegExp("^,"),

@@ -3,8 +3,6 @@ import { parse, nextToken, TOKEN, matchToken, tokens } from '../parse';
 
 DEBUG.v = false;
 
-//const plugins = ['nr', 'p'];
-
 const consume = (t: string) => {
     return [...nextToken(t)].map(x => x.value);
 };
@@ -280,6 +278,63 @@ test("parse k'[^c?]", ()=>{
               "plugins": [
                 "k"
               ]
+            }
+          ],
+          "plugins": [
+            "s"
+          ]
+        }
+      ],
+      "plugins": [
+        "s"
+      ]
+    }
+  );
+});
+
+test("parse a[b|c]2?x", ()=>{
+  const t = "a[b|c]2?x";
+  const p = parse(t);
+
+  expect(p).toEqual(
+    {
+      "type": "array",
+      "c": [
+        {
+          "type": "array",
+          "c": [
+            {
+              "type": "array",
+              "c": [
+                {
+                  "type": "array",
+                  "c": [
+                    {
+                      "type": "atom",
+                      "name": "b",
+                      "catched": false,
+                      "plugins": []
+                    },
+                    {
+                      "type": "atom",
+                      "name": "c",
+                      "catched": false,
+                      "plugins": []
+                    }
+                  ],
+                  "plugins": [
+                    "s"
+                  ]
+                }
+              ],
+              "plugins": [],
+              "retryCatch": 2
+            },
+            {
+              "type": "atom",
+              "name": "x",
+              "catched": false,
+              "plugins": []
             }
           ],
           "plugins": [
