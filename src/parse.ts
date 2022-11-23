@@ -126,10 +126,7 @@ export const parse = (t: string) => {
             t = t.substring(0, t.length-1);
             catched = true;
         }
-        if(t.startsWith('^'))
-            return {type: "atom", nr: true, name: t.substring(1), catched, plugins: []};
-        else
-            return {type: "atom", name: t, catched, plugins: []};
+        return {type: "atom", name: t, catched, plugins: []};       
     }
 
     function parseArray(): ParsedArray{
@@ -142,8 +139,12 @@ export const parse = (t: string) => {
         for(;;){
             const token = g.next().value; 
             if(token.id === TOKEN.END || token.id === TOKEN.END_ARRAY){
-                sub.c.push(parseAtom(name));
-                ret.c.push(sub);    
+                if(name !== ""){
+                    const atom = parseAtom(name);
+                    atom.plugins = [...plugins];
+                    sub.c.push(atom);
+                }   
+                ret.c.push(sub); 
                 return ret;
             }else if(token.id === TOKEN.NR){
                 plugins.push("nr");
@@ -162,7 +163,6 @@ export const parse = (t: string) => {
             }else if(token.id === TOKEN.BEGIN_ARRAY){
                 const arr = parseArray();
                 arr.plugins = plugins.length > 0 ? [...plugins]:(arr.c.length > 1? ['p']: ['s']);
-                console.log(arr.plugins, plugins.length, plugins);
                 plugins = [];
                 sub.c.push(arr);
             }else if(token.id === TOKEN.CATCH){

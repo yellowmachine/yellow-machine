@@ -180,7 +180,7 @@ test("parse a|w[b]e", ()=>{
     );
 });
 
-test("parse a|w[b]e", ()=>{
+test("parse [b,c]", ()=>{
   const t = "[b,c]";
   const p = parse(t);
 
@@ -226,12 +226,52 @@ test("parse a|w[b]e", ()=>{
               "plugins": [
                 "p"
               ]
-            },
+            }
+          ],
+          "plugins": [
+            "s"
+          ]
+        }
+      ],
+      "plugins": [
+        "s"
+      ]
+    }
+  );
+});
+
+test("parse k'[^c?]", ()=>{
+  const t = "k'[^c?]";
+  const p = parse(t);
+
+  expect(p).toEqual(
+    {
+      "type": "array",
+      "c": [
+        {
+          "type": "array",
+          "c": [
             {
-              "type": "atom",
-              "name": "",
-              "catched": false,
-              "plugins": []
+              "type": "array",
+              "c": [
+                {
+                  "type": "array",
+                  "c": [
+                    {
+                      "type": "atom",
+                      "name": "c",
+                      "catched": true,
+                      "plugins": ["nr"]
+                    }
+                  ],
+                  "plugins": [
+                    "s"
+                  ]
+                }
+              ],
+              "plugins": [
+                "k"
+              ]
             }
           ],
           "plugins": [
