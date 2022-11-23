@@ -83,17 +83,15 @@ test("next token a|b", ()=>{
 
 test("parse atom a?", ()=>{
   const t = "a?";
-    const p = parse(t, plugins);
+    const p = parse(t);
     expect(p).toEqual(
       {
-        plugin: 's',
         type: 'array',
-        plugins: [],
+        plugins: ['s'],
         c: [
           {
-            plugin: 's',
             type: "array",
-            plugins: [],
+            plugins: ['s'],
             c: 
               [
                 {
@@ -111,16 +109,14 @@ test("parse atom a?", ()=>{
 
 test("parse", ()=>{
     const t = "a|b";
-    const p = parse(t, plugins);
+    const p = parse(t);
     expect(p).toEqual(
     {
-        plugin: 's',
-        plugins: [],
+        plugins: ['s'],
         c: 
         [
             {
-                plugin: 's',
-                plugins: [],
+                plugins: ['s'],
                 c: [
                 {name: "a", type: "atom", catched: false, plugins: []},
                 {name: "b", type: "atom", catched: false, plugins: []}
@@ -136,18 +132,16 @@ test("parse", ()=>{
 
 test("parse a|w[b]e", ()=>{
     const t = "a|w'[b]e";
-    const p = parse(t, [...plugins, 'w']);
+    const p = parse(t);
 
     expect(p).toEqual(
         {
             "type": "array",
-            "plugin": "s",
-            plugins: [],
+            plugins: ['s'],
             "c": [
               {
                 "type": "array",
-                "plugin": "s",
-                plugins: [],
+                plugins: ['s'],
                 "c": [
                   {
                     "type": "atom",
@@ -157,13 +151,11 @@ test("parse a|w[b]e", ()=>{
                   },
                   {
                     "type": "array",
-                    "plugin": "s",
                     plugins: ['w'],
                     "c": [
                       {
                         "type": "array",
-                        plugins: [],
-                        "plugin": "s",
+                        plugins: ['s'],
                         "c": [
                           {
                             "type": "atom",
@@ -186,4 +178,70 @@ test("parse a|w[b]e", ()=>{
             ]
           }
     );
+});
+
+test("parse a|w[b]e", ()=>{
+  const t = "[b,c]";
+  const p = parse(t);
+
+  expect(p).toEqual(
+    {
+      "type": "array",
+      "c": [
+        {
+          "type": "array",
+          "c": [
+            {
+              "type": "array",
+              "c": [
+                {
+                  "type": "array",
+                  "c": [
+                    {
+                      "type": "atom",
+                      "name": "b",
+                      "catched": false,
+                      "plugins": []
+                    }
+                  ],
+                  "plugins": [
+                    "s"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "c": [
+                    {
+                      "type": "atom",
+                      "name": "c",
+                      "catched": false,
+                      "plugins": []
+                    }
+                  ],
+                  "plugins": [
+                    "s"
+                  ]
+                }
+              ],
+              "plugins": [
+                "p"
+              ]
+            },
+            {
+              "type": "atom",
+              "name": "",
+              "catched": false,
+              "plugins": []
+            }
+          ],
+          "plugins": [
+            "s"
+          ]
+        }
+      ],
+      "plugins": [
+        "s"
+      ]
+    }
+  );
 });

@@ -29,7 +29,7 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
     
     const plugins = {...opts.plugins, nr: nr(), p: p()};
 
-    const rootParsed = parse(raw, Object.keys(plugins));
+    const rootParsed = parse(raw);
     
     function _compile(parsed: ParsedArray){
 

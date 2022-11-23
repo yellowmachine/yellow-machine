@@ -93,11 +93,11 @@ export type ParsedAtom = {
     type: "atom",
     name: string, 
     plugins: string[],
-    plugin?: string,
     retry?: number,
     catched: boolean,
     nr?: boolean, 
-    repeat?: number
+    repeat?: number,
+    plugin?: string
 };
 
 export type ParsedArray = {
@@ -108,7 +108,7 @@ export type ParsedArray = {
     nr?: number,
     repeat?: number,
     plugins: string[],
-    plugin: string
+    plugin?: string
 };
 
 type C = ParsedAtom|ParsedExpression;
@@ -116,7 +116,7 @@ type ParsedExpression = C[];
 
 const removeWhite = (t: string) => t.replace(/\s/g,'');
 
-export const parse = (t: string, plugins: string[]) => {
+export const parse = (t: string) => {
     
     const g = nextToken(removeWhite(t));
 
@@ -134,40 +134,36 @@ export const parse = (t: string, plugins: string[]) => {
 
     function parseArray(): ParsedArray{
 
-        const ret: ParsedArray = {type: "array", plugin: 'p', c: [], plugins: []};
-        let sub: ParsedArray = {type: "array", plugin: 's', c: [], plugins: []};
+        const ret: ParsedArray = {type: "array", c: [], plugins: ['s']};
+        let sub: ParsedArray = {type: "array", c: [], plugins: ['s']};
         let name = "";
-        let _plugins: string[] = [];
+        let plugins: string[] = [];
 
         for(;;){
             const token = g.next().value; 
             if(token.id === TOKEN.END || token.id === TOKEN.END_ARRAY){
                 sub.c.push(parseAtom(name));
-                ret.c.push(sub);
-                if(ret.c.length > 1){
-                    ret.plugin = 'p';
-                }else{
-                    ret.plugin = 's';
-                }        
+                ret.c.push(sub);    
                 return ret;
             }else if(token.id === TOKEN.NR){
-                _plugins.push("nr");
+                plugins.push("nr");
             }else if(token.id === TOKEN.COMMA){
                 const atom = parseAtom(name); 
-                atom.plugins = [..._plugins];
-                _plugins = [];
+                atom.plugins = [...plugins];
+                plugins = [];
                 sub.c.push(atom);
                 ret.c.push(sub);
-                sub = {type: "array", plugin: 's', c: [], plugins: []};
+                sub = {type: "array", c: [], plugins: ['s']};
             }else if(token.id === TOKEN.PIPE){
                 const atom = parseAtom(name); 
-                atom.plugins = [..._plugins];
-                _plugins = [];
+                atom.plugins = [...plugins];
+                plugins = [];
                 sub.c.push(atom);
             }else if(token.id === TOKEN.BEGIN_ARRAY){
                 const arr = parseArray();
-                arr.plugins = _plugins.length > 0 ? [..._plugins]:(arr.c.length > 1? ['p']: ['s']);
-                _plugins = [];
+                arr.plugins = plugins.length > 0 ? [...plugins]:(arr.c.length > 1? ['p']: ['s']);
+                console.log(arr.plugins, plugins.length, plugins);
+                plugins = [];
                 sub.c.push(arr);
             }else if(token.id === TOKEN.CATCH){
                 const m = parseInt(token.opts[0] || '1');
@@ -180,7 +176,7 @@ export const parse = (t: string, plugins: string[]) => {
             }else if(token.id === TOKEN.NAME){
                 name = token.value;
             }else if(token.id === TOKEN.PLUGIN){
-                _plugins.push(token.value.substring(0, token.value.length-1));
+                plugins.push(token.value.substring(0, token.value.length-1));
             }
             else{
                 throw new Error("Parse error:" + JSON.stringify(token));
