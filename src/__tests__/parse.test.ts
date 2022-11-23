@@ -3,7 +3,7 @@ import { parse, nextToken, TOKEN, matchToken, tokens } from '../parse';
 
 DEBUG.v = false;
 
-const plugins = ['nr', 'p'];
+//const plugins = ['nr', 'p'];
 
 const consume = (t: string) => {
     return [...nextToken(t)].map(x => x.value);

@@ -1,4 +1,5 @@
 import { DEBUG, compile, g } from '../index';
+import join from '../join';
 
 DEBUG.v = false;
 
@@ -69,4 +70,18 @@ test("run a,b,c!", async ()=>{
     });
 
     await expect(cmp("")).rejects.toThrow(/^a?b?c!/);
+});
+
+test("run join''[a,b]", async ()=>{
+    const a = g('a');
+    const b = g('b');
+
+    const t = "join''[a,b]";
+    const cmp = compile(t, {
+        namespace: {a, b},
+        plugins: {join: join(',')}
+    });
+
+    const result = await cmp("");
+    expect(result).toBe('a,b');
 });
