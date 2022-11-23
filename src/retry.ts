@@ -4,7 +4,7 @@ export default (n: number) => (pipe: FD[]) => async (data: Data) => {
     
     const initialData = data.data;
     
-    for(;;){
+    for(;;){        
         try{
             return await pipe[0]({...data, data: initialData}); 
         }catch(err){

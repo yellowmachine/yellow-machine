@@ -164,10 +164,10 @@ test("run a[b|c]?x", async ()=>{
     const c = g("c!");
     const x = g("x,k,m");
 
-    const t = "a[b|c]2?x";
+    const t = "a[b|c]?x";
     const cmp = compile(t, {
         namespace: {a, b, c, x}
     });
     const result = await cmp("");
-    expect(result).toEqual("nullx");
+    expect(result).toEqual(null);
 });
