@@ -81,6 +81,14 @@ test("next token a|b", ()=>{
     expect(tokens).toEqual(["a", "|", "b"]);
 });
 
+test("order of plugins", ()=>{
+  const t = "k'm'p'x'a";
+  const p = parse(t);
+  const arr = p.c[0]; //.c[0].plugins;
+  const plugins = arr.type === 'array'? arr.c[0].plugins:[];
+  expect(plugins).toEqual(['k', 'm', 'p', 'x']);
+});
+
 test("parse atom a?", ()=>{
   const t = "a?";
     const p = parse(t);

@@ -34,7 +34,7 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
         function composePlugins(plugins: string[]){
             if(plugins.length === 0) throw new Error("Internal Error");
             return (f: FD[]) => {
-                for(const name of plugins){
+                for(const name of plugins.reverse()){
                     let plugin;
                     if(name === 'p') plugin = p();
                     else if(name === 's') plugin = s;
