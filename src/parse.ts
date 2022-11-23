@@ -158,7 +158,6 @@ export const parse = (t: string) => {
                 sub.c.push(atom);
             }else if(token.id === TOKEN.BEGIN_ARRAY){
                 const arr = parseArray();
-                //arr.plugins = plugins.length > 0 ? [...plugins]:(arr.c.length > 1? ['p']: ['s']);
                 arr.plugins = [...plugins];
                 plugins = [];
                 sub.c.push(arr);

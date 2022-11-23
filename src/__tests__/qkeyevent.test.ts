@@ -8,13 +8,12 @@ test("closing w with keypress q compact mode", async ()=> {
     
     const a = g('a');
     const e = g('e');
-    function b(/*{ctx}: Data*/){
+    function b(){
         process.stdin.emit("keypress", 'q');
         return null;
-        //ctx.close(false);
     }
 
-    const t = "a|w[b]e";
+    const t = "a|w'[b]e";
     const cmp = compile(t, {
         namespace: {a, b, e},
         plugins: {w: watch(["*.js"])}

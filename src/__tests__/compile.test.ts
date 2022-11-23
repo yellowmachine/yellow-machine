@@ -15,7 +15,6 @@ test("run a|b", async ()=>{
     expect(result).toBe('ab');
 });
 
-/*
 test("run a|b a!", async ()=>{
     
     const a = g('a!');
@@ -35,7 +34,7 @@ test("run a,c|b a!", async ()=>{
     const b = g('b');
     const c = g('c');
 
-    const t = "a,c|b";
+    const t = "'[a,c|b]";
     const cmp = compile(t, {
         namespace: {a, b, c}
     });
@@ -49,7 +48,7 @@ test("run a,b,c", async ()=>{
     const b = g('b');
     const c = g('c');
 
-    const t = "a,b,c";
+    const t = "'[a,b,c]";
     const cmp = compile(t, {
         namespace: {a, b, c}
     });
@@ -64,11 +63,10 @@ test("run a,b,c!", async ()=>{
     const b = g('b');
     const c = g('c!');
 
-    const t = "a,b,c";
+    const t = "'[a,b,c]";
     const cmp = compile(t, {
         namespace: {a, b, c}
     });
 
     await expect(cmp("")).rejects.toThrow(/^a?b?c!/);
 });
-*/
