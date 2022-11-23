@@ -1,5 +1,5 @@
 import { DEBUG } from '../index';
-import { parse, nextToken } from '../parse';
+import { parse, nextToken, TOKEN, matchToken, tokens } from '../parse';
 
 DEBUG.v = false;
 
@@ -8,6 +8,54 @@ const plugins = ['nr', 'p'];
 const consume = (t: string) => {
     return [...nextToken(t)].map(x => x.value);
 };
+
+test('match token name a[', ()=>{
+  const r = matchToken(tokens[TOKEN.NAME], "a[");
+  expect(r).toEqual({
+    value: 'a',
+    opts: ["", undefined, "a", ""]
+  });
+});
+
+test('match token name a3[', ()=>{
+  const r = matchToken(tokens[TOKEN.NAME], "a3[");
+  expect(r).toEqual({
+    value: 'a3',
+    opts: ["", undefined, "a3", ""]
+  });
+});
+
+test("match token plugin a'[", ()=>{
+  const r = matchToken(tokens[TOKEN.PLUGIN], "a'[");
+  expect(r).toEqual({
+    value: "a'",
+    opts: ["a'"]
+  });
+});
+
+test("match token plugin a'b3'k'[", ()=>{
+  const r = matchToken(tokens[TOKEN.PLUGIN], "a'b3'k'[");
+  expect(r).toEqual({
+    value: "a'b3'k'",
+    opts: ["k'"]
+  });
+});
+
+test("match token name w'k'a3?[", ()=>{
+  const r = matchToken(tokens[TOKEN.NAME], "w'k'a3?[");
+  expect(r).toEqual({
+    value: "w'k'a3?",
+    opts: ["", "k'", "a3", "?"]
+  });
+});
+
+test("match token name ^w'k'a3[", ()=>{
+  const r = matchToken(tokens[TOKEN.NAME], "^w'k'a3[");
+  expect(r).toEqual({
+    value: "^w'k'a3",
+    opts: ["^", "k'", "a3", ""]
+  });
+});
 
 test("next token", ()=>{
     const t = "a,^b|c[e3";

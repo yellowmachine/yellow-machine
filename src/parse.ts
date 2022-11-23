@@ -10,7 +10,7 @@ type Token = {
     opts: (string|null)[]
 }
 
-enum TOKEN {
+export enum TOKEN {
     COMMA,
     PIPE,
     THROW,
@@ -18,36 +18,59 @@ enum TOKEN {
     BEGIN_ARRAY,
     END_ARRAY,
     NAME,
+    PLUGIN,
     END
   }
 
-export function *nextToken(r: string){
-
-    const tokens: {[key in keyof typeof TOKEN]?: TokenExp} = {
-        [TOKEN.COMMA]: {
-            test: RegExp("^,")
-        },
-        [TOKEN.PIPE]: {
-            test: RegExp("^\\|")
-        },
-        [TOKEN.THROW]: {
-            test: RegExp("^(]\\d*!)"),
-            opts: [RegExp("^](\\d*)!")]
-        },
-        [TOKEN.CATCH]: {
-            test: RegExp("(]\\d*\\?)"),
-            opts: [RegExp("](\\d*)\\?")]
-        },
-        [TOKEN.BEGIN_ARRAY]: {
-            test: RegExp("^[\\^]?\\[")
-        },
-        [TOKEN.NAME]: {
-            test: RegExp("^(\\^?[a-zA-Z][a-zA-Z\\d]*\\??)")
-        },
-        [TOKEN.END_ARRAY]: {
-            test: RegExp("^]")
-        }
+export function matchToken(exp: TokenExp|undefined, t: string){
+    const token: {value: string, opts: (null|string)[]} =  {
+        value: ";",
+        opts: []
     };
+
+    if(exp === undefined) return null;
+    
+    if(exp.test.test(t)){
+        const match = t.match(exp.test);
+        if(match){
+            token.value = match[0];
+            token.opts = match.slice(1);
+        }
+        return token;
+    }
+    return null;
+}
+
+export const tokens: {[key in keyof typeof TOKEN]?: TokenExp} = {
+    [TOKEN.COMMA]: {
+        test: RegExp("^,")
+    },
+    [TOKEN.PIPE]: {
+        test: RegExp("^\\|")
+    },
+    [TOKEN.THROW]: {
+        test: RegExp("^(]\\d*!)"),
+        opts: [RegExp("^](\\d*)!")]
+    },
+    [TOKEN.CATCH]: {
+        test: RegExp("(]\\d*\\?)"),
+        opts: [RegExp("](\\d*)\\?")]
+    },
+    [TOKEN.BEGIN_ARRAY]: {
+        test: RegExp("^[\\^]?\\[")
+    },
+    [TOKEN.NAME]: {
+        test: RegExp("^(\\^?)([a-zA-Z][a-zA-Z\\d]*')*([a-zA-Z][a-zA-Z\\d]*)(\\??)")
+    },
+    [TOKEN.PLUGIN]: {
+        test: RegExp("^\\^?([a-zA-Z][a-zA-Z\\d]*')+\\??")
+    },
+    [TOKEN.END_ARRAY]: {
+        test: RegExp("^]")
+    }
+};
+
+export function *nextToken(r: string){
 
     do{
         const token: Token =  {
