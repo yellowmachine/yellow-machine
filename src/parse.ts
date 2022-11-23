@@ -38,7 +38,7 @@ export function matchToken(exp: RegExp|undefined, t: string){
 }
 
 export const tokens: {[key in keyof typeof TOKEN]?: RegExp} = {
-    [TOKEN.PLUGIN]: RegExp("^([a-zA-Z][a-zA-Z\\d]*)?'"),
+    [TOKEN.PLUGIN]: RegExp("^([a-zA-Z\\d]+)?'"),
     [TOKEN.NAME]: RegExp("^([a-zA-Z][a-zA-Z\\d]*)(\\??)"),
     [TOKEN.THROW]: RegExp("^](\\d*)!"),
     [TOKEN.CATCH]: RegExp("](\\d*)\\?"),
@@ -173,7 +173,7 @@ export const parse = (t: string) => {
                 name = token.value;
             }else if(token.id === TOKEN.PLUGIN){
                 let pluginName = token.value.substring(0, token.value.length-1);
-                pluginName = pluginName === ""? 'p':pluginName;
+                pluginName = pluginName === "" ? 'p':pluginName;
                 plugins.push(pluginName);
             }
             else{

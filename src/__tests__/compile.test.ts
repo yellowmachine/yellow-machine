@@ -100,3 +100,29 @@ test("run join''[a,b]c", async ()=>{
     const result = await cmp("");
     expect(result).toBe('a;bc');
 });
+
+test("run 3'[a|b]", async ()=>{
+    const a = g('a,a2,a3');
+    const b = g('b,b2,b3');
+
+    const t = "3'[a|b]";
+    const cmp = compile(t, {
+        namespace: {a, b}
+    });
+
+    const result = await cmp("");
+    expect(result).toEqual(["ab", "a2b2", "a3b3"]);
+});
+
+test("run 3'^[a|b]", async ()=>{
+    const a = g('a,a2,a3');
+    const b = g('b,b2,b3');
+
+    const t = "3'^[a|b]";
+    const cmp = compile(t, {
+        namespace: {a, b}
+    });
+
+    const result = await cmp("");
+    expect(result).toEqual(["ab", null, null]);
+});

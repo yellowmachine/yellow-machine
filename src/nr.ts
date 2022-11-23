@@ -26,7 +26,7 @@ function createResolve(){
     return {resolve, reject, promise: p};
 }
 
-export default ({mode, size}: {mode?: MODE, size?: number} = {mode: "buffer"}) => 
+export default ({mode, size}: {mode?: MODE, size?: number} = {mode: "nobuffer"}) => 
     (pipes: FD[]): FD => {
 
     let exited = true;
@@ -47,7 +47,7 @@ export default ({mode, size}: {mode?: MODE, size?: number} = {mode: "buffer"}) =
                     throw err;        
                 }
             }else{
-                return false;
+                return null;
             }
         }
         try{
@@ -58,7 +58,7 @@ export default ({mode, size}: {mode?: MODE, size?: number} = {mode: "buffer"}) =
                 const {resolve} = buffer.pop() as BufferData;
                 if(resolve) resolve(response);
             }
-            return true;
+            return response;
         }catch(err){
             if(buffer.length > 0){
                 const {reject} = buffer.pop() as BufferData;

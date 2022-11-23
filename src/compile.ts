@@ -39,6 +39,9 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
                     if(name === 'p') plugin = p();
                     else if(name === 's') plugin = s;
                     else if(name === 'nr') plugin = nr();
+                    else if(/^\d+$/.test(name)){
+                        plugin = repeat(parseInt(name));
+                    }
                     else{
                         plugin = opts.plugins[name];
                         if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
