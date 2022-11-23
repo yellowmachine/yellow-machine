@@ -34,7 +34,7 @@ export default ({mode, size}: {mode?: MODE, size?: number} = {mode: "nobuffer"})
     
     const g = async (data: Data) => {
         if(!exited){
-            if(mode === "buffer" && (size === undefined || buffer.length < size)){
+            if(mode === "buffer" && (size === undefined || buffer.length < size - 1)){
                 const x = createResolve();
                 buffer.push({...x, data});
                 try{

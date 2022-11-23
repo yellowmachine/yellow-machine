@@ -1,5 +1,6 @@
 import { DEBUG, compile, g } from '../index';
 import join from '../join';
+import nr from '../nr';
 
 DEBUG.v = false;
 
@@ -125,4 +126,18 @@ test("run 3'^[a|b]", async ()=>{
 
     const result = await cmp("");
     expect(result).toEqual(["ab", null, null]);
+});
+
+test("run 3'buffer'[a|b]", async ()=>{
+    const a = g('a,a2,a3');
+    const b = g('b,b2,b3');
+
+    const t = "3'buffer'[a|b]";
+    const cmp = compile(t, {
+        namespace: {a, b},
+        plugins: {buffer: nr({mode: "buffer", size: 2})}
+    });
+
+    const result = await cmp("");
+    expect(result).toEqual(["ab", "aba2b2", null]);
 });
