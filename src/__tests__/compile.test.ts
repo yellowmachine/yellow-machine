@@ -15,6 +15,7 @@ test("run a|b", async ()=>{
     expect(result).toBe('ab');
 });
 
+/*
 test("run a|b a!", async ()=>{
     
     const a = g('a!');
@@ -70,3 +71,4 @@ test("run a,b,c!", async ()=>{
 
     await expect(cmp("")).rejects.toThrow(/^a?b?c!/);
 });
+*/

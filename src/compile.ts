@@ -1,5 +1,5 @@
 import { type Namespace, type Plugin, type FD, type Data } from '.';
-import { parse, ParsedArray, ParsedAtom } from './parse';
+import { parse, ParsedArray } from './parse';
 import {pipe as s} from './pipe';
 
 import p from './parallel';
@@ -26,20 +26,24 @@ const wrap = (m: FD|AsyncGenerator|Generator) => {
 };
 
 export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
-    
-    //const plugins = {...opts.plugins, nr: nr(), p: p()};
 
     const rootParsed = parse(raw);
     
     function _compile(parsed: ParsedArray){
 
         function composePlugins(plugins: string[]){
-            if(plugins.length === 0) throw new Error("Internal error: no plugins.");
+            if(plugins.length === 0) throw new Error("Internal Error");
             return (f: FD[]) => {
                 for(const name of plugins){
-                    const plugin = opts.plugins[name];
-                    if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
-                        f = [plugin(f)];     
+                    let plugin;
+                    if(name === 'p') plugin = p();
+                    else if(name === 's') plugin = s;
+                    else if(name === 'nr') plugin = nr();
+                    else{
+                        plugin = opts.plugins[name];
+                        if(plugin === undefined) throw new Error("Key Error: plugin namespace error: " + name);
+                    }
+                    f = [plugin(f)];     
                 }
                 return f[0];
             } ;
@@ -62,16 +66,17 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
                         f = _catch(arr.retryCatch)([f]);
                     if(arr.retryThrow)
                         f = retry(arr.retryThrow)([f]);
-                    if(arr.nr)
-                        f = nr()([f]);
                     if(arr.repeat)
                         f = repeat(arr.repeat)([f]);
                     return f;
                 }else{
-                    const f = wrap(buildAtom(sub.name));
-                    if(sub.catched) _catch(1)([f]);
-                    const composed = composePlugins(sub.plugins);
-                    return composed([f]);
+                    let f = wrap(buildAtom(sub.name));
+                    if(sub.catched) f = _catch(1)([f]);
+                    if(sub.plugins.length > 0){
+                        const composed = composePlugins(sub.plugins);
+                        f = composed([f]);
+                    }
+                    return f;
                 }
             }));
 

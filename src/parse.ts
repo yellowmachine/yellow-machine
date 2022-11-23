@@ -94,8 +94,7 @@ export type ParsedAtom = {
     name: string, 
     plugins: string[],
     retry?: number,
-    catched: boolean,
-    nr?: boolean, 
+    catched: boolean, 
     repeat?: number
 };
 
@@ -104,7 +103,6 @@ export type ParsedArray = {
     c: (ParsedAtom|ParsedArray)[],
     retryCatch?: number,
     retryThrow?: number,
-    nr?: number,
     repeat?: number,
     plugins: string[]
 };
