@@ -180,8 +180,8 @@ test("parse a|w[b]e", ()=>{
     );
 });
 
-test("parse [b,c]", ()=>{
-  const t = "[b,c]";
+test("parse '[b,c]", ()=>{
+  const t = "'[b,c]";
   const p = parse(t);
 
   expect(p).toEqual(

@@ -38,7 +38,7 @@ export function matchToken(exp: RegExp|undefined, t: string){
 }
 
 export const tokens: {[key in keyof typeof TOKEN]?: RegExp} = {
-    [TOKEN.PLUGIN]: RegExp("^([a-zA-Z][a-zA-Z\\d]*)'"),
+    [TOKEN.PLUGIN]: RegExp("^([a-zA-Z][a-zA-Z\\d]*)?'"),
     [TOKEN.NAME]: RegExp("^([a-zA-Z][a-zA-Z\\d]*)(\\??)"),
     [TOKEN.THROW]: RegExp("^](\\d*)!"),
     [TOKEN.CATCH]: RegExp("](\\d*)\\?"),
@@ -162,7 +162,8 @@ export const parse = (t: string) => {
                 sub.c.push(atom);
             }else if(token.id === TOKEN.BEGIN_ARRAY){
                 const arr = parseArray();
-                arr.plugins = plugins.length > 0 ? [...plugins]:(arr.c.length > 1? ['p']: ['s']);
+                //arr.plugins = plugins.length > 0 ? [...plugins]:(arr.c.length > 1? ['p']: ['s']);
+                arr.plugins = [...plugins];
                 plugins = [];
                 sub.c.push(arr);
             }else if(token.id === TOKEN.CATCH){
@@ -176,7 +177,9 @@ export const parse = (t: string) => {
             }else if(token.id === TOKEN.NAME){
                 name = token.value;
             }else if(token.id === TOKEN.PLUGIN){
-                plugins.push(token.value.substring(0, token.value.length-1));
+                let pluginName = token.value.substring(0, token.value.length-1);
+                pluginName = pluginName === ""? 'p':pluginName;
+                plugins.push(pluginName);
             }
             else{
                 throw new Error("Parse error:" + JSON.stringify(token));
