@@ -65,10 +65,17 @@ export default (raw: string, opts: {namespace: Namespace, plugins: Plugin}) => {
             const pipes = (arr.c.map(sub=>{
                 if(sub.type === 'array'){
                     let f = buildArray(sub);
+                    if(arr.retryType === '?'){
+                        f = _catch(arr.retry || 1)([f]);
+                    }else if(arr.retryType === '!'){
+                        f = retry(arr.retry || 1)([f]);
+                    }
+                    /*
                     if(arr.retryCatch)
                         f = _catch(arr.retryCatch)([f]);
                     if(arr.retryThrow)
                         f = retry(arr.retryThrow)([f]);
+                    */
                     if(arr.repeat)
                         f = repeat(arr.repeat)([f]);
                     return f;

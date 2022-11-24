@@ -7,34 +7,9 @@ const consume = (t: string) => {
     return [...nextToken(t)].map(x => x.value);
 };
 
-const reg = RegExp("^](\\d*)?([\\?!])?");
+const reg = RegExp("^](\\d*)([\\?!])");
 
-test("end array full ]", ()=>{
-  const r = matchToken(reg, "]");
-  expect(r).toEqual({
-    value: ']',
-    opts: [undefined, undefined]
-  });
-});
-
-test("end array full ]?", ()=>{
-  const r = matchToken(reg, "]?");
-  expect(r).toEqual({
-    value: ']?',
-    opts: [undefined, "?"]
-  });
-});
-
-test("end array full ]3?", ()=>{
-  const r = matchToken(reg, "]3?");
-  expect(r).toEqual({
-    value: ']3?',
-    opts: ["3", "?"]
-  });
-});
-
-
-test("end array full ]3!", ()=>{
+test('match token name ]3!', ()=>{
   const r = matchToken(reg, "]3!");
   expect(r).toEqual({
     value: ']3!',
@@ -378,7 +353,8 @@ test("parse a[b|c]2?x", ()=>{
                 }
               ],
               "plugins": [],
-              "retryCatch": 2
+              retry: 2,
+              retryType: "?"
             },
             {
               "type": "atom",

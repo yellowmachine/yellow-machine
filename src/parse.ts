@@ -8,7 +8,7 @@ type Token = {
 export enum TOKEN {
     PLUGIN,
     NAME,
-    THROW,
+    //THROW,
     CATCH,
     BEGIN_ARRAY,
     END_ARRAY,
@@ -40,8 +40,7 @@ export function matchToken(exp: RegExp|undefined, t: string){
 export const tokens: {[key in keyof typeof TOKEN]?: RegExp} = {
     [TOKEN.PLUGIN]: RegExp("^([a-zA-Z\\d]+)?'"),
     [TOKEN.NAME]: RegExp("^([a-zA-Z][a-zA-Z\\d]*)(\\??)"),
-    [TOKEN.THROW]: RegExp("^](\\d*)!"),
-    [TOKEN.CATCH]: RegExp("^](\\d*)\\?"),
+    [TOKEN.CATCH]: RegExp("^](\\d*)([\\?!])"),
     [TOKEN.BEGIN_ARRAY]: RegExp("^\\["),
     [TOKEN.NR]: RegExp("^\\^"),
     [TOKEN.COMMA]: RegExp("^,"),
@@ -101,8 +100,8 @@ export type ParsedAtom = {
 export type ParsedArray = {
     type: "array",
     c: (ParsedAtom|ParsedArray)[],
-    retryCatch?: number,
-    retryThrow?: number,
+    retry?: number,
+    retryType?: string,
     repeat?: number,
     plugins: string[]
 };
@@ -131,12 +130,15 @@ export const parse = (t: string) => {
             const token = g.next().value; 
             if( token.id === TOKEN.END || 
                 token.id === TOKEN.END_ARRAY ||
-                token.id === TOKEN.CATCH ||
-                token.id === TOKEN.THROW   
+                token.id === TOKEN.CATCH
+                //|| token.id === TOKEN.THROW   
             ){
                 const m = parseInt(token.opts[0] || '1');
-                if(token.id == TOKEN.CATCH) ret.retryCatch = m;
-                if(token.id == TOKEN.THROW) ret.retryThrow = m;
+                if(token.id == TOKEN.CATCH){
+                    ret.retry = m;
+                    ret.retryType = token.opts[1];
+                } 
+                //if(token.id == TOKEN.THROW) ret.retryThrow = m;
                 ret.c.push(sub); 
                 return ret;
             }else if(token.id === TOKEN.NR){
