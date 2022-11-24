@@ -76,13 +76,3 @@ export const run = async (raw: string, options?: Options, data?: Data) => {
         return false;
     }
 };
-
-/*
-export const dev = (path: string[]) => (namespace: Namespace, plugins?: Plugin) => context(namespace, plugins, true, path);
-
-export const context = (namespace: Namespace,
-                        plugins?: Plugin, 
-                        dev=false, 
-                        path: string[]=[]
-                    ) => (t: string, data?: any) => run(t, {namespace, plugins, dev, path}, data);
-*/

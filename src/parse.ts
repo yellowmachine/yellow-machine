@@ -127,6 +127,7 @@ export const parse = (t: string) => {
 
         for(;;){
             const token = g.next().value; 
+            if(token === undefined) throw new Error("Expected ]");
             if( token.id === TOKEN.END || 
                 token.id === TOKEN.END_ARRAY ||
                 token.id === TOKEN.CATCH

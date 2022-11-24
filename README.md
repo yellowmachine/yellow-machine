@@ -5,11 +5,13 @@ V. 2: With the new release you can only run string expression, no more arrays. P
 Example of use:
 
 ```ts
-const {run, w, compile} = require("yellow-machine")
+const {compile, w, SHOW_QUIT_MESSAGE} = require("yellow-machine")
 const npm = require('npm-commands')
 const {docker} = require('./docker')
 const {dgraph} = require('./dgraph')
 const config = require("./config")
+
+SHOW_QUIT_MESSAGE.v = true
 
 function test(){
     npm().run('tap');
@@ -23,45 +25,45 @@ const {up, down} = docker({name: "my-container-dgraph-v13",
 const dql = dgraph(config)
 
 async function main() {
-    const exp = `up[
-                      w'[ dql? | test ]
-                      down`;
-    const options = {
-        namespace: {up, dql, test, down}, 
-        plugins: {w: w(["./tests/*.js", "./schema/*.*"])}
-    }
-    const f = compile(exp, options);
-    await f('some initial data');
-    // or
-    await run(exp, options, 'some initial data'); 
-    // if up is ok, then enters into next scope. w watchs for file changes and
-    // dispatch the pipe: if dql is ok then test is executed
-    // if dql fails, if it were just "dql" then would throw an exception that stops watch
-    // but due to '?' the exception is catched and w continues.
-    // if key 'q' is pressed then watch finishes and down is executed
+    const t = `up[
+                    w'[ dql | test ]
+                    down
+                 ]`;
+    const f = compile(t, {
+                            namespace: {up, dql, test, down}, 
+                            plugins: {w: w(["./tests/*.js", "./schema/*.*"])}
+        });
+    await f();
 }
 
 main()
 ```
 
-If you want to use several times the same expression, you should compile first:
+You can use ```run``` directly, but ```compile``` is recommended:
 
 ```ts
-const {compile} = require("yellow-machine");
+const {run, compile} = require("yellow-machine");
 
+await run("a|'[b,c]", options, initialData);
+
+//or
 const f = compile("a|'[b,c]", options);
 
 //then
 await f("some data");
 await f("other data");
-
-// you still can use context but it is not recommended
 ```
 
-Possible expresssions:
+# The language:
 
 ```ts
+// With regular expressions:
 
+Catch = /\d*[\?!]/
+Atom = /[a-zA-Z][a-zA-Z\d]*\??/
+Plugin = /([a-zA-Z\d]+)?'/
+C = Plugin*Atom|Expression;
+Expression = Plugin*[C](Catch)?;
 ```
 
 # Producer / Consumer

@@ -7,16 +7,20 @@ const consume = (t: string) => {
     return [...nextToken(t)].map(x => x.value);
 };
 
-const reg = RegExp("^](\\d*)([\\?!])");
+/*
+test.only("real example", ()=>{
+  const t = `up[
+                w'[ dql | test ]
+                down
+                ]`;
+  const p = parse(t);
+  expect(p).toEqual(
+    {
 
-test('match token name ]3!', ()=>{
-  const r = matchToken(reg, "]3!");
-  expect(r).toEqual({
-    value: ']3!',
-    opts: ["3", "!"]
-  });
+    }
+  );
 });
-
+*/
 
 test('match token name a[', ()=>{
   const r = matchToken(tokens[TOKEN.NAME], "a[");
