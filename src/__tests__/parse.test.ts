@@ -1,175 +1,365 @@
 import { DEBUG } from '../index';
-import { parse, nextToken } from '../parse';
+import { parse, nextToken, TOKEN, matchToken, tokens } from '../parse';
 
 DEBUG.v = false;
 
-const plugins = ['nr', 'p'];
+const consume = (t: string) => {
+    return [...nextToken(t)].map(x => x.value);
+};
 
-test("next token empty string", ()=>{
-    expect(nextToken("", plugins)).toBe(null);
+test('match token name a[', ()=>{
+  const r = matchToken(tokens[TOKEN.NAME], "a[");
+  expect(r).toEqual({
+    value: 'a',
+    opts: ["a", ""]
+  });
 });
 
-test("next token basic pipeline", ()=>{
-    expect(nextToken("a|b,c[", plugins)).toEqual({remaining: "[", token: "a|b,c"});
+test('match token name a3[', ()=>{
+  const r = matchToken(tokens[TOKEN.NAME], "a3[");
+  expect(r).toEqual({
+    value: 'a3',
+    opts: ["a3", ""]
+  });
 });
 
-test("next token basic pipeline with ^", ()=>{
-    expect(nextToken("^a|b,c[", plugins)).toEqual({remaining: "[", token: "^a|b,c"});
+test('match token name a3?[', ()=>{
+  const r = matchToken(tokens[TOKEN.NAME], "a3?[");
+  expect(r).toEqual({
+    value: 'a3?',
+    opts: ["a3", "?"]
+  });
 });
 
-test("next token basic pipeline with ^ and ^", ()=>{
-    expect(nextToken("^a|b,^c[", plugins)).toEqual({remaining: "[", token: "^a|b,^c"});
+test("match token plugin a'[", ()=>{
+  const r = matchToken(tokens[TOKEN.PLUGIN], "a'[");
+  expect(r).toEqual({
+    value: "a'",
+    opts: ["a"]
+  });
 });
 
-test("next token basic pipeline with p", ()=>{
-    expect(nextToken("a|b|p[", plugins)).toEqual({remaining: "p[", token: "a|b|"});
+test("match token plugin a'b3'k'[", ()=>{
+  const r = matchToken(tokens[TOKEN.PLUGIN], "a'b3'k'[");
+  expect(r).toEqual({
+    value: "a'",
+    opts: ["a"]
+  });
 });
 
-test("next token basic pipeline with ^ v2", ()=>{
-    expect(nextToken("a|b|p^[", plugins)).toEqual({remaining: "p^[", token: "a|b|"});
+test("match token name w'k'a3?[", ()=>{
+  const r = matchToken(tokens[TOKEN.NAME], "w'k'a3?[");
+  expect(r).toEqual({
+    value: "w",
+    opts: ["w", ""]
+  });
 });
 
-test("next token basic pipeline with ^ v3", ()=>{
-    expect(nextToken("p^[", plugins)).toEqual({remaining: "^[", token: "*p"});
+test("match token plugin ^w'k'a3[", ()=>{
+  const r = matchToken(tokens[TOKEN.NR], "^w'k'a3[");
+  expect(r).toEqual({
+    value: "^",
+    opts: []
+  });
 });
 
-test("next token basic pipeline with ^ v2", ()=>{
-    expect(nextToken("^[a", plugins)).toEqual({remaining: "a", token: "^["});
+test("next token", ()=>{
+    const t = "a,^b|c[e3";
+    const tokens = consume(t);
+    expect(tokens).toEqual(["a", ",", "^", "b", "|", "c", "[", "e3"]);
 });
 
-test("next token with |^", ()=>{
-    expect(nextToken("|^b", plugins)).toEqual({remaining: "", token: "|^b"});
+test("next token c^[e", ()=>{
+    const t = "c^[e";
+    const tokens = consume(t);
+    expect(tokens).toEqual(["c", "^", "[", "e"]);
 });
 
-test("next token with ^b", ()=>{
-    expect(nextToken("^b", plugins)).toEqual({remaining: "", token: "^b"});
+test("next token []", ()=>{
+    const t = "a[b]";
+    const tokens = consume(t);
+    expect(tokens).toEqual(["a", "[", "b", "]"]);
 });
 
-test("parse empty", ()=>{
-    const {remaining, parsed} = parse("", plugins);
-    expect(parsed).toEqual([]);
-    expect(remaining).toBe("");
+test("next token a|b", ()=>{
+    const t = "a|b";
+    const tokens = consume(t);
+    expect(tokens).toEqual(["a", "|", "b"]);
 });
 
-test("parse most simple", ()=>{
-    const {remaining, parsed} = parse("a", plugins);
-    expect(parsed).toEqual(['a']);
-    expect(remaining).toBe("");
+test("order of plugins", ()=>{
+  const t = "k'm'p'x'a";
+  const p = parse(t);
+  const arr = p.c[0];
+  const plugins = arr.type === 'array'? arr.c[0].plugins:[];
+  expect(plugins).toEqual(['k', 'm', 'p', 'x']);
 });
 
-test("parse most simple with ,", ()=>{
-    const {remaining, parsed} = parse("a,b", plugins);
-    expect(parsed).toEqual([{t: "[", c: ["a"]}, {t: "[", c: ["b"]}]);
-    expect(remaining).toBe("");
+test("parse atom a?", ()=>{
+  const t = "a?";
+    const p = parse(t);
+    expect(p).toEqual(
+      {
+        type: 'array',
+        plugins: ['s'],
+        c: [
+          {
+            type: "array",
+            plugins: ['s'],
+            c: 
+              [
+                {
+                  type: "atom",
+                  name: "a",
+                  catched: true,
+                  plugins: []
+                }
+              ]
+          }
+        ]
+      }
+    );
 });
 
-test("parse most simple with |", ()=>{
-    const {remaining, parsed} = parse("a|b|c", plugins);
-    expect(parsed).toEqual(["a|b|c"]);
-    expect(remaining).toBe("");
+test("parse", ()=>{
+    const t = "a|b";
+    const p = parse(t);
+    expect(p).toEqual(
+    {
+        plugins: ['s'],
+        c: 
+        [
+            {
+                plugins: ['s'],
+                c: [
+                {name: "a", type: "atom", catched: false, plugins: []},
+                {name: "b", type: "atom", catched: false, plugins: []}
+            
+                ], 
+                type: "array"
+            }
+        ], 
+        type: "array"
+    }
+    );
 });
 
-test("parse most simple with , |", ()=>{
-    const {remaining, parsed} = parse("a,x|b|c", plugins);
-    expect(parsed).toEqual([{t: "[", c: ["a"]}, {t: "[", c: ["x|b|c"]}]);
-    expect(remaining).toBe("");
+test("parse a|w[b]e", ()=>{
+    const t = "a|w'[b]e";
+    const p = parse(t);
+
+    expect(p).toEqual(
+        {
+            "type": "array",
+            plugins: ['s'],
+            "c": [
+              {
+                "type": "array",
+                plugins: ['s'],
+                "c": [
+                  {
+                    "type": "atom",
+                    "name": "a",
+                    plugins: [],
+                    catched: false
+                  },
+                  {
+                    "type": "array",
+                    plugins: ['w'],
+                    "c": [
+                      {
+                        "type": "array",
+                        plugins: ['s'],
+                        "c": [
+                          {
+                            "type": "atom",
+                            "name": "b",
+                            plugins: [],
+                            catched: false
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "atom",
+                    "name": "e",
+                    plugins: [],
+                    catched: false
+                  }
+                ]
+              }
+            ]
+          }
+    );
 });
 
-test("parse most simple with []", ()=>{
-    const {remaining, parsed} = parse("a|[b]|c", plugins);
-    expect(parsed).toEqual(["a", {t: "[", c: ["b"]}, "c"]);
-    expect(remaining).toBe("");
+test("parse '[b,c]", ()=>{
+  const t = "'[b,c]";
+  const p = parse(t);
+
+  expect(p).toEqual(
+    {
+      "type": "array",
+      "c": [
+        {
+          "type": "array",
+          "c": [
+            {
+              "type": "array",
+              "c": [
+                {
+                  "type": "array",
+                  "c": [
+                    {
+                      "type": "atom",
+                      "name": "b",
+                      "catched": false,
+                      "plugins": []
+                    }
+                  ],
+                  "plugins": [
+                    "s"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "c": [
+                    {
+                      "type": "atom",
+                      "name": "c",
+                      "catched": false,
+                      "plugins": []
+                    }
+                  ],
+                  "plugins": [
+                    "s"
+                  ]
+                }
+              ],
+              "plugins": [
+                "p"
+              ]
+            }
+          ],
+          "plugins": [
+            "s"
+          ]
+        }
+      ],
+      "plugins": [
+        "s"
+      ]
+    }
+  );
 });
 
-test("parse most simple with [] without |[...]|", ()=>{
-    const {remaining, parsed} = parse("a[b]c", plugins);
-    expect(parsed).toEqual(["a", {t: "[", c: ["b"]}, "c"]);
-    expect(remaining).toBe("");
+test("parse k'[^c?]", ()=>{
+  const t = "k'[^c?]";
+  const p = parse(t);
+
+  expect(p).toEqual(
+    {
+      "type": "array",
+      "c": [
+        {
+          "type": "array",
+          "c": [
+            {
+              "type": "array",
+              "c": [
+                {
+                  "type": "array",
+                  "c": [
+                    {
+                      "type": "atom",
+                      "name": "c",
+                      "catched": true,
+                      "plugins": ["nr"]
+                    }
+                  ],
+                  "plugins": [
+                    "s"
+                  ]
+                }
+              ],
+              "plugins": [
+                "k"
+              ]
+            }
+          ],
+          "plugins": [
+            "s"
+          ]
+        }
+      ],
+      "plugins": [
+        "s"
+      ]
+    }
+  );
 });
 
-test("parse most simple without ending", ()=>{
-    const {remaining, parsed} = parse("a[b[c", plugins);
-    expect(parsed).toEqual(["a", {t: "[", c: ["b", {t: "[", c: ["c"]}]}]);
-    expect(remaining).toBe("");
-});
+test("parse a[b|c]2?x", ()=>{
+  const t = "a[b|c]2?x";
+  const p = parse(t);
 
-test("parse most simple with p[]", ()=>{
-    const {remaining, parsed} = parse("a|p[b]", plugins);
-
-    expect(parsed).toEqual(["a", {t: "*p", c: ["b"]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse most simple with q[] q is not plugin", ()=>{
-    const {remaining, parsed} = parse("a|q[b]", plugins);
-
-    expect(parsed).toEqual(["a|q", {t: "[", c: ['b']}]);
-    expect(remaining).toBe("");
-});
-
-test("parse most simple with q[] q is not plugin", ()=>{
-    const {remaining, parsed} = parse("a|p^[b]", plugins);
-
-    expect(parsed).toEqual(["a", {t: "*p", c: [{t: "^[", c: ["b"]}]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse ]?", ()=>{
-    const {remaining, parsed} = parse("a[b!|c]?x", plugins);
-    expect(parsed).toEqual(["a",{t: "[", c: ["b!|c"]}, "x", "?"]);
-    expect(remaining).toBe("");
-});
-
-test("parse |^", ()=>{
-    const {remaining, parsed} = parse("|^b", plugins);
-    expect(parsed).toEqual([{t: "*nr", c: ["b"]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse ^b", ()=>{
-    const {remaining, parsed} = parse("^b", plugins);
-    expect(parsed).toEqual([{t: "*nr", c: ["b"]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse ^b|c", ()=>{
-    const {remaining, parsed} = parse("^b|c", plugins);
-    expect(parsed).toEqual([{t: "*nr", c: ["b|c"]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse ^b|c,x", ()=>{
-    const {remaining, parsed} = parse("^b|c,x", plugins);
-    expect(parsed).toEqual([{t: "*nr", c: ["b|c"]}, {t: "[", c: ["x"]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse c,^x", ()=>{
-    const {remaining, parsed} = parse("c,^x", plugins);
-    expect(parsed).toEqual([{t: "[", c: ["c"]}, {t: "*nr", c: ["x"]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse [[", ()=>{
-    const {remaining, parsed} = parse("[[", plugins);
-    expect(parsed).toEqual([{t: "[", c: [{t: "[", c: []}]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse [^[", ()=>{
-    const {remaining, parsed} = parse("[^[", plugins);
-    expect(parsed).toEqual([{t: "[", c: [{t: "^[", c: []}]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse ^^", ()=>{
-    const {remaining, parsed} = parse("^^", plugins);
-    expect(parsed).toEqual([{t: "*nr", c: [{t: "*nr", c: []}]}]);
-    expect(remaining).toBe("");
-});
-
-test("parse ^^b", ()=>{
-    const {remaining, parsed} = parse("^^b", plugins);
-    expect(parsed).toEqual([{t: "*nr", c: [{t: "*nr", c: ["b"]}]}]);
-    expect(remaining).toBe("");
+  expect(p).toEqual(
+    {
+      "type": "array",
+      "c": [
+        {
+          "type": "array",
+          "c": [
+            {
+              "type": "atom",
+              "name": "a",
+              "catched": false,
+              "plugins": []
+            },
+            {
+              "type": "array",
+              "c": [
+                {
+                  "type": "array",
+                  "c": [
+                    {
+                      "type": "atom",
+                      "name": "b",
+                      "catched": false,
+                      "plugins": []
+                    },
+                    {
+                      "type": "atom",
+                      "name": "c",
+                      "catched": false,
+                      "plugins": []
+                    }
+                  ],
+                  "plugins": [
+                    "s"
+                  ]
+                }
+              ],
+              "plugins": [],
+              retry: 2,
+              retryType: "?"
+            },
+            {
+              "type": "atom",
+              "name": "x",
+              "catched": false,
+              "plugins": []
+            }
+          ],
+          "plugins": [
+            "s"
+          ]
+        }
+      ],
+      "plugins": [
+        "s"
+      ]
+    }
+  );
 });

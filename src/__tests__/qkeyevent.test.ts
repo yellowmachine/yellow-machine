@@ -1,19 +1,24 @@
-import { context as C, DEBUG, i } from '../index';
 import watch, {DEBUG as wDebug} from '../watch';
+import { DEBUG, g, compile } from '../index';
 
 DEBUG.v = false;
 wDebug.v = false;
 
 test("closing w with keypress q compact mode", async ()=> {
-    const path: string[] = [];
-    const a = async() => path.push('a');
-    const end = async() => path.push('end');
-    const b = async() => {
-        path.push('b');
-        process.stdin.emit("keypress", 'q');
-    };
     
-    const run = C({a, b, end}, {w: watch(["*.js"])});
-    await run("a|w[b]end"); 
-    expect(path).toEqual(['a', 'b', 'end']);
+    const a = g('a');
+    const e = g('e');
+    function b(){
+        process.stdin.emit("keypress", 'q');
+        return null;
+    }
+
+    const t = "a|w'[b]e";
+    const cmp = compile(t, {
+        namespace: {a, b, e},
+        plugins: {w: watch(["*.js"])}
+    });
+
+    const path = await cmp("");
+    expect(path).toEqual('ae');
 });

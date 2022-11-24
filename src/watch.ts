@@ -1,9 +1,7 @@
-
-
 import { watch as chwatch } from 'chokidar';
 import { emitKeypressEvents } from 'node:readline';
 
-import { type SETUP, type Data } from '.';
+import { type Data, type FD } from '.';
 
 export const SHOW_QUIT_MESSAGE = {v: false};
 export const DEBUG = {v: false};
@@ -11,11 +9,10 @@ export const DEBUG = {v: false};
 emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
-export default (files: string[]) => (setup: SETUP) => async (data: Data) => {
+export default (files: string[]) => (pipes: FD[]) => async (data: Data) => {
 
     const quit = data.ctx.close;
 
-    const f = setup["single"];
     try{
         return await main();
     }catch(err){
@@ -40,7 +37,7 @@ export default (files: string[]) => (setup: SETUP) => async (data: Data) => {
         });
 
         let exited = false;
-        function close(err = false, data: any = null){
+        function close(err = false){
             if(!exited){
                 quit();
                 exited = true;
@@ -49,7 +46,7 @@ export default (files: string[]) => (setup: SETUP) => async (data: Data) => {
                 if(err){
                     if(reject) reject();
                 }
-                else if(resolve) resolve(data);
+                else if(resolve) resolve(data.data);
                 if(watcher)
                     watcher.close();
             }
@@ -65,7 +62,7 @@ export default (files: string[]) => (setup: SETUP) => async (data: Data) => {
         async function run(){
             try{
                 data = {data: data.data, ctx: {close}};
-                await f(data);         
+                await pipes[0](data);
                 if(SHOW_QUIT_MESSAGE.v)
                     // eslint-disable-next-line no-console
                     console.log("Press " + q + " to quit!");
