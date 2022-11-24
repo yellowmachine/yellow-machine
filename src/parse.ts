@@ -8,7 +8,6 @@ type Token = {
 export enum TOKEN {
     PLUGIN,
     NAME,
-    //THROW,
     CATCH,
     BEGIN_ARRAY,
     END_ARRAY,
@@ -131,14 +130,11 @@ export const parse = (t: string) => {
             if( token.id === TOKEN.END || 
                 token.id === TOKEN.END_ARRAY ||
                 token.id === TOKEN.CATCH
-                //|| token.id === TOKEN.THROW   
             ){
-                const m = parseInt(token.opts[0] || '1');
                 if(token.id == TOKEN.CATCH){
-                    ret.retry = m;
+                    ret.retry = parseInt(token.opts[0] || '1');
                     ret.retryType = token.opts[1];
                 } 
-                //if(token.id == TOKEN.THROW) ret.retryThrow = m;
                 ret.c.push(sub); 
                 return ret;
             }else if(token.id === TOKEN.NR){
@@ -159,9 +155,9 @@ export const parse = (t: string) => {
                 plugins = [];
                 sub.c.push(atom);
             }else if(token.id === TOKEN.PLUGIN){
-                let pluginName = token.value.substring(0, token.value.length-1);
-                pluginName = pluginName === "" ? 'p':pluginName;
-                plugins.push(pluginName);
+                let name = token.value.substring(0, token.value.length-1);
+                name = name === "" ? 'p':name;
+                plugins.push(name);
             }
             else{
                 throw new Error("Parse error:" + JSON.stringify(token));

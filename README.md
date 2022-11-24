@@ -81,72 +81,6 @@ function someProducerConsumer({data, ctx}){
 
 ```
 
-# Plugins
-
-// repeat is a plugin that spawns n pipes
-```ts
-const { repeat, compile } = require("yellow-machine")
-
-const options = {
-        namespace: {a, b}, 
-        //plugins: {r2: repeat(2)}
-    }
-    
-const f = compile("2'^[a|b]", options);    
-// or    
-const f = compile("r2'^[a|b]", options);
-
-await f(); //--> a1 ... b1 ... a2 ... b2
-```
-
-//note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
-
-```ts
-test("run a[b|c]2!x", async ()=>{
-
-    const a = g("a,q,y,z");
-    const b = g("b!");
-    const c = g("c,c2,c3");
-    const x = g("x,k,m");
-
-    const t = "a[b|c]2!x";
-    const cmp = compile(t, {
-        namespace: {a, b, c, x}
-    });
-    const result = await cmp("");
-    expect(result).toEqual("undefinedcx"); // ab! is discarded by the retry, then the b generator return undefined
-});
-```
-------
-How to use the switch or decide plugin;
-
-```ts
-import {sw, compile} from 'yellow-machine';
-...
-const a = g(["a"]);
-const b = g(["b"]);
-const c = g(["c"]);
-
-// if you return true the given pipe will be executed
-// if you return false, then it will continue with the next pipe after sw
-// if you return a number, then it consider given pipes and it will be indexed and executed
-function decide(data: Data): number|boolean{
-        if(data.data === 'a') return 0;
-        else return 1;
-    }
-
-const options = {
-    namespace: {a, b, c},
-    plugins: {sw: sw(decide)},
-    dev: true,
-    path: []
-}
-
-const f = compile("a|sw[b,c]", options);
-
-await f(); // a ... b
-```
-
 Example of a producer / consumer:
 
 // you can return null, and it means that the current pipe should stop and go out to continue
@@ -207,70 +141,145 @@ exports.docker = function({image, port, name, waitOn=null}){
 
 # Plugins
 
-A plugin is a function that returns a setup function, which will return a producer / consumer. The plugin is used for example to get an array of pipes and run them in parallel. So a plugin can receive a pipe or an array of pipes. Here two examples.
+A plugin is a setup function like, for example:
 
+```ts
+// retry
+export default (n: number) => (pipe: FD[]) => async (data: Data) => {
+        
+    const initialData = data.data;
+    
+    for(;;){        
+        try{
+            return await pipe[0]({...data, data: initialData}); 
+        }catch(err){
+            n--;
+            if(n === 0) throw err;
+        }    
+    } 
+};
+```
+
+Then a function is returned, a special function that takes an array of pipes to be executed.
+
+These are some builtin plugins:
 
 - `p` to execute an array of pipes in parallel
 
     ```ts
-    // you can pass a map function that is called to pass a fresh object of Data to each parallel pipe
-    (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any)|null = null)
+    // map: you can pass a map function that is called to pass a fresh object of Data to each parallel pipe
+    export default (mode: "all"|"race"|"allSettled" = "all", 
+                map: ((data: Data)=>any)|null = null) => (pipes: FD[]) => async (data: Data) => {...
     ```
 
 - `w` to watch some files
 
     ```ts
-    (files: string[]) // the array of files to watch
+    // the array of files to watch
+    export default (files: string[]) => (pipes: FD[]) => async (data: Data) => { 
     ```
 - `nr` means not reentrant
 
     ```ts
     // MODE "buffer"|"nobuffer"
     // size: number, size of buffer
-    ({mode, size}: {mode?: MODE, size?: number} = {mode: "buffer"})
+    export default ({mode, size}: {mode?: MODE, size?: number} = {mode: "nobuffer"}) => 
+    (pipes: FD[]): FD => {
     ```
 
-- `sw` switch: is constructed with a function like this
+- `sw` switch: to decide which pipe to be executed
 
-- `repeat` : export default (n: number) spawns n pipes
+    ```ts
+    type SWF = (data: any)=>number|boolean; // boolean: decide between two pipes; number: switch pipe
+    export default (f: SWF) => (pipes: FD[]) => async (data: Data) => {
+    ```
 
-Some implementations:
+- `repeat` :
+
+    ```ts
+    export default (n: number) => (pipes: FD[]) => async (data: Data) => {
+    ```
+
+// repeat is a plugin that spawns n pipes
+```ts
+const { repeat, compile } = require("yellow-machine")
+
+const options = {
+        namespace: {a, b}, 
+        //plugins: {r2: repeat(2)}
+    }
+    
+const f = compile("2'^[a|b]", options);    
+// or    
+const f = compile("r2'^[a|b]", options);
+
+await f(); //--> a1 ... b1 ... a2 ... b2
+```
+
+//note that you can also use generators. Useful in debug mode, or to test paths mocking real functions with generators
+
+```ts
+test("run a[b|c]2!x", async ()=>{
+
+    const a = g("a,q,y,z");
+    const b = g("b!");
+    const c = g("c,c2,c3");
+    const x = g("x,k,m");
+
+    const t = "a[b|c]2!x";
+    const cmp = compile(t, {
+        namespace: {a, b, c, x}
+    });
+    const result = await cmp("");
+    expect(result).toEqual("undefinedcx"); // ab! is discarded by the retry, then the b generator return undefined
+});
+```
+
+Some implementations of plugins:
 
 ```ts
 // parallel
+import { Data, FD } from '.';
 
-import { Data, type SETUP } from '.';
-
-export default (mode: "all"|"race"|"allSettled" = "all", map: ((data: Data)=>any)|null = null) => (setup: SETUP) => async (data: Data) => {
-    const pipes = setup["multiple"];
+export default (mode: "all"|"race"|"allSettled" = "all", 
+                map: ((data: Data)=>any)|null = null) => (pipes: FD[]) => async (data: Data) => {
+    
     const promises: Promise<any>[] = [];   
 
     for(const t of pipes){
         if(map) data = {ctx: data.ctx, data: map(data.data)};
         promises.push(t(data));
     }
-    if(mode === "all") return await Promise.all(promises);
-    //else if (mode === "any") return await Promise.any(promises);
-    else if (mode === "race") return await Promise.race(promises);
-    else if (mode === "allSettled") return await Promise.allSettled(promises);
+    try{
+        if(mode === "all"){
+            return await Promise.all(promises);
+        } 
+        //else if (mode === "any") return await Promise.any(promises);
+        else if (mode === "race") return await Promise.race(promises);
+        else if (mode === "allSettled") return await Promise.allSettled(promises);
+    }catch(err){
+        const msg = err instanceof Error ? err.message: "";
+        throw new Error(data.data + msg);
+    }
     return false;
 };
+
 ```
 
 An example of a plugin that uses both single and multiple:
 
 ```ts
 // switch
-import { Data, type SETUP } from '.';
+import { Data, FD } from '.';
+
 type SWF = (data: any)=>number|boolean;
 
-export default (f: SWF) => (setup: SETUP) => async (data: Data) => {
-    const pipe = setup["single"];
-    const pipes = setup["multiple"];
+export default (f: SWF) => (pipes: FD[]) => async (data: Data) => {
 
     const v = f(data);
+    
     if(typeof v === 'boolean'){
-        if(v) return await pipe(data);
+        if(v) return await pipes[0](data);
         else return null;
     }else{
         return await pipes[v](data); 
