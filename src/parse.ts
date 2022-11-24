@@ -2,7 +2,7 @@ type Token = {
     id: number,
     name: string,
     value: string,
-    opts: (string|null)[]
+    opts: string[]
 }
 
 export enum TOKEN {
@@ -19,7 +19,7 @@ export enum TOKEN {
   }
 
 export function matchToken(exp: RegExp|undefined, t: string){
-    const token: {value: string, opts: (null|string)[]} =  {
+    const token: {value: string, opts: string[]} =  {
         value: ";",
         opts: []
     };
@@ -116,20 +116,15 @@ export const parse = (t: string) => {
     
     const g = nextToken(removeWhite(t));
 
-    function parseAtom(t: string): ParsedAtom{
-        let catched = false;
-        if(t.endsWith('?')){
-            t = t.substring(0, t.length-1);
-            catched = true;
-        }
-        return {type: "atom", name: t, catched, plugins: []};       
+    function parseAtom({name, question}: {name: string, question: string}): ParsedAtom{
+        const catched = question === '?' ? true : false;
+        return {type: "atom", name, catched, plugins: []};       
     }
 
     function parseArray(): ParsedArray{
 
         const ret: ParsedArray = {type: "array", c: [], plugins: ['s']};
         let sub: ParsedArray = {type: "array", c: [], plugins: ['s']};
-        let name = "";
         let plugins: string[] = [];
 
         for(;;){
@@ -139,11 +134,6 @@ export const parse = (t: string) => {
                 token.id === TOKEN.CATCH ||
                 token.id === TOKEN.THROW   
             ){
-                if(name !== ""){
-                    const atom = parseAtom(name);
-                    atom.plugins = [...plugins];
-                    sub.c.push(atom);
-                }
                 const m = parseInt(token.opts[0] || '1');
                 if(token.id == TOKEN.CATCH) ret.retryCatch = m;
                 if(token.id == TOKEN.THROW) ret.retryThrow = m;
@@ -152,24 +142,20 @@ export const parse = (t: string) => {
             }else if(token.id === TOKEN.NR){
                 plugins.push("nr");
             }else if(token.id === TOKEN.COMMA){
-                const atom = parseAtom(name); 
-                atom.plugins = [...plugins];
-                plugins = [];
-                sub.c.push(atom);
                 ret.c.push(sub);
                 sub = {type: "array", c: [], plugins: ['s']};
             }else if(token.id === TOKEN.PIPE){
-                const atom = parseAtom(name); 
-                atom.plugins = [...plugins];
-                plugins = [];
-                sub.c.push(atom);
+                //
             }else if(token.id === TOKEN.BEGIN_ARRAY){
                 const arr = parseArray();
                 arr.plugins = [...plugins];
                 plugins = [];
                 sub.c.push(arr);
             }else if(token.id === TOKEN.NAME){
-                name = token.value;
+                const atom = parseAtom({name: token.opts[0], question: token.opts[1]}); 
+                atom.plugins = [...plugins];
+                plugins = [];
+                sub.c.push(atom);
             }else if(token.id === TOKEN.PLUGIN){
                 let pluginName = token.value.substring(0, token.value.length-1);
                 pluginName = pluginName === "" ? 'p':pluginName;

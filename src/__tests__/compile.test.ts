@@ -173,7 +173,7 @@ test("run a[b|c]?x", async ()=>{
     expect(result).toEqual(null);
 });
 
-test.only("run w'^'[b,c]x", async ()=>{
+test("run w'^'[b,c]x", async ()=>{
 
     const a = g("a");
     const b = g("b");
