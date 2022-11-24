@@ -7,21 +7,6 @@ const consume = (t: string) => {
     return [...nextToken(t)].map(x => x.value);
 };
 
-/*
-test.only("real example", ()=>{
-  const t = `up[
-                w'[ dql | test ]
-                down
-                ]`;
-  const p = parse(t);
-  expect(p).toEqual(
-    {
-
-    }
-  );
-});
-*/
-
 test('match token name a[', ()=>{
   const r = matchToken(tokens[TOKEN.NAME], "a[");
   expect(r).toEqual({
@@ -105,7 +90,7 @@ test("next token a|b", ()=>{
 test("order of plugins", ()=>{
   const t = "k'm'p'x'a";
   const p = parse(t);
-  const arr = p.c[0]; //.c[0].plugins;
+  const arr = p.c[0];
   const plugins = arr.type === 'array'? arr.c[0].plugins:[];
   expect(plugins).toEqual(['k', 'm', 'p', 'x']);
 });

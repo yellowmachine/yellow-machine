@@ -13,12 +13,12 @@ export const pipe =  (tasks: FD[]) => async (data: Data) => {
 
     try{
         for(const m of tasks){
-            data.data = await m(data);
-            if(data.data === null) return null;
+            const v = await m(data);
+            if(v === null) return null;
+            data.data = v;
         }
         return data.data;
     }catch(err){
-        //data.data = null;
         if(DEBUG.v)
             // eslint-disable-next-line no-console
             console.log(err);
