@@ -190,7 +190,7 @@ These are some builtin plugins:
 - `sw` switch: to decide which pipe to be executed
 
     ```ts
-    type SWF = (data: any)=>number|boolean; // boolean: decide between two pipes; number: switch pipe
+    type SWF = (data: any)=>number|boolean; // boolean: decide if execute pipe or not; number: switch pipe
     export default (f: SWF) => (pipes: FD[]) => async (data: Data) => {
     ```
 
