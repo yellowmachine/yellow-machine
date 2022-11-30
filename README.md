@@ -1,5 +1,11 @@
 # yellow pipeline
 
+*** Deprecated ***
+use [ypipe](https://github.com/yellowmachine/ypipe) instead.
+
+The expressions are the same, but plugins are constructed in a different way.
+***
+
 A simple language to specify, compile and run tasks.
 
 Examples of expressions:
